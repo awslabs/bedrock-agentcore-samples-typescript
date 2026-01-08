@@ -13,7 +13,7 @@ body:
     attributes:
       label: Which example?
       description: Path to the example file
-      placeholder: examples/tools/browser/basic.ts
+      placeholder: examples/runtime/hosting-agent/strands
     validations:
       required: true
 
@@ -31,7 +31,7 @@ body:
       label: Steps to reproduce
       description: Steps to reproduce the behavior
       placeholder: |
-        1. Run `npx tsx ...`
+        1. Run `make dev`
         2. See error
     validations:
       required: true

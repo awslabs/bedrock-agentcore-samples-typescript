@@ -27,7 +27,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Validate (format, lint, type-check)
+      - name: Validate (format, lint)
         run: npm run validate
 
   security:
