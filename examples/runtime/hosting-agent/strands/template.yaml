@@ -1,0 +1,59 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: AgentCore Runtime - Hosting Agent (Strands)
+
+Parameters:
+  ContainerImageUri:
+    Type: String
+    Description: ECR image URI
+
+Resources:
+  RuntimeRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: bedrock-agentcore.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/CloudWatchLogsFullAccess
+      Policies:
+        - PolicyName: BedrockAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - bedrock:InvokeModel
+                  - bedrock:InvokeModelWithResponseStream
+                Resource: '*'
+        - PolicyName: ECRAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ecr:GetAuthorizationToken
+                  - ecr:BatchCheckLayerAvailability
+                  - ecr:GetDownloadUrlForLayer
+                  - ecr:BatchGetImage
+                Resource: '*'
+
+  AgentRuntime:
+    Type: AWS::BedrockAgentCore::Runtime
+    Properties:
+      AgentRuntimeName: hosting_agent_strands
+      AgentRuntimeArtifact:
+        ContainerConfiguration:
+          ContainerUri: !Ref ContainerImageUri
+      ProtocolConfiguration: HTTP
+      RoleArn: !GetAtt RuntimeRole.Arn
+      NetworkConfiguration:
+        NetworkMode: PUBLIC
+
+Outputs:
+  RuntimeArn:
+    Description: Agent Runtime ARN
+    Value: !GetAtt AgentRuntime.AgentRuntimeArn
