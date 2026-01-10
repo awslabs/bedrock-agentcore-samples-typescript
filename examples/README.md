@@ -14,7 +14,8 @@ examples/
 │   ├── inbound-auth/           # Authenticate callers
 │   └── outbound-auth/          # Access external services
 ├── tools/                      # AgentCore Tools samples
-│   └── (coming soon)
+│   ├── code-interpreter/       # Execute code in secure sandbox
+│   └── browser/                # Browser automation
 └── end-to-end/                 # Complete deployment examples
     ├── cloudformation/
     ├── cdk/
