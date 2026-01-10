@@ -1,6 +1,6 @@
 import { ToolLoopAgent, tool } from 'ai'
 import { createAmazonBedrock } from '@ai-sdk/amazon-bedrock'
-import { BedrockAgentCoreApp, type RequestContext } from 'bedrock-agentcore/runtime'
+import { BedrockAgentCoreApp } from 'bedrock-agentcore/runtime'
 import { z } from 'zod'
 
 const bedrock = createAmazonBedrock({
@@ -43,14 +43,15 @@ const agent = new ToolLoopAgent({
 })
 
 const app = new BedrockAgentCoreApp({
-  handler: async function* (request: unknown, _context: RequestContext) {
-    const { prompt } = requestSchema.parse(request)
+  invocationHandler: {
+    requestSchema,
+    process: async function* (request, _context) {
+      const stream = await agent.stream({ prompt: request.prompt })
 
-    const stream = await agent.stream({ prompt })
-
-    for await (const chunk of stream.textStream) {
-      yield { event: 'message', data: { text: chunk } }
-    }
+      for await (const chunk of stream.textStream) {
+        yield { event: 'message', data: { text: chunk } }
+      }
+    },
   },
 })
 

@@ -1,5 +1,5 @@
 import { Agent, BedrockModel, tool } from '@strands-agents/sdk'
-import { BedrockAgentCoreApp, type RequestContext } from 'bedrock-agentcore/runtime'
+import { BedrockAgentCoreApp } from 'bedrock-agentcore/runtime'
 import { z } from 'zod'
 
 // Request schema
@@ -43,14 +43,15 @@ const agent = new Agent({
 })
 
 const app = new BedrockAgentCoreApp({
-  handler: async function* (request: unknown, _context: RequestContext) {
-    const { prompt } = requestSchema.parse(request)
-
-    for await (const event of agent.stream(prompt)) {
-      if (event.type === 'modelContentBlockDeltaEvent' && event.delta?.type === 'textDelta') {
-        yield { event: 'message', data: { text: event.delta.text } }
+  invocationHandler: {
+    requestSchema,
+    process: async function* (request, _context) {
+      for await (const event of agent.stream(request.prompt)) {
+        if (event.type === 'modelContentBlockDeltaEvent' && event.delta?.type === 'textDelta') {
+          yield { event: 'message', data: { text: event.delta.text } }
+        }
       }
-    }
+    },
   },
 })
 
