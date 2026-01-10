@@ -8,8 +8,10 @@ const agent = new RealtimeAgent({
 })
 
 const app = new BedrockAgentCoreApp({
-  handler: async (_request, _context) => {
-    return { message: 'Use WebSocket endpoint /ws for realtime audio' }
+  invocationHandler: {
+    process: async (_request, _context) => {
+      return { message: 'Use WebSocket endpoint /ws for realtime audio' }
+    },
   },
 
   websocketHandler: async (socket: WebSocket, context: RequestContext) => {
