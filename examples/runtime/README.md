@@ -42,13 +42,15 @@ Every AgentCore Runtime app follows the same pattern:
 import { BedrockAgentCoreApp } from 'bedrock-agentcore/runtime'
 
 const app = new BedrockAgentCoreApp({
-  handler: async function* (request, context) {
-    // request: the incoming payload (you define the shape)
-    // context: session ID, headers, auth tokens, etc.
+  invocationHandler: {
+    process: async function* (request, context) {
+      // request: the incoming payload (you define the shape)
+      // context: session ID, headers, auth tokens, etc.
 
-    // Yield events to stream responses back
-    yield { event: 'message', data: { text: 'Processing...' } }
-    yield { event: 'message', data: { text: 'Done!' } }
+      // Yield events to stream responses back
+      yield { event: 'message', data: { text: 'Processing...' } }
+      yield { event: 'message', data: { text: 'Done!' } }
+    },
   },
 })
 
@@ -85,7 +87,9 @@ Uses the `websocketHandler` option in `BedrockAgentCoreApp`:
 
 ```typescript
 const app = new BedrockAgentCoreApp({
-  handler: async (request, context) => { ... },        // HTTP
+  invocationHandler: {
+    process: async (request, context) => { ... },      // HTTP
+  },
   websocketHandler: async (socket, context) => { ... } // WebSocket
 })
 ```
@@ -104,16 +108,18 @@ Uses background tasks with async queues:
 
 ```typescript
 const app = new BedrockAgentCoreApp({
-  handler: async function* (request, context) {
-    const queue = new AsyncQueue()
+  invocationHandler: {
+    process: async function* (request, context) {
+      const queue = new AsyncQueue()
 
-    // Spawn background task
-    runLongTask(request, queue)
+      // Spawn background task
+      runLongTask(request, queue)
 
-    // Stream results as they arrive
-    for await (const result of queue) {
-      yield { event: 'progress', data: result }
-    }
+      // Stream results as they arrive
+      for await (const result of queue) {
+        yield { event: 'progress', data: result }
+      }
+    },
   },
 })
 ```

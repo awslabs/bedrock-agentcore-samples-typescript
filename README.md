@@ -22,9 +22,11 @@ The `bedrock-agentcore` SDK provides the building blocks for TypeScript agents:
 import { BedrockAgentCoreApp } from 'bedrock-agentcore/runtime'
 
 const app = new BedrockAgentCoreApp({
-  handler: async function* (request, context) {
-    // Your agent logic here
-    yield { event: 'message', data: { text: 'Hello!' } }
+  invocationHandler: {
+    process: async function* (request, context) {
+      // Your agent logic here
+      yield { event: 'message', data: { text: 'Hello!' } }
+    },
   },
 })
 
@@ -63,14 +65,18 @@ const agent = new Agent({
   }),
 })
 
+const requestSchema = z.object({ prompt: z.string() })
+
 const app = new BedrockAgentCoreApp({
-  handler: async function* (request, context) {
-    const { prompt } = z.object({ prompt: z.string() }).parse(request)
-    for await (const event of agent.stream(prompt)) {
-      if (event.delta?.type === 'textDelta') {
-        yield { event: 'message', data: { text: event.delta.text } }
+  invocationHandler: {
+    requestSchema,
+    process: async function* (request, context) {
+      for await (const event of agent.stream(request.prompt)) {
+        if (event.delta?.type === 'textDelta') {
+          yield { event: 'message', data: { text: event.delta.text } }
+        }
       }
-    }
+    },
   },
 })
 
