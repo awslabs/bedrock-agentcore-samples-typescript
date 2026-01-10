@@ -15,10 +15,12 @@ Deploy an agent using Vercel AI SDK to Amazon Bedrock AgentCore Runtime.
 ```typescript
 import { ToolLoopAgent, tool } from 'ai'
 import { createAmazonBedrock } from '@ai-sdk/amazon-bedrock'
-import { BedrockAgentCoreApp, type RequestContext } from 'bedrock-agentcore/runtime'
+import { BedrockAgentCoreApp } from 'bedrock-agentcore/runtime'
 import { z } from 'zod'
 
 const bedrock = createAmazonBedrock({ region: 'us-east-1' })
+
+const requestSchema = z.object({ prompt: z.string() })
 
 const calculator = tool({
   description: 'Performs basic arithmetic',
@@ -47,12 +49,14 @@ const agent = new ToolLoopAgent({
 })
 
 const app = new BedrockAgentCoreApp({
-  handler: async function* (request, context) {
-    const { prompt } = requestSchema.parse(request)
-    const stream = await agent.stream({ prompt })
-    for await (const chunk of stream.textStream) {
-      yield { event: 'message', data: { text: chunk } }
-    }
+  invocationHandler: {
+    requestSchema,
+    process: async function* (request, _context) {
+      const stream = await agent.stream({ prompt: request.prompt })
+      for await (const chunk of stream.textStream) {
+        yield { event: 'message', data: { text: chunk } }
+      }
+    },
   },
 })
 

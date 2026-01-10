@@ -35,12 +35,14 @@ const agent = new Agent({
 })
 
 const app = new BedrockAgentCoreApp({
-  handler: async function* (request, context) {
-    for await (const event of agent.stream(prompt)) {
-      if (event.delta?.type === 'textDelta') {
-        yield { event: 'message', data: { text: event.delta.text } }
+  invocationHandler: {
+    process: async function* (request, _context) {
+      for await (const event of agent.stream(request.prompt)) {
+        if (event.delta?.type === 'textDelta') {
+          yield { event: 'message', data: { text: event.delta.text } }
+        }
       }
-    }
+    },
   },
 })
 ```
@@ -66,11 +68,13 @@ const agent = new ToolLoopAgent({
 })
 
 const app = new BedrockAgentCoreApp({
-  handler: async function* (request, context) {
-    const stream = await agent.stream({ prompt })
-    for await (const chunk of stream.textStream) {
-      yield { event: 'message', data: { text: chunk } }
-    }
+  invocationHandler: {
+    process: async function* (request, _context) {
+      const stream = await agent.stream({ prompt: request.prompt })
+      for await (const chunk of stream.textStream) {
+        yield { event: 'message', data: { text: chunk } }
+      }
+    },
   },
 })
 ```

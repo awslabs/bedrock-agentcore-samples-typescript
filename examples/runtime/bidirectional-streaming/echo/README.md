@@ -31,8 +31,10 @@ import type { WebSocket } from 'ws'
 
 const app = new BedrockAgentCoreApp({
   // HTTP handler (required)
-  handler: async (request, context) => {
-    return { message: 'Use WebSocket endpoint /ws' }
+  invocationHandler: {
+    process: async (_request, _context) => {
+      return { message: 'Use WebSocket endpoint /ws' }
+    },
   },
 
   // WebSocket handler for bidirectional streaming

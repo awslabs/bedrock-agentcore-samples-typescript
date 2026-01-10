@@ -14,8 +14,10 @@ Deploy a Strands agent to Amazon Bedrock AgentCore Runtime.
 
 ```typescript
 import { Agent, BedrockModel, tool } from '@strands-agents/sdk'
-import { BedrockAgentCoreApp, type RequestContext } from 'bedrock-agentcore/runtime'
+import { BedrockAgentCoreApp } from 'bedrock-agentcore/runtime'
 import { z } from 'zod'
+
+const requestSchema = z.object({ prompt: z.string() })
 
 const calculator = tool({
   name: 'calculator',
@@ -48,13 +50,15 @@ const agent = new Agent({
 })
 
 const app = new BedrockAgentCoreApp({
-  handler: async function* (request, context) {
-    const { prompt } = requestSchema.parse(request)
-    for await (const event of agent.stream(prompt)) {
-      if (event.delta?.type === 'textDelta') {
-        yield { event: 'message', data: { text: event.delta.text } }
+  invocationHandler: {
+    requestSchema,
+    process: async function* (request, _context) {
+      for await (const event of agent.stream(request.prompt)) {
+        if (event.delta?.type === 'textDelta') {
+          yield { event: 'message', data: { text: event.delta.text } }
+        }
       }
-    }
+    },
   },
 })
 
