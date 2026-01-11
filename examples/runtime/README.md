@@ -10,9 +10,9 @@ AgentCore Runtime runs your agent code in containers, providing:
 - **Load balancing** — Distributes requests across instances
 - **Logging** — CloudWatch integration out of the box
 - **Networking** — Public or VPC-private endpoints
-- **Protocol support** — HTTP and WebSocket for real-time streaming
+- **Protocol support** — HTTP, WebSocket, MCP, and A2A
 
-You provide a container image with your agent. AgentCore handles everything else.
+You provide a container image or just agent code. AgentCore handles everything else.
 
 ## How It Works
 
@@ -30,7 +30,7 @@ You provide a container image with your agent. AgentCore handles everything else
 ```
 
 1. Client sends request to AgentCore endpoint
-2. AgentCore routes to your container
+2. AgentCore authenticates request and routes to your container
 3. `BedrockAgentCoreApp` (from the SDK) handles protocol details
 4. Your handler processes the request, streams responses back
 
@@ -40,14 +40,15 @@ Every AgentCore Runtime app follows the same pattern:
 
 ```typescript
 import { BedrockAgentCoreApp } from 'bedrock-agentcore/runtime'
+import { z } from 'zod'
 
 const app = new BedrockAgentCoreApp({
   invocationHandler: {
+    requestSchema: z.object({ prompt: z.string() }), // Typed inputs with Zod
     process: async function* (request, context) {
-      // request: the incoming payload (you define the shape)
+      // request.prompt is typed as string
       // context: session ID, headers, auth tokens, etc.
 
-      // Yield events to stream responses back
       yield { event: 'message', data: { text: 'Processing...' } }
       yield { event: 'message', data: { text: 'Done!' } }
     },
@@ -74,6 +75,70 @@ This means:
 
 The SDK handles the protocol details so you focus on your agent logic.
 
+## Authentication
+
+AgentCore Runtime supports two authentication methods:
+
+| Method | How It Works |
+|--------|--------------|
+| **OAuth** | Bearer token in Authorization header - no request signing required |
+| **IAM** | AWS SigV4 request signing using credentials |
+
+### OAuth
+
+Add a bearer token to requests. Configure an OIDC provider with AgentCore Identity:
+
+```typescript
+// HTTP
+fetch(`${runtimeEndpoint}/invocations`, {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({ prompt: 'Hello' }),
+})
+
+// WebSocket
+import { RuntimeClient } from 'bedrock-agentcore/runtime'
+
+const client = new RuntimeClient({ region: 'us-east-1' })
+const { url, headers } = await client.generateWsConnectionOAuth({
+  runtimeArn: 'arn:aws:...',
+  bearerToken: token,
+})
+```
+
+See [AgentCore Identity documentation](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/identity-getting-started.html) for OIDC provider configuration, or the [identity examples](../identity/) for a working OAuth sample.
+
+### IAM
+
+Requests must be SigV4-signed. For HTTP, use AWS CLI or SDKs. For WebSocket, use `RuntimeClient`:
+
+```bash
+# HTTP via AWS CLI
+aws bedrock-agentcore invoke-agent-runtime \
+  --agent-runtime-arn "arn:aws:..." \
+  --payload '{"prompt": "Hello"}'
+```
+
+```typescript
+// WebSocket
+import { RuntimeClient } from 'bedrock-agentcore/runtime'
+import { WebSocket } from 'ws'
+
+const client = new RuntimeClient({ region: 'us-east-1' })
+const { url, headers } = await client.generateWsConnection({
+  runtimeArn: 'arn:aws:...',
+})
+
+const ws = new WebSocket(url, { headers })
+```
+
+`RuntimeClient` handles credential resolution and SigV4 signing automatically.
+
+> **Note:** The samples in this repository use IAM authentication because it requires no additional OIDC provider setup.
+
 ---
 
 ## Samples
@@ -93,10 +158,9 @@ Host an AI agent that responds to prompts with tool use.
 
 Full-duplex WebSocket communication for real-time applications.
 
-| Implementation                              | Description                                    | Code                                                      |
-| ------------------------------------------- | ---------------------------------------------- | --------------------------------------------------------- |
-| [Echo](./bidirectional-streaming/echo/)     | Simple WebSocket echo with session context     | [index.ts](./bidirectional-streaming/echo/src/index.ts)   |
-| [OpenAI](./bidirectional-streaming/openai/) | OpenAI Realtime API bridge for audio streaming | [index.ts](./bidirectional-streaming/openai/src/index.ts) |
+| Implementation                          | Description                                | Code                                                    |
+| --------------------------------------- | ------------------------------------------ | ------------------------------------------------------- |
+| [Echo](./bidirectional-streaming/echo/) | Simple WebSocket echo with session context | [index.ts](./bidirectional-streaming/echo/src/index.ts) |
 
 Uses the `websocketHandler` option in `BedrockAgentCoreApp`:
 
@@ -113,31 +177,7 @@ const app = new BedrockAgentCoreApp({
 
 ### [async-agent](./async-agent/)
 
-Long-running tasks that stream results as they're produced.
-
-| Pattern                 | Description                                |
-| ----------------------- | ------------------------------------------ |
-| Background task + queue | Spawn async work, stream results via queue |
-
-Uses background tasks with async queues:
-
-```typescript
-const app = new BedrockAgentCoreApp({
-  invocationHandler: {
-    process: async function* (request, context) {
-      const queue = new AsyncQueue()
-
-      // Spawn background task
-      runLongTask(request, queue)
-
-      // Stream results as they arrive
-      for await (const result of queue) {
-        yield { event: 'progress', data: result }
-      }
-    },
-  },
-})
-```
+TODO
 
 ---
 
@@ -171,7 +211,7 @@ AgentRuntime:
     AgentRuntimeArtifact:
       ContainerConfiguration:
         ContainerUri: !Ref ContainerImageUri
-    ProtocolConfiguration: HTTP
+    ProtocolConfiguration: HTTP # Or MCP and A2A
     RoleArn: !GetAtt RuntimeRole.Arn
     NetworkConfiguration:
       NetworkMode: PUBLIC
