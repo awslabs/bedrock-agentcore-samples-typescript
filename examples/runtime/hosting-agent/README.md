@@ -38,7 +38,7 @@ const app = new BedrockAgentCoreApp({
   invocationHandler: {
     process: async function* (request, _context) {
       for await (const event of agent.stream(request.prompt)) {
-        if (event.delta?.type === 'textDelta') {
+        if (event.type === 'modelContentBlockDeltaEvent' && event.delta?.type === 'textDelta') {
           yield { event: 'message', data: { text: event.delta.text } }
         }
       }
