@@ -59,6 +59,21 @@ app.run() // Starts HTTP server on port 8080
 
 The generator function (`async function*`) enables streaming — each `yield` sends an event to the client immediately.
 
+## The AgentCore Protocol
+
+`BedrockAgentCoreApp` creates an HTTP server that follows the AgentCore Runtime protocol:
+
+- **POST /invocations** — Accepts JSON requests, streams SSE responses
+- **Session management** via `x-amzn-bedrock-agentcore-runtime-session-id` header
+- **Streaming** via Server-Sent Events (SSE)
+
+This means:
+1. **Same code runs locally and on AWS** — No changes needed for deployment
+2. **Any HTTP client works** — curl, fetch, Postman, custom CLIs
+3. **You could use any server framework** — Express, Fastify, etc. — as long as it implements the protocol
+
+The SDK handles the protocol details so you focus on your agent logic.
+
 ---
 
 ## Samples

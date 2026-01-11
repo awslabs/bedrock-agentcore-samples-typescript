@@ -2,32 +2,56 @@
 
 A data analysis agent using the Strands Agents SDK with AgentCore Code Interpreter.
 
-See [parent README](../README.md) for network access configuration and retrieving artifacts.
+See [parent README](../README.md) for network access configuration and artifact retrieval details.
 
 ## Quick Start
 
 ```bash
 npm install
-make dev
+npm start
 ```
 
-## Test
+## Test - Server Mode
 
 ```bash
+npm start  # Starts HTTP server on :8080
+
+# In another terminal:
 curl -X POST http://localhost:8080/invocations \
   -H "Content-Type: application/json" \
   -H "Accept: text/event-stream" \
   -H "x-amzn-bedrock-agentcore-runtime-session-id: test-123" \
-  -d '{"prompt": "Calculate the first 20 prime numbers and sum them up"}'
+  -d '{"prompt": "Calculate the first 20 prime numbers"}'
+
+# With artifact generation:
+curl -X POST http://localhost:8080/invocations \
+  -H "Content-Type: application/json" \
+  -H "Accept: text/event-stream" \
+  -H "x-amzn-bedrock-agentcore-runtime-session-id: test-123" \
+  -d '{"prompt": "Create a bar chart of fibonacci numbers 1-10 and save it"}'
+
+ls output/  # Check saved artifacts
 ```
 
-## Deploy
+## Test - Interactive Mode
 
 ```bash
-make build-and-push
-make deploy
-make outputs
+npm run start:interactive
+
+> Calculate the first 10 fibonacci numbers
+[agent response...]
+
+> Create a bar chart of those numbers
+--- Artifacts saved to ./output/: fib_chart.png ---
+
+> exit
 ```
+
+## How It Works
+
+This sample uses `BedrockAgentCoreApp` which creates an HTTP server following the AgentCore Runtime protocol. The same code runs locally for development and deploys to AWS without changes.
+
+For deployment, see [runtime examples](../../../runtime/).
 
 ## Code Highlights
 
@@ -40,9 +64,8 @@ const codeInterpreter = new CodeInterpreterTools({ region: 'us-east-1' })
 const agent = new Agent({
   model: new BedrockModel({ modelId: 'global.anthropic.claude-haiku-4-5-20251001-v1:0' }),
   tools: codeInterpreter.tools,
+  systemPrompt: '... save artifacts to output/ ...',
 })
 
-for await (const event of agent.stream(prompt)) {
-  // Handle streaming events
-}
+// Artifacts saved to sandbox output/ are automatically retrieved and saved locally
 ```

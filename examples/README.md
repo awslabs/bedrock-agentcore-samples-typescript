@@ -22,23 +22,4 @@ examples/
     └── terraform/
 ```
 
-## Self-Sufficient Samples
-
-Each sample is self-contained with:
-
-- `src/` — TypeScript source code
-- `package.json` — Dependencies
-- `Dockerfile` — Container build
-- `docker-compose.yaml` — Local development
-- `Makefile` — Build, deploy, delete commands
-- `template.yaml` — CloudFormation template
-- `README.md` — Documentation
-
-## Quick Start
-
-```bash
-cd runtime/hosting-agent/strands
-make dev
-```
-
 See individual sample READMEs for details.

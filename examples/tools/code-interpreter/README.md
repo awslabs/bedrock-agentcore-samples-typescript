@@ -70,56 +70,36 @@ const codeInterpreter = new CodeInterpreterTools({
 ```bash
 cd strands  # or vercel-ai
 npm install
-make dev
+npm start                    # HTTP server on :8080
+npm run start:interactive    # Interactive shell
 ```
 
-### Test (Default Sandbox)
-
-The default Code Interpreter works for computations that don't require network access:
+### Test
 
 ```bash
 curl -X POST http://localhost:8080/invocations \
   -H "Content-Type: application/json" \
   -H "Accept: text/event-stream" \
   -H "x-amzn-bedrock-agentcore-runtime-session-id: test-123" \
-  -d '{"prompt": "Calculate the first 20 prime numbers and sum them up"}'
+  -d '{"prompt": "Calculate the first 20 prime numbers and create a bar chart"}'
 ```
 
-### Test (With Internet Access)
+## Artifact Retrieval
 
-If you've created a Code Interpreter with `PUBLIC` network mode, try prompts that fetch external data:
-
-```bash
-curl -X POST http://localhost:8080/invocations \
-  -H "Content-Type: application/json" \
-  -H "Accept: text/event-stream" \
-  -H "x-amzn-bedrock-agentcore-runtime-session-id: test-123" \
-  -d '{"prompt": "Download the California Housing dataset from https://raw.githubusercontent.com/ageron/handson-ml2/master/datasets/housing/housing.csv and tell me the average median_house_value grouped by ocean_proximity. Create a lightweight visualisation and store as a .png"}'
-```
-
-## Retrieving Artifacts
-
-When agents create files in the sandbox (visualizations, reports, processed data), you have several options for retrieving them:
-
-**1. Discovery**
-
-Use the `listFiles` API or have the agent run `ls` to discover created files:
+These samples automatically retrieve artifacts after each request. The agent is instructed to save outputs to `output/` in the sandbox, and the sample code downloads them locally:
 
 ```typescript
+// After agent completes, retrieve artifacts from sandbox
 const client = codeInterpreter.getClient()
-const files = await client.executeCommand({ command: 'ls -la output/' })
+const listing = await client.executeCommand({ command: 'ls -1 output/' })
+
+for (const file of listing.split('\n').filter(Boolean)) {
+  const content = await client.readFiles({ paths: [`output/${file}`] })
+  // Binary files (images, PDFs) are returned as base64
+  const buffer = Buffer.from(JSON.parse(content).blob, 'base64')
+  fs.writeFileSync(`./output/${file}`, buffer)
+}
 ```
 
-**2. Direct Retrieval**
-
-Use the `readFiles` API to retrieve file contents. Binary files (images, PDFs) are returned as base64:
-
-```typescript
-const content = await client.readFiles({ paths: ['output/chart.png'] })
-// Returns base64-encoded content for binary files
-```
-
-**3. S3 Upload**
-
-Have the agent upload artifacts directly to S3. Requires a custom Code Interpreter with an execution role that has S3 write permissions
+Generated files are saved to `./output/` in your local directory
 
