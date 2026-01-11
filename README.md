@@ -10,13 +10,15 @@ Amazon Bedrock AgentCore is a fully managed service for deploying and running AI
 - **Identity** — Secure credential management for both accessing agents and agents accessing external services
 - **Memory** — Persistent conversation and context storage
 - **Gateway** — Unified MCP layer for agents accessing REST APIs, Lambda functions, and more
-- **Tools** — Built-in Code Interpreter and Browser Tool capabilities
-
-AgentCore provides auto-scaling, load balancing, logging, and security for agents at scale.
+- **Tools** — Built-in Code Interpreter and Browser capabilities
 
 ## The TypeScript SDK
 
-The `bedrock-agentcore` SDK provides the building blocks for TypeScript agents:
+The `bedrock-agentcore` SDK provides the building blocks for TypeScript agents.
+
+### Runtime
+
+`BedrockAgentCoreApp` wraps any agent framework in an HTTP server that follows the AgentCore Runtime protocol—handling request parsing, streaming responses, and session management for seamless deployment:
 
 ```typescript
 import { BedrockAgentCoreApp } from 'bedrock-agentcore/runtime'
@@ -24,41 +26,53 @@ import { BedrockAgentCoreApp } from 'bedrock-agentcore/runtime'
 const app = new BedrockAgentCoreApp({
   invocationHandler: {
     process: async function* (request, context) {
-      // Your agent logic here
       yield { event: 'message', data: { text: 'Hello!' } }
     },
   },
 })
 
-app.run()
+app.run() // Starts HTTP server on :8080
 ```
 
-The SDK wraps your agent in a container-ready HTTP server, handling request parsing, streaming responses, and session management.
-
-## Quick Start
-
-### 1. Create Your Agent
+With a full agent framework:
 
 ```typescript
-import { Agent, BedrockModel } from '@strands-agents/sdk'
+import { Agent, BedrockModel, tool } from '@strands-agents/sdk'
 import { BedrockAgentCoreApp } from 'bedrock-agentcore/runtime'
 import { z } from 'zod'
+
+const calculator = tool({
+  name: 'calculator',
+  description: 'Performs basic arithmetic',
+  inputSchema: z.object({
+    operation: z.enum(['add', 'subtract', 'multiply', 'divide']),
+    a: z.number(),
+    b: z.number(),
+  }),
+  callback: ({ operation, a, b }) => {
+    switch (operation) {
+      case 'add': return a + b
+      case 'subtract': return a - b
+      case 'multiply': return a * b
+      case 'divide': return a / b
+    }
+  },
+})
 
 const agent = new Agent({
   model: new BedrockModel({
     modelId: 'global.amazon.nova-2-lite-v1:0',
     region: 'us-east-1',
   }),
+  tools: [calculator],
 })
-
-const requestSchema = z.object({ prompt: z.string() })
 
 const app = new BedrockAgentCoreApp({
   invocationHandler: {
-    requestSchema,
+    requestSchema: z.object({ prompt: z.string() }),
     process: async function* (request, context) {
       for await (const event of agent.stream(request.prompt)) {
-        if (event.delta?.type === 'textDelta') {
+        if (event.type === 'modelContentBlockDeltaEvent' && event.delta?.type === 'textDelta') {
           yield { event: 'message', data: { text: event.delta.text } }
         }
       }
@@ -69,63 +83,84 @@ const app = new BedrockAgentCoreApp({
 app.run()
 ```
 
-### 2. Run Locally
+→ [Runtime examples](./examples/runtime/)
 
-```bash
-cd examples/runtime/hosting-agent/strands
-make dev
+### Tools
+
+Built-in tools for common agent capabilities.
+
+**Code Interpreter** — Execute Python, JavaScript, or shell commands in a secure sandbox:
+
+```typescript
+import { CodeInterpreterTools } from 'bedrock-agentcore/tools/code-interpreter/strands'
+
+const codeInterpreter = new CodeInterpreterTools({ region: 'us-east-1' })
+const tools = codeInterpreter.getTools() // executeCode, fileOperations, executeCommand
+
+const agent = new Agent({
+  model: new BedrockModel({ modelId: 'global.amazon.nova-2-lite-v1:0', region: 'us-east-1' }),
+  tools,
+})
+
+// Agent can now run: "Calculate the standard deviation of [1, 2, 3, 4, 5]"
+// → Executes Python in a secure sandbox, returns the result
 ```
 
-### 3. Test
+→ [Code Interpreter examples](./examples/tools/code-interpreter/)
 
-```bash
-curl -X POST http://localhost:8080/invocations \
-  -H "Content-Type: application/json" \
-  -H "Accept: text/event-stream" \
-  -H "x-amzn-bedrock-agentcore-runtime-session-id: test-123" \
-  -d '{"prompt": "Hello!"}'
+**Browser** — Automate web browsing with a remote browser session:
+
+```typescript
+import { BrowserTools } from 'bedrock-agentcore/tools/browser/strands'
+
+const browserTools = new BrowserTools({ region: 'us-east-1' })
+await browserTools.startSession()
+const tools = browserTools.getTools() // navigate, click, type, getText, screenshot
+
+const agent = new Agent({
+  model: new BedrockModel({ modelId: 'global.amazon.nova-2-lite-v1:0', region: 'us-east-1' }),
+  tools,
+})
+
+// Agent can now: "Go to amazon.com and find the Echo Show"
+// → Navigates, searches, reads results from a real browser
 ```
 
-### 4. Deploy to AWS
-
-```bash
-make build-and-push  # Build container, push to ECR
-make deploy          # Deploy to AgentCore
-make delete          # Clean up (avoid AWS costs)
-```
-
-## Prerequisites
-
-- Node.js 20+
-- Docker
-- AWS CLI configured with credentials
-- Access to Amazon Bedrock and AgentCore
+→ [Browser examples](./examples/tools/browser/)
 
 ## Repository Structure
 
 ```
 ├── examples/
-│   ├── runtime/                    # AgentCore Runtime samples
-│   │   ├── hosting-agent/          # Agent hosting (Strands, Vercel AI)
+│   ├── runtime/                      # AgentCore Runtime samples
+│   │   ├── hosting-agent/            # Agent hosting (Strands, Vercel AI)
 │   │   ├── bidirectional-streaming/  # WebSocket streaming
-│   │   └── async-agent/            # Long-running tasks
-│   ├── identity/                   # AgentCore Identity samples
-│   │   ├── inbound-auth/           # Authenticate callers
-│   │   └── outbound-auth/          # Access external services
-│   ├── tools/                      # AgentCore Tools samples
-│   └── end-to-end/                 # Complete deployment examples
-└── .github/                        # GitHub workflows and templates
+│   │   └── async-agent/              # Long-running tasks
+│   ├── identity/                     # AgentCore Identity samples
+│   │   ├── inbound-auth/             # Authenticate callers
+│   │   └── outbound-auth/            # Access external services
+│   ├── tools/                        # AgentCore Tools samples
+│   │   ├── code-interpreter/         # Secure code execution
+│   │   └── browser/                  # Web automation
+│   └── end-to-end/                   # Complete deployment examples
+└── .github/                          # GitHub workflows and templates
 ```
 
-## Contributing
+## Prerequisites
 
-We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
+- Node.js 20+
+- AWS CLI configured with credentials
+- Access to Amazon Bedrock and AgentCore
 
 ## Related Resources
 
 - [Amazon Bedrock AgentCore Documentation](https://docs.aws.amazon.com/bedrock-agentcore/)
 - [Strands Agents SDK](https://strandsagents.com/)
 - [Vercel AI SDK](https://ai-sdk.dev)
+
+## Contributing
+
+We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
 
 ## Security
 
