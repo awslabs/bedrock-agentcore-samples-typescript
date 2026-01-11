@@ -98,16 +98,14 @@ make deploy         # Deploy to AgentCore
 ## How It Works
 
 ```
-┌─────────────┐      ┌──────────────────────┐      ┌─────────────┐
-│   Client    │─────▶│  AgentCore Runtime   │─────▶│   Bedrock   │
-│             │◀─────│  (your container)    │◀─────│   Model     │
-└─────────────┘      └──────────────────────┘      └─────────────┘
-                              │
-                              ▼
-                     ┌──────────────┐
-                     │    Tools     │
-                     │ (calculator) │
-                     └──────────────┘
+┌────────┐       ┌───────────────────────────────────┐       ┌─────────┐
+│        │       │    AgentCore Runtime Container    │       │         │
+│ Client │──────▶│                                   │──────▶│ Bedrock │
+│        │◀──────│  BedrockAgentCoreApp              │◀──────│  Model  │
+│        │       │    ├── Agent                      │       │         │
+└────────┘       │    └── Tools (calculator)         │       └─────────┘
+                 │                                   │
+                 └───────────────────────────────────┘
 ```
 
 1. Client sends request to AgentCore Runtime endpoint
