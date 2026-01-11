@@ -1,5 +1,5 @@
 {
-  "name": "browser-grocery-vercel-ai",
+  "name": "browser-vercel-ai",
   "version": "1.0.0",
   "type": "module",
   "scripts": {
@@ -10,6 +10,7 @@
     "@ai-sdk/amazon-bedrock": "^4.0.0",
     "ai": "^6.0.0",
     "bedrock-agentcore": "file:./bedrock-agentcore-0.1.1.tgz",
+    "playwright": "^1.52.0",
     "tsx": "^4.19.0",
     "zod": "^4.0.0"
   },

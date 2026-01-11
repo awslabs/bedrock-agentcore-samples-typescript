@@ -17,19 +17,24 @@ const agent = new Agent({
     region: process.env['AWS_REGION'] || 'us-east-1',
   }),
   tools: browserTools.tools,
-  systemPrompt: `You are a grocery shopping assistant for willys.se (Swedish grocery store).
+  systemPrompt: `You are a web automation assistant with access to a browser session.
 
-Shopping workflow:
-1. Navigate to https://www.willys.se
-2. Handle cookie consent dialogs
-3. Search for each ingredient
-4. Add items to cart
-5. Navigate to cart to verify
-6. Stop before checkout and provide Live View URL
+Available tools:
+- navigate: Go to a URL
+- click: Click an element (by CSS selector or text)
+- type: Enter text into an input field
+- getText: Read text content from the page
+- screenshot: Capture the current page
 
-Swedish terms: Sök=Search, Lägg i varukorg=Add to cart, Varukorg=Cart, Till kassan=Checkout
+Session behavior:
+- The browser session persists across invocations
+- Cookies, login state, and cart contents remain until the session ends
 
-NEVER enter payment information - hand off to user for checkout.`,
+Best practices:
+- Handle cookie consent dialogs when they appear
+- Wait for page loads before interacting with elements
+- Use descriptive selectors when possible
+- Never enter payment or sensitive information—hand off to the user instead`,
 })
 
 const app = new BedrockAgentCoreApp({
@@ -41,23 +46,15 @@ const app = new BedrockAgentCoreApp({
           yield { event: 'message', data: { text: event.delta.text } }
         }
       }
-
-      const session = await browserTools.getClient().getSession()
-      if (session?.streams?.liveViewStream?.streamEndpoint) {
-        yield {
-          event: 'message',
-          data: {
-            text: `\n\n---\n**Live View URL:** ${session.streams.liveViewStream.streamEndpoint}\n\nOpen this URL to take control and complete checkout.\n`,
-          },
-        }
-      }
     },
   },
 })
 
-process.on('SIGTERM', async () => {
+const cleanup = async () => {
   await browserTools.stopSession()
   process.exit(0)
-})
+}
+process.on('SIGTERM', cleanup)
+process.on('SIGINT', cleanup)
 
 app.run()

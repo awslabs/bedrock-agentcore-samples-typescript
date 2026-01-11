@@ -1,6 +1,8 @@
-# Browser Grocery Shopping - Vercel AI SDK
+# Browser Automation - Vercel AI SDK
 
-A grocery shopping agent using the Vercel AI SDK with AgentCore Browser tool.
+A web automation agent using the Vercel AI SDK with AgentCore Browser tool.
+
+See [parent README](../README.md) for browser capabilities.
 
 ## Quick Start
 
@@ -19,7 +21,7 @@ curl -X POST http://localhost:8080/invocations \
   -H "Content-Type: application/json" \
   -H "Accept: text/event-stream" \
   -H "x-amzn-bedrock-agentcore-runtime-session-id: test-123" \
-  -d '{"prompt": "Add milk, eggs, and butter to my willys.se cart"}'
+  -d '{"prompt": "Go to amazon.com and search for Echo Show devices. Open the product page of one, and save a screenshot."}'
 ```
 
 ## Test - Interactive Mode
@@ -27,12 +29,11 @@ curl -X POST http://localhost:8080/invocations \
 ```bash
 npm run start:interactive
 
-> Add milk and eggs to my willys.se cart
-[agent navigates and adds items...]
-Live View URL: https://...
+> Go to amazon.com and search for Echo Show
+[agent navigates and searches...]
 
-> Now add butter
-[agent adds butter...]
+> Open the first product and take a screenshot
+[agent clicks product, captures screenshot...]
 
 > exit
 ```
@@ -57,15 +58,4 @@ const agent = new ToolLoopAgent({
   model: bedrock('global.anthropic.claude-haiku-4-5-20251001-v1:0'),
   tools: browserTools.tools,
 })
-
-// Get Live View URL for user handoff
-const session = await browserTools.getClient().getSession()
-const liveViewUrl = session.streams?.liveViewStream?.streamEndpoint
 ```
-
-## Human Handoff
-
-The agent stops before payment and provides a Live View URL so users can:
-1. See the browser session in real-time
-2. Take control to complete checkout
-3. Enter payment details securely
