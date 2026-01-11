@@ -35,20 +35,6 @@ app.run()
 
 The SDK wraps your agent in a container-ready HTTP server, handling request parsing, streaming responses, and session management.
 
-## Examples
-
-| Category       | Example                                                                | What You'll Learn                               |
-| -------------- | ---------------------------------------------------------------------- | ----------------------------------------------- |
-| **Runtime**    | [hosting-agent](./examples/runtime/hosting-agent/)                     | Deploy an AI agent with tool use                |
-| **Runtime**    | [bidirectional-streaming](./examples/runtime/bidirectional-streaming/) | WebSocket bidirectional communication           |
-| **Runtime**    | [async-agent](./examples/runtime/async-agent/)                         | Long-running tasks with streaming results       |
-| **Identity**   | [inbound-auth](./examples/identity/inbound-auth/)                      | Authenticate clients calling your agent         |
-| **Identity**   | [outbound-auth](./examples/identity/outbound-auth/)                    | Agent accessing external services securely      |
-| **Tools**      | [tools](./examples/tools/)                                             | Code Interpreter and Browser Tool (coming soon) |
-| **End-to-End** | [cloudformation](./examples/end-to-end/cloudformation/)                | Complete solution with CloudFormation           |
-| **End-to-End** | [cdk](./examples/end-to-end/cdk/)                                      | Complete solution with AWS CDK                  |
-| **End-to-End** | [terraform](./examples/end-to-end/terraform/)                          | Complete solution with Terraform                |
-
 ## Quick Start
 
 ### 1. Create Your Agent
