@@ -26,6 +26,7 @@ import { BedrockAgentCoreApp } from 'bedrock-agentcore/runtime'
 const app = new BedrockAgentCoreApp({
   invocationHandler: {
     process: async function* (request, context) {
+      // Your agent logic here
       yield { event: 'message', data: { text: 'Hello!' } }
     },
   },
@@ -41,30 +42,16 @@ import { Agent, BedrockModel, tool } from '@strands-agents/sdk'
 import { BedrockAgentCoreApp } from 'bedrock-agentcore/runtime'
 import { z } from 'zod'
 
-const calculator = tool({
-  name: 'calculator',
-  description: 'Performs basic arithmetic',
-  inputSchema: z.object({
-    operation: z.enum(['add', 'subtract', 'multiply', 'divide']),
-    a: z.number(),
-    b: z.number(),
-  }),
-  callback: ({ operation, a, b }) => {
-    switch (operation) {
-      case 'add': return a + b
-      case 'subtract': return a - b
-      case 'multiply': return a * b
-      case 'divide': return a / b
-    }
-  },
+const getWeather = tool({
+  name: 'getWeather',
+  description: 'Gets weather for a city',
+  inputSchema: z.object({ city: z.string() }),
+  callback: ({ city }) => `72°F and sunny in ${city}`,
 })
 
 const agent = new Agent({
-  model: new BedrockModel({
-    modelId: 'global.amazon.nova-2-lite-v1:0',
-    region: 'us-east-1',
-  }),
-  tools: [calculator],
+  model: new BedrockModel({ modelId: 'global.amazon.nova-2-lite-v1:0', region: 'us-east-1' }),
+  tools: [getWeather],
 })
 
 const app = new BedrockAgentCoreApp({
