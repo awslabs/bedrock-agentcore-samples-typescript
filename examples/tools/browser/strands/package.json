@@ -1,0 +1,19 @@
+{
+  "name": "browser-grocery-strands",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "start:interactive": "tsx src/interactive.ts"
+  },
+  "dependencies": {
+    "@strands-agents/sdk": "latest",
+    "bedrock-agentcore": "file:./bedrock-agentcore-0.1.1.tgz",
+    "tsx": "^4.19.0",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.0"
+  }
+}
