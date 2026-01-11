@@ -135,6 +135,7 @@ const ws = new WebSocket(url, { headers })
 ```
 
 `RuntimeClient` handles:
+
 - AWS credential resolution (environment, profile, IAM role)
 - SigV4 request signing
 - Session ID generation

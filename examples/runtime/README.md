@@ -69,6 +69,7 @@ The generator function (`async function*`) enables streaming — each `yield` se
 - **Streaming** via Server-Sent Events (SSE)
 
 This means:
+
 1. **Same code runs locally and on AWS** — No changes needed for deployment
 2. **Any HTTP client works** — curl, fetch, Postman, custom CLIs
 3. **You could use any server framework** — Express, Fastify, etc. — as long as it implements the protocol
@@ -79,10 +80,10 @@ The SDK handles the protocol details so you focus on your agent logic.
 
 AgentCore Runtime supports two authentication methods:
 
-| Method | How It Works |
-|--------|--------------|
+| Method    | How It Works                                                       |
+| --------- | ------------------------------------------------------------------ |
 | **OAuth** | Bearer token in Authorization header - no request signing required |
-| **IAM** | AWS SigV4 request signing using credentials |
+| **IAM**   | AWS SigV4 request signing using credentials                        |
 
 ### OAuth
 
@@ -93,7 +94,7 @@ Add a bearer token to requests. Configure an OIDC provider with AgentCore Identi
 fetch(`${runtimeEndpoint}/invocations`, {
   method: 'POST',
   headers: {
-    'Authorization': `Bearer ${token}`,
+    Authorization: `Bearer ${token}`,
     'Content-Type': 'application/json',
   },
   body: JSON.stringify({ prompt: 'Hello' }),

@@ -1,3 +1,4 @@
+/* global fetch, TextDecoder */
 import * as readline from 'readline'
 
 const SERVER_URL = process.env['SERVER_URL'] || 'http://localhost:8080'
@@ -8,7 +9,7 @@ async function sendPrompt(prompt: string) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Accept': 'text/event-stream',
+      Accept: 'text/event-stream',
       'x-amzn-bedrock-agentcore-runtime-session-id': SESSION_ID,
     },
     body: JSON.stringify({ prompt }),

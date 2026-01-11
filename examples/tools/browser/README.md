@@ -4,20 +4,20 @@ Build AI agents that browse the web using AgentCore's Browser tool.
 
 ## Available Implementations
 
-| Framework | Directory |
-|-----------|-----------|
-| Strands SDK | [strands/](./strands/) |
+| Framework     | Directory                  |
+| ------------- | -------------------------- |
+| Strands SDK   | [strands/](./strands/)     |
 | Vercel AI SDK | [vercel-ai/](./vercel-ai/) |
 
 ## Browser Capabilities
 
-| Tool | Description |
-|------|-------------|
-| `navigate` | Go to a URL |
-| `click` | Click an element by selector or text |
-| `type` | Enter text into an input field |
-| `getText` | Read text content from the page |
-| `screenshot` | Capture the current page |
+| Tool         | Description                          |
+| ------------ | ------------------------------------ |
+| `navigate`   | Go to a URL                          |
+| `click`      | Click an element by selector or text |
+| `type`       | Enter text into an input field       |
+| `getText`    | Read text content from the page      |
+| `screenshot` | Capture the current page             |
 
 **Session persistence:** Browser state (cookies, login, cart) persists within a session. Sessions timeout after inactivity.
 

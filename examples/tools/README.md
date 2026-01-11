@@ -4,27 +4,30 @@ Amazon Bedrock AgentCore provides built-in tools to enhance agent capabilities. 
 
 ## Available Examples
 
-| Tool | Framework | Description |
-|------|-----------|-------------|
-| [Code Interpreter](./code-interpreter/strands/) | Strands SDK | Data analysis agent that executes Python code |
-| [Code Interpreter](./code-interpreter/vercel-ai/) | Vercel AI SDK | Data analysis agent that executes Python code |
-| [Browser](./browser/strands/) | Strands SDK | Grocery shopping agent with browser automation |
-| [Browser](./browser/vercel-ai/) | Vercel AI SDK | Grocery shopping agent with browser automation |
+| Tool                                              | Framework     | Description                                    |
+| ------------------------------------------------- | ------------- | ---------------------------------------------- |
+| [Code Interpreter](./code-interpreter/strands/)   | Strands SDK   | Data analysis agent that executes Python code  |
+| [Code Interpreter](./code-interpreter/vercel-ai/) | Vercel AI SDK | Data analysis agent that executes Python code  |
+| [Browser](./browser/strands/)                     | Strands SDK   | Grocery shopping agent with browser automation |
+| [Browser](./browser/vercel-ai/)                   | Vercel AI SDK | Grocery shopping agent with browser automation |
 
 ## Code Interpreter
 
 The Code Interpreter tool allows agents to execute code in a secure sandbox environment. Use it for:
+
 - Data analysis and visualization
 - File processing
 - Mathematical calculations
 - Running scripts
 
 **Features:**
+
 - Session persistence — variables and files remain available across invocations
 - Artifact retrieval — generated files (charts, reports) are automatically saved locally
 - Pre-installed libraries — pandas, numpy, matplotlib, seaborn, scipy, scikit-learn
 
 **Example prompt:**
+
 ```
 Create a bar chart of fibonacci numbers 1-10 and save it
 ```
@@ -34,16 +37,19 @@ Create a bar chart of fibonacci numbers 1-10 and save it
 ## Browser Tool
 
 The Browser tool enables agents to navigate websites and interact with web pages. Use it for:
+
 - Web scraping and data extraction
 - Form filling and automation
 - E-commerce workflows
 - Research and information gathering
 
 **Features:**
+
 - Live View URL — watch the browser in real-time and take control for human handoff
 - Session persistence — browser state maintained across invocations
 
 **Example prompt:**
+
 ```
 Add milk, eggs, and butter to my willys.se cart
 ```
@@ -66,6 +72,7 @@ npm run start:interactive
 ```
 
 **Server mode test:**
+
 ```bash
 curl -X POST http://localhost:8080/invocations \
   -H "Content-Type: application/json" \

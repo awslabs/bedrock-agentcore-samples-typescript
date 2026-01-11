@@ -4,20 +4,20 @@ Build AI agents that execute code in a secure sandbox using AgentCore's Code Int
 
 ## Available Implementations
 
-| Framework | Directory |
-|-----------|-----------|
-| Strands SDK | [strands/](./strands/) |
+| Framework     | Directory                  |
+| ------------- | -------------------------- |
+| Strands SDK   | [strands/](./strands/)     |
 | Vercel AI SDK | [vercel-ai/](./vercel-ai/) |
 
 ## Sandbox Capabilities
 
 The Code Interpreter provides three tools:
 
-| Tool | Description |
-|------|-------------|
-| `executeCode` | Run Python, JavaScript, or TypeScript |
-| `fileOperations` | Read, write, list, or remove files |
-| `executeCommand` | Execute shell commands |
+| Tool             | Description                           |
+| ---------------- | ------------------------------------- |
+| `executeCode`    | Run Python, JavaScript, or TypeScript |
+| `fileOperations` | Read, write, list, or remove files    |
+| `executeCommand` | Execute shell commands                |
 
 **Pre-installed libraries:** pandas, numpy, matplotlib, seaborn, scipy, scikit-learn
 
@@ -39,6 +39,7 @@ aws bedrock-agentcore create-code-interpreter \
 ```
 
 **Network modes:**
+
 - `SANDBOX` – No internet access, no AWS resource access (default)
 - `PUBLIC` – Can access public internet URLs
 - `VPC` – Access resources within a specific VPC
@@ -61,7 +62,7 @@ Pass this identifier when creating the tools:
 ```typescript
 const codeInterpreter = new CodeInterpreterTools({
   region: '<region>',
-  identifier: '<id>',  // Your codeInterpreterId
+  identifier: '<id>', // Your codeInterpreterId
 })
 ```
 
@@ -102,4 +103,3 @@ for (const file of listing.split('\n').filter(Boolean)) {
 ```
 
 Generated files are saved to `./output/` in your local directory
-
