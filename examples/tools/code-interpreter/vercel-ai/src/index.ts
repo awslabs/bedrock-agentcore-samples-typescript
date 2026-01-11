@@ -86,9 +86,11 @@ const app = new BedrockAgentCoreApp({
   },
 })
 
-process.on('SIGTERM', async () => {
+const cleanup = async () => {
   await codeInterpreter.stopSession()
   process.exit(0)
-})
+}
+process.on('SIGTERM', cleanup)
+process.on('SIGINT', cleanup)
 
 app.run()
