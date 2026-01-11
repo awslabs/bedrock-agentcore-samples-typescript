@@ -1,7 +1,7 @@
 import { RuntimeClient } from 'bedrock-agentcore/runtime'
 import { WebSocket } from 'ws'
 
-const REGION = process.env['AWS_REGION'] || 'us-east-1'
+const REGION = process.env['AWS_REGION'] ?? 'us-east-1'
 const RUNTIME_ARN = process.argv[2]
 
 if (!RUNTIME_ARN) {

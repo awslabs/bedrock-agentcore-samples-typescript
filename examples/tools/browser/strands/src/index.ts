@@ -8,13 +8,13 @@ const requestSchema = z.object({
 })
 
 const browserTools = new BrowserTools({
-  region: process.env['AWS_REGION'] || 'us-east-1',
+  region: process.env['AWS_REGION'] ?? 'us-east-1',
 })
 
 const agent = new Agent({
   model: new BedrockModel({
     modelId: 'global.anthropic.claude-haiku-4-5-20251001-v1:0',
-    region: process.env['AWS_REGION'] || 'us-east-1',
+    region: process.env['AWS_REGION'] ?? 'us-east-1',
   }),
   tools: browserTools.tools,
   systemPrompt: `You are a web automation assistant with access to a browser session.

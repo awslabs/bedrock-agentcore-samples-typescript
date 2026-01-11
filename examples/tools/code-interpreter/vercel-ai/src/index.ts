@@ -11,11 +11,11 @@ const requestSchema = z.object({
 })
 
 const bedrock = createAmazonBedrock({
-  region: process.env['AWS_REGION'] || 'us-east-1',
+  region: process.env['AWS_REGION'] ?? 'us-east-1',
 })
 
 const codeInterpreter = new CodeInterpreterTools({
-  region: process.env['AWS_REGION'] || 'us-east-1',
+  region: process.env['AWS_REGION'] ?? 'us-east-1',
 })
 
 const agent = new ToolLoopAgent({

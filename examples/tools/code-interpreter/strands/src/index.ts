@@ -10,13 +10,13 @@ const requestSchema = z.object({
 })
 
 const codeInterpreter = new CodeInterpreterTools({
-  region: process.env['AWS_REGION'] || 'us-east-1',
+  region: process.env['AWS_REGION'] ?? 'us-east-1',
 })
 
 const agent = new Agent({
   model: new BedrockModel({
     modelId: 'global.anthropic.claude-haiku-4-5-20251001-v1:0',
-    region: process.env['AWS_REGION'] || 'us-east-1',
+    region: process.env['AWS_REGION'] ?? 'us-east-1',
   }),
   tools: codeInterpreter.tools,
   systemPrompt: `You are a data analyst with access to a secure sandbox with three tools:
