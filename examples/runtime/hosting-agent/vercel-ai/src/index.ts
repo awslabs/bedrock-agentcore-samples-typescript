@@ -1,10 +1,12 @@
 import { ToolLoopAgent, tool } from 'ai'
 import { createAmazonBedrock } from '@ai-sdk/amazon-bedrock'
+import { fromNodeProviderChain } from '@aws-sdk/credential-providers'
 import { BedrockAgentCoreApp } from 'bedrock-agentcore/runtime'
 import { z } from 'zod'
 
 const bedrock = createAmazonBedrock({
   region: process.env['AWS_REGION'] ?? 'us-east-1',
+  credentialProvider: fromNodeProviderChain(),
 })
 
 // Request schema
