@@ -92,6 +92,8 @@ make deploy
 
 ## Test Deployed Agent
 
+Invoke using AWS CLI, AWS SDKs, or HTTP requests to the AgentCore endpoint.
+
 Get the Runtime ARN from the stack outputs:
 
 ```bash
