@@ -73,7 +73,9 @@ No AWS credentials required (this is a simple echo server).
 make dev
 ```
 
-## Testing with wscat
+## Test - Local Development
+
+Connect directly with any WebSocket client:
 
 ```bash
 # Install wscat if needed
@@ -99,6 +101,43 @@ Connected
 make build-and-push
 make deploy
 ```
+
+## Test - Deployed Runtime
+
+Deployed runtimes require authenticated WebSocket connections (see [Authentication](../../README.md#authentication)).
+
+### Using the Test Client
+
+```bash
+# Get runtime ARN from deployment
+make outputs
+
+# Run the test client (uses IAM authentication)
+npm run test:deployed -- "<runtime-arn>"
+```
+
+### How It Works
+
+The test client ([src/client.ts](./src/client.ts)) uses `RuntimeClient` to handle SigV4 signing:
+
+```typescript
+import { RuntimeClient } from 'bedrock-agentcore/runtime'
+import { WebSocket } from 'ws'
+
+const client = new RuntimeClient({ region: 'us-east-1' })
+
+const { url, headers } = await client.generateWsConnection({
+  runtimeArn: RUNTIME_ARN,
+  endpointName: 'DEFAULT',
+})
+
+const ws = new WebSocket(url, { headers })
+```
+
+`RuntimeClient` handles:
+- AWS credential resolution (environment, profile, IAM role)
+- SigV4 request signing
+- Session ID generation
 
 ## Key Concepts
 
