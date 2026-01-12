@@ -76,69 +76,63 @@ This means:
 
 The SDK handles the protocol details so you focus on your agent logic.
 
-## Authentication
+## Invoking an Agent
 
-AgentCore Runtime supports two authentication methods:
+Once deployed, you can invoke your agent via HTTP or WebSocket. AgentCore supports two authentication methods:
 
-| Method    | How It Works                                                       |
-| --------- | ------------------------------------------------------------------ |
-| **OAuth** | Bearer token in Authorization header - no request signing required |
-| **IAM**   | AWS SigV4 request signing using credentials                        |
+- **IAM** — AWS SigV4 request signing (used in these samples)
+- **OAuth** — Bearer token in Authorization header
 
-### OAuth
+### HTTP
 
-Add a bearer token to requests. Configure an OIDC provider with AgentCore Identity:
+**With AWS CLI (IAM):**
+
+```bash
+aws bedrock-agentcore invoke-agent-runtime \
+  --agent-runtime-arn "arn:aws:..." \
+  --runtime-session-id "session-123" \
+  --payload '{"prompt": "Hello"}'
+```
+
+**With fetch (OAuth):**
 
 ```typescript
-// HTTP
-fetch(`${runtimeEndpoint}/invocations`, {
+const response = await fetch(`${runtimeEndpoint}/invocations`, {
   method: 'POST',
   headers: {
     Authorization: `Bearer ${token}`,
     'Content-Type': 'application/json',
+    'x-amzn-bedrock-agentcore-runtime-session-id': sessionId,
   },
   body: JSON.stringify({ prompt: 'Hello' }),
 })
-
-// WebSocket
-import { RuntimeClient } from 'bedrock-agentcore/runtime'
-
-const client = new RuntimeClient({ region: 'us-east-1' })
-const { url, headers } = await client.generateWsConnectionOAuth({
-  runtimeArn: 'arn:aws:...',
-  bearerToken: token,
-})
 ```
 
-See [AgentCore Identity documentation](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/identity-getting-started.html) for OIDC provider configuration, or the [identity examples](../identity/) for a working OAuth sample.
+### WebSocket
 
-### IAM
-
-Requests must be SigV4-signed. For HTTP, use AWS CLI or SDKs. For WebSocket, use `RuntimeClient`:
-
-```bash
-# HTTP via AWS CLI
-aws bedrock-agentcore invoke-agent-runtime \
-  --agent-runtime-arn "arn:aws:..." \
-  --payload '{"prompt": "Hello"}'
-```
+Use `RuntimeClient` from the SDK to generate signed connections:
 
 ```typescript
-// WebSocket
 import { RuntimeClient } from 'bedrock-agentcore/runtime'
 import { WebSocket } from 'ws'
 
 const client = new RuntimeClient({ region: 'us-east-1' })
+
+// IAM authentication
 const { url, headers } = await client.generateWsConnection({
   runtimeArn: 'arn:aws:...',
+})
+
+// OAuth authentication
+const { url, headers } = await client.generateWsConnectionOAuth({
+  runtimeArn: 'arn:aws:...',
+  bearerToken: token,
 })
 
 const ws = new WebSocket(url, { headers })
 ```
 
-`RuntimeClient` handles credential resolution and SigV4 signing automatically.
-
-> **Note:** The samples in this repository use IAM authentication because it requires no additional OIDC provider setup.
+For OAuth setup, see the [AgentCore Identity documentation](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/identity-getting-started.html).
 
 ---
 
@@ -146,39 +140,15 @@ const ws = new WebSocket(url, { headers })
 
 ### [hosting-agent](./hosting-agent/)
 
-Host an AI agent that responds to prompts with tool use.
-
-| Framework                               | Description                          | Code                                               |
-| --------------------------------------- | ------------------------------------ | -------------------------------------------------- |
-| [Strands](./hosting-agent/strands/)     | Strands Agents SDK with BedrockModel | [index.ts](./hosting-agent/strands/src/index.ts)   |
-| [Vercel AI](./hosting-agent/vercel-ai/) | Vercel AI SDK with ToolLoopAgent     | [index.ts](./hosting-agent/vercel-ai/src/index.ts) |
-
----
+Deploy an AI agent that responds to prompts with tool use. Implementations for Strands Agents SDK and Vercel AI SDK.
 
 ### [bidirectional-streaming](./bidirectional-streaming/)
 
 Full-duplex WebSocket communication for real-time applications.
 
-| Implementation                          | Description                                | Code                                                    |
-| --------------------------------------- | ------------------------------------------ | ------------------------------------------------------- |
-| [Echo](./bidirectional-streaming/echo/) | Simple WebSocket echo with session context | [index.ts](./bidirectional-streaming/echo/src/index.ts) |
-
-Uses the `websocketHandler` option in `BedrockAgentCoreApp`:
-
-```typescript
-const app = new BedrockAgentCoreApp({
-  invocationHandler: {
-    process: async (request, context) => { ... },      // HTTP
-  },
-  websocketHandler: async (socket, context) => { ... } // WebSocket
-})
-```
-
----
-
 ### [async-agent](./async-agent/)
 
-TODO
+Long-running tasks (coming soon)
 
 ---
 

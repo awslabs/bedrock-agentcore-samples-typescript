@@ -26,18 +26,8 @@ AgentCore Identity handles authentication in both directions:
 
 ### [inbound-auth](./inbound-auth/)
 
-Authenticate clients calling your agent.
-
-| Method           | Description                          |
-| ---------------- | ------------------------------------ |
-| Token validation | Verify JWT/OAuth tokens from callers |
-| API keys         | Validate API keys for agent access   |
+Authenticate clients calling your agent (coming soon).
 
 ### [outbound-auth](./outbound-auth/)
 
-Your agent accessing external services securely.
-
-| Method             | Description                    |
-| ------------------ | ------------------------------ |
-| OAuth credentials  | Access APIs like GitHub, Slack |
-| Secrets management | Retrieve API keys and secrets  |
+Your agent accessing external services securely (coming soon).

@@ -1,15 +1,8 @@
-# Browser Automation Examples
+# Browser
 
 Build AI agents that browse the web using AgentCore's Browser tool.
 
-## Available Implementations
-
-| Framework     | Directory                  |
-| ------------- | -------------------------- |
-| Strands SDK   | [strands/](./strands/)     |
-| Vercel AI SDK | [vercel-ai/](./vercel-ai/) |
-
-## Browser Capabilities
+## Capabilities
 
 | Tool         | Description                          |
 | ------------ | ------------------------------------ |

@@ -1,15 +1,6 @@
-# AgentCore Tools Examples
+# AgentCore Tools
 
-Amazon Bedrock AgentCore provides built-in tools to enhance agent capabilities. These examples demonstrate how to integrate AgentCore tools with popular AI frameworks.
-
-## Available Examples
-
-| Tool                                              | Framework     | Description                                    |
-| ------------------------------------------------- | ------------- | ---------------------------------------------- |
-| [Code Interpreter](./code-interpreter/strands/)   | Strands SDK   | Data analysis agent that executes Python code  |
-| [Code Interpreter](./code-interpreter/vercel-ai/) | Vercel AI SDK | Data analysis agent that executes Python code  |
-| [Browser](./browser/strands/)                     | Strands SDK   | Grocery shopping agent with browser automation |
-| [Browser](./browser/vercel-ai/)                   | Vercel AI SDK | Grocery shopping agent with browser automation |
+Amazon Bedrock AgentCore provides built-in tools to extend agent capabilities.
 
 ## Code Interpreter
 

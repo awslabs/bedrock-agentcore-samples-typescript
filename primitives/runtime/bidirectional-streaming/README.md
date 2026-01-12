@@ -1,12 +1,6 @@
-# Bidirectional Streaming Examples
+# Bidirectional Streaming
 
 Real-time, full-duplex communication using WebSocket connections.
-
-## Available Examples
-
-| Example          | Description                                        |
-| ---------------- | -------------------------------------------------- |
-| [echo/](./echo/) | Simple echo server demonstrating WebSocket handler |
 
 ## Testing Local vs Deployed
 

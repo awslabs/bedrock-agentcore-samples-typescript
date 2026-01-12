@@ -104,7 +104,7 @@ make deploy
 
 ## Test - Deployed Runtime
 
-Deployed runtimes require authenticated WebSocket connections (see [Authentication](../../README.md#authentication)).
+Deployed runtimes require authenticated WebSocket connections (see [Invoking an Agent](../../README.md#invoking-an-agent)).
 
 ### Using the Test Client
 

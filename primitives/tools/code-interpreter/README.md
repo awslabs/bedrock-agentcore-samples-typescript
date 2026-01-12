@@ -1,13 +1,6 @@
-# Code Interpreter Examples
+# Code Interpreter
 
 Build AI agents that execute code in a secure sandbox using AgentCore's Code Interpreter.
-
-## Available Implementations
-
-| Framework     | Directory                  |
-| ------------- | -------------------------- |
-| Strands SDK   | [strands/](./strands/)     |
-| Vercel AI SDK | [vercel-ai/](./vercel-ai/) |
 
 ## Sandbox Capabilities
 
