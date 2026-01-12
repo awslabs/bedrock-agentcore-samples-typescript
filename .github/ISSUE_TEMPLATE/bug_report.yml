@@ -13,7 +13,7 @@ body:
     attributes:
       label: Which example?
       description: Path to the example file
-      placeholder: examples/runtime/hosting-agent/strands
+      placeholder: primitives/runtime/hosting-agent/strands
     validations:
       required: true
 

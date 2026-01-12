@@ -70,7 +70,7 @@ const app = new BedrockAgentCoreApp({
 app.run()
 ```
 
-→ [Runtime examples](./examples/runtime/)
+→ [Runtime examples](./primitives/runtime/)
 
 ### Tools
 
@@ -93,7 +93,7 @@ const agent = new Agent({
 // → Executes Python in a secure sandbox, returns the result
 ```
 
-→ [Code Interpreter examples](./examples/tools/code-interpreter/)
+→ [Code Interpreter examples](./primitives/tools/code-interpreter/)
 
 **Browser** — Automate web browsing with a remote browser session:
 
@@ -113,12 +113,12 @@ const agent = new Agent({
 // → Navigates, searches, reads results from a real browser
 ```
 
-→ [Browser examples](./examples/tools/browser/)
+→ [Browser examples](./primitives/tools/browser/)
 
 ## Repository Structure
 
 ```
-├── examples/
+├── primitives/
 │   ├── runtime/                      # AgentCore Runtime samples
 │   │   ├── hosting-agent/            # Agent hosting (Strands, Vercel AI)
 │   │   ├── bidirectional-streaming/  # WebSocket streaming
@@ -126,10 +126,12 @@ const agent = new Agent({
 │   ├── identity/                     # AgentCore Identity samples
 │   │   ├── inbound-auth/             # Authenticate callers
 │   │   └── outbound-auth/            # Access external services
-│   ├── tools/                        # AgentCore Tools samples
-│   │   ├── code-interpreter/         # Secure code execution
-│   │   └── browser/                  # Web automation
-│   └── end-to-end/                   # Complete deployment examples
+│   └── tools/                        # AgentCore Tools samples
+│       ├── code-interpreter/         # Secure code execution
+│       └── browser/                  # Web automation
+├── use-cases/
+│   ├── customer-support-agent/       # Complete support chatbot
+│   └── data-analyzer/                # Data analysis agent
 └── .github/                          # GitHub workflows and templates
 ```
 

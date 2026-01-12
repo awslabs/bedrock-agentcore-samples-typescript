@@ -18,7 +18,7 @@ Use [GitHub Issues](../../issues) to report bugs or suggest features. Check exis
 Each example should be **self-sufficient**:
 
 ```
-examples/runtime/your-example/
+primitives/runtime/your-example/
 ├── src/index.ts        # Entry point using BedrockAgentCoreApp
 ├── package.json        # Dependencies
 ├── tsconfig.json       # TypeScript config
