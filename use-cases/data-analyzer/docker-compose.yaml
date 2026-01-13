@@ -1,0 +1,12 @@
+services:
+  app:
+    build: .
+    ports:
+      - '8080:8080'
+    env_file:
+      - .env
+    environment:
+      # AWS credentials from shell (supports SSO, temp credentials)
+      - AWS_ACCESS_KEY_ID
+      - AWS_SECRET_ACCESS_KEY
+      - AWS_SESSION_TOKEN
