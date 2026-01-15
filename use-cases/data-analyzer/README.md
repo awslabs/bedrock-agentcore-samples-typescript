@@ -1,33 +1,44 @@
-# Data Analyzer Agent
+# Data Analyzer
 
-A data analysis agent with Code Interpreter (internet-enabled), S3 artifact storage, Cognito authentication, and a React frontend.
+A data analysis agent that executes code in a secure sandbox using AgentCore Code Interpreter. Includes a React frontend with file upload, streaming responses, and Cognito authentication.
 
-## What This Demonstrates
+## Features
 
-- **Code Interpreter with internet** — Fetch data from URLs and APIs, run Python/JS code
-- **Artifact storage** — Generated files uploaded to S3 with session-based prefixes
-- **Cognito authentication** — OAuth2 login for the deployed AgentCore Runtime
-- **React frontend** — Chat interface with environment toggle (local vs deployed)
-- **CDK deployment** — Single command deploys all AWS resources
+- **Code Interpreter** — Execute code in a secure sandbox with internet access
+- **File Upload** — Upload CSV, Excel, JSON, or TXT files for analysis
+- **Artifact Storage** — Generated charts and files uploaded to S3
+- **Streaming** — Real-time streaming of agent responses and tool execution
+- **Authentication** — Cognito OAuth2 for deployed endpoint, no auth for local development
 
-## What Gets Created
+## Architecture
+
+```
+┌─────────────┐     ┌─────────────────┐     ┌──────────────────┐
+│   React     │────▶│ AgentCore       │────▶│ Code Interpreter │
+│   Frontend  │◀────│ Runtime         │◀────│    (sandbox)     │
+└─────────────┘     └─────────────────┘     └──────────────────┘
+       │                    │
+       │                    ▼
+       │            ┌─────────────┐
+       └───────────▶│ S3 Bucket   │
+         (presigned │ (artifacts) │
+          URLs)     └─────────────┘
+```
 
 The CDK stack deploys:
-
-- **AgentCore Runtime** — Hosts the agent container with JWT authentication
-- **Code Interpreter** — Sandboxed Python/JS execution with internet access
+- **AgentCore Runtime** — Hosts the agent with JWT authentication
+- **Code Interpreter** — Sandboxed execution with internet access (PUBLIC network mode)
 - **S3 Bucket** — Stores generated artifacts (charts, reports, etc.)
-- **Cognito User Pool** — OAuth2 authentication with Managed Login v2 UI
-- **Test User** — Pre-created user (user@example.com / password)
+- **Cognito User Pool** — OAuth2 with Managed Login UI and test user
 
 ## Prerequisites
 
 - Node.js 20+
-- AWS CLI configured
+- AWS CLI configured with appropriate permissions
 - AWS CDK CLI: `npm install -g aws-cdk`
-- Docker
+- Docker (for local development)
 
-## Quick Start
+## Deploy
 
 ```bash
 npm install
@@ -35,9 +46,9 @@ npm run bootstrap   # First time only
 npm run deploy
 ```
 
-After deployment, note the CDK outputs — you'll need them for the `.env` files.
+Note the CDK outputs — you'll need them for the `.env` files.
 
-## Frontend
+## Frontend Setup
 
 ```bash
 cd frontend
@@ -46,13 +57,14 @@ cp .env.example .env
 ```
 
 Fill `frontend/.env` with CDK outputs:
-- `VITE_COGNITO_DOMAIN` ← CognitoDomain output
-- `VITE_CLIENT_ID` ← WebClientId output
-- `VITE_AWS_REGION` ← Your AWS region
-- `VITE_RUNTIME_ARN` ← RuntimeArn output
+```
+VITE_COGNITO_DOMAIN=<CognitoDomain output>
+VITE_CLIENT_ID=<WebClientId output>
+VITE_AWS_REGION=<your region, e.g., us-east-1>
+VITE_RUNTIME_ARN=<RuntimeArn output>
+```
 
 Start the frontend:
-
 ```bash
 npm run dev
 ```
@@ -61,34 +73,26 @@ Open http://localhost:3000 and login with:
 - **Email:** user@example.com
 - **Password:** password
 
-Use the dropdown to switch between:
-- **Local** — Sends requests to `localhost:8080` (no auth)
-- **Deployed** — Sends requests to AgentCore Runtime (with OAuth token)
+## Local Development
 
-## Local Backend Development
+For backend development without deploying:
 
 ```bash
 cp .env.example .env
 ```
 
-Fill `.env` with CDK outputs:
-- `ARTIFACT_BUCKET` ← BucketName output
-- `CODE_INTERPRETER_ID` ← CodeInterpreterId output
+Fill `.env`:
+```
+ARTIFACT_BUCKET=<BucketName output>
+CODE_INTERPRETER_ID=<CodeInterpreterId output>
+```
 
-Run locally:
-
+Run:
 ```bash
 npm run dev
 ```
 
-Test with curl:
-
-```bash
-curl -X POST http://localhost:8080/invocations \
-  -H "Content-Type: application/json" \
-  -H "x-amzn-bedrock-agentcore-runtime-session-id: test-123" \
-  -d '{"prompt": "Create a chart showing sales data for 5 products"}'
-```
+The frontend can switch between local (`localhost:8080`) and deployed endpoints using the dropdown.
 
 ## Cleanup
 
@@ -96,13 +100,16 @@ curl -X POST http://localhost:8080/invocations \
 npm run destroy
 ```
 
-## Cost
+## Pricing
 
-This sample incurs AWS charges for:
-- **AgentCore Runtime** — Pay per invocation and compute time
-- **Code Interpreter** — Pay per session and execution time
-- **Bedrock model calls** — Pay per input/output tokens (Claude Haiku)
-- **S3 storage** — Minimal cost for artifact storage
-- **Cognito** — Free tier covers 50,000 MAUs
+This sample uses the following AWS services:
 
-For development/testing, costs are typically a few dollars per day. Delete resources with `npm run destroy` when not in use.
+| Service | Pricing |
+|---------|---------|
+| **AgentCore Runtime** | vCPU-hour + GB-hour (billed per second) — [AgentCore Pricing](https://aws.amazon.com/bedrock/agentcore/pricing/) |
+| **Code Interpreter** | vCPU-hour + GB-hour (billed per second) — [AgentCore Pricing](https://aws.amazon.com/bedrock/agentcore/pricing/) |
+| **Bedrock (Claude)** | Per input/output token — [Bedrock Pricing](https://aws.amazon.com/bedrock/pricing/) |
+| **S3** | Storage and requests — [S3 Pricing](https://aws.amazon.com/s3/pricing/) |
+| **Cognito** | Monthly active users — [Cognito Pricing](https://aws.amazon.com/cognito/pricing/) |
+
+AgentCore Runtime and Code Interpreter only incur costs when actively processing requests. For development and testing, expect costs below $1/day. Delete resources with `npm run destroy` when no longer needed.
