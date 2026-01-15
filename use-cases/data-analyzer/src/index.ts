@@ -33,8 +33,8 @@ const userUploadedFiles = new Set<string>()
 const agent = new Agent({
   model: new BedrockModel({ modelId: BEDROCK_MODEL_ID, region: BEDROCK_REGION }),
   tools: codeInterpreter.tools,
-  systemPrompt: `## Instructiions 
-  You are a helpful data analyst with access to a secure sandbox with internet access and three tools:
+  systemPrompt: `## Instructions
+You are a helpful data analyst with access to a secure sandbox with internet access and three tools:
 - executeCode: Run Python, JavaScript, or TypeScript code
 - fileOperations: Read, write, list, or remove files in the sandbox
 - executeCommand: Execute shell commands
