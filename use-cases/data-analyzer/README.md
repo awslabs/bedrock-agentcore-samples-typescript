@@ -73,6 +73,8 @@ Open http://localhost:3000 and login with:
 - **Email:** user@example.com
 - **Password:** password
 
+To test, try uploading `data/sample_sales_data.csv` and ask the agent to show sales per region per category.
+
 ## Local Development
 
 For backend development without deploying:
