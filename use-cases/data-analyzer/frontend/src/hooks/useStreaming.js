@@ -9,7 +9,7 @@ export default function useStreaming() {
     try {
       const headers = {
         'Content-Type': 'application/json',
-        'Accept': 'text/event-stream'
+        Accept: 'text/event-stream',
       }
 
       if (getValidAccessToken) {
@@ -29,7 +29,7 @@ export default function useStreaming() {
       let response = await fetch(endpoint, {
         method: 'POST',
         headers,
-        body: JSON.stringify(body)
+        body: JSON.stringify(body),
       })
 
       if (response.status === 401 && getValidAccessToken) {
@@ -39,7 +39,7 @@ export default function useStreaming() {
         response = await fetch(endpoint, {
           method: 'POST',
           headers,
-          body: JSON.stringify(body)
+          body: JSON.stringify(body),
         })
       }
 
@@ -81,7 +81,12 @@ export default function useStreaming() {
                   onEvent({ type: 'tool', name: data.name, input: data.input, toolUseId: data.toolUseId })
                   break
                 case 'tool_result':
-                  onEvent({ type: 'tool_result', toolUseId: data.toolUseId, status: data.status, content: data.content })
+                  onEvent({
+                    type: 'tool_result',
+                    toolUseId: data.toolUseId,
+                    status: data.status,
+                    content: data.content,
+                  })
                   break
                 case 'data':
                   onEvent({ type: 'data', dataType: data.type, url: data.url, mimeType: data.mimeType })

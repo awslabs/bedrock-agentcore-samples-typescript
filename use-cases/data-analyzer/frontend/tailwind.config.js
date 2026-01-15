@@ -1,8 +1,5 @@
 export default {
-  content: [
-    "./index.html",
-    "./src/**/*.{js,jsx}",
-  ],
+  content: ['./index.html', './src/**/*.{js,jsx}'],
   theme: {
     extend: {
       fontFamily: {
@@ -14,7 +11,7 @@ export default {
         'user-msg': '#10b981',
         'agent-msg': '#f3f4f6',
         'border-light': '#e5e7eb',
-        'primary': '#6366f1',
+        primary: '#6366f1',
         'primary-dark': '#4f46e5',
       },
       animation: {
@@ -29,11 +26,9 @@ export default {
         'fade-in': {
           '0%': { opacity: '0', transform: 'translateY(10px)' },
           '100%': { opacity: '1', transform: 'translateY(0)' },
-        }
-      }
+        },
+      },
     },
   },
-  plugins: [
-    require('@tailwindcss/typography'),
-  ],
+  plugins: [require('@tailwindcss/typography')],
 }

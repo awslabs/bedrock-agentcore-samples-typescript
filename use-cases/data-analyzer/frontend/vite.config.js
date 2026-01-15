@@ -9,11 +9,11 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:8080',
         rewrite: (path) => path.replace(/^\/api/, ''),
-      }
-    }
+      },
+    },
   },
   build: {
     outDir: 'dist',
-    emptyOutDir: true
-  }
+    emptyOutDir: true,
+  },
 })

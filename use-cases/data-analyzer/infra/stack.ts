@@ -122,9 +122,7 @@ export class DataAnalyzerStack extends cdk.Stack {
         new iam.ServicePrincipal('bedrock-agentcore.amazonaws.com'),
         new iam.ServicePrincipal('ecs-tasks.amazonaws.com')
       ),
-      managedPolicies: [
-        iam.ManagedPolicy.fromAwsManagedPolicyName('CloudWatchLogsFullAccess'),
-      ],
+      managedPolicies: [iam.ManagedPolicy.fromAwsManagedPolicyName('CloudWatchLogsFullAccess')],
     })
 
     // Bedrock permissions
@@ -136,17 +134,13 @@ export class DataAnalyzerStack extends cdk.Stack {
     )
 
     // AgentCore permissions (Code Interpreter, etc.)
-    runtimeRole.addManagedPolicy(
-      iam.ManagedPolicy.fromAwsManagedPolicyName('BedrockAgentCoreFullAccess')
-    )
+    runtimeRole.addManagedPolicy(iam.ManagedPolicy.fromAwsManagedPolicyName('BedrockAgentCoreFullAccess'))
 
     // S3 permissions for artifact storage
     artifactBucket.grantReadWrite(runtimeRole)
 
     // ECR permissions - use managed policy for reliable propagation
-    runtimeRole.addManagedPolicy(
-      iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonEC2ContainerRegistryReadOnly')
-    )
+    runtimeRole.addManagedPolicy(iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonEC2ContainerRegistryReadOnly'))
 
     // AgentCore Runtime
     const runtime = new bedrockagentcore.CfnRuntime(this, 'Runtime', {

@@ -26,6 +26,7 @@ A data analysis agent that executes code in a secure sandbox using AgentCore Cod
 ```
 
 The CDK stack deploys:
+
 - **AgentCore Runtime** — Hosts the agent with JWT authentication
 - **Code Interpreter** — Sandboxed execution with internet access (PUBLIC network mode)
 - **S3 Bucket** — Stores generated artifacts (charts, reports, etc.)
@@ -57,6 +58,7 @@ cp .env.example .env
 ```
 
 Fill `frontend/.env` with CDK outputs:
+
 ```
 VITE_COGNITO_DOMAIN=<CognitoDomain output>
 VITE_CLIENT_ID=<WebClientId output>
@@ -65,11 +67,13 @@ VITE_RUNTIME_ARN=<RuntimeArn output>
 ```
 
 Start the frontend:
+
 ```bash
 npm run dev
 ```
 
 Open http://localhost:3000 and login with:
+
 - **Email:** user@example.com
 - **Password:** password
 
@@ -84,12 +88,14 @@ cp .env.example .env
 ```
 
 Fill `.env`:
+
 ```
 ARTIFACT_BUCKET=<BucketName output>
 CODE_INTERPRETER_ID=<CodeInterpreterId output>
 ```
 
 Run:
+
 ```bash
 npm run dev
 ```
@@ -106,12 +112,12 @@ npm run destroy
 
 This sample uses the following AWS services:
 
-| Service | Pricing |
-|---------|---------|
+| Service               | Pricing                                                                                                          |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------- |
 | **AgentCore Runtime** | vCPU-hour + GB-hour (billed per second) — [AgentCore Pricing](https://aws.amazon.com/bedrock/agentcore/pricing/) |
-| **Code Interpreter** | vCPU-hour + GB-hour (billed per second) — [AgentCore Pricing](https://aws.amazon.com/bedrock/agentcore/pricing/) |
-| **Bedrock (Claude)** | Per input/output token — [Bedrock Pricing](https://aws.amazon.com/bedrock/pricing/) |
-| **S3** | Storage and requests — [S3 Pricing](https://aws.amazon.com/s3/pricing/) |
-| **Cognito** | Monthly active users — [Cognito Pricing](https://aws.amazon.com/cognito/pricing/) |
+| **Code Interpreter**  | vCPU-hour + GB-hour (billed per second) — [AgentCore Pricing](https://aws.amazon.com/bedrock/agentcore/pricing/) |
+| **Bedrock (Claude)**  | Per input/output token — [Bedrock Pricing](https://aws.amazon.com/bedrock/pricing/)                              |
+| **S3**                | Storage and requests — [S3 Pricing](https://aws.amazon.com/s3/pricing/)                                          |
+| **Cognito**           | Monthly active users — [Cognito Pricing](https://aws.amazon.com/cognito/pricing/)                                |
 
 AgentCore Runtime and Code Interpreter only incur costs when actively processing requests. For development and testing, expect costs below $1/day. Delete resources with `npm run destroy` when no longer needed.

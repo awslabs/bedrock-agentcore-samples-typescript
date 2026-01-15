@@ -2,16 +2,7 @@
   "app": "npx tsx infra/app.ts",
   "watch": {
     "include": ["**"],
-    "exclude": [
-      "README.md",
-      "cdk*.json",
-      "**/*.d.ts",
-      "**/*.js",
-      "tsconfig.json",
-      "node_modules",
-      "dist",
-      "cdk.out"
-    ]
+    "exclude": ["README.md", "cdk*.json", "**/*.d.ts", "**/*.js", "tsconfig.json", "node_modules", "dist", "cdk.out"]
   },
   "context": {
     "@aws-cdk/aws-lambda:recognizeLayerVersion": true,

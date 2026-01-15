@@ -59,8 +59,8 @@ export default function useAuth() {
         body: new URLSearchParams({
           grant_type: 'refresh_token',
           client_id: CLIENT_ID,
-          refresh_token: storedRefreshToken
-        })
+          refresh_token: storedRefreshToken,
+        }),
       })
 
       if (!response.ok) {
@@ -204,8 +204,8 @@ export default function useAuth() {
           grant_type: 'authorization_code',
           client_id: CLIENT_ID,
           code: code,
-          redirect_uri: CALLBACK_URL
-        })
+          redirect_uri: CALLBACK_URL,
+        }),
       })
 
       if (!response.ok) {
@@ -256,6 +256,6 @@ export default function useAuth() {
     isAuthenticated: !!token,
     getValidIdToken,
     getValidAccessToken,
-    getUserId
+    getUserId,
   }
 }
