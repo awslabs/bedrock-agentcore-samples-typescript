@@ -4,12 +4,33 @@
 import eslint from '@eslint/js'
 import tseslint from '@typescript-eslint/eslint-plugin'
 import tsparser from '@typescript-eslint/parser'
+import globals from 'globals'
 
 export default [
   {
-    ignores: ['**/node_modules/**', '**/dist/**', '**/coverage/**'],
+    ignores: ['**/node_modules/**', '**/dist/**', '**/coverage/**', '**/cdk.out/**', '**/*.jsx'],
   },
   eslint.configs.recommended,
+  {
+    files: ['**/frontend/src/**/*.js', '**/frontend/src/**/*.jsx'],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: 'module',
+      globals: globals.browser,
+    },
+    rules: {
+      'no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' },
+      ],
+    },
+  },
+  {
+    files: ['**/*.config.js', '**/postcss.config.js'],
+    languageOptions: {
+      globals: globals.node,
+    },
+  },
   {
     files: ['**/*.ts'],
     languageOptions: {

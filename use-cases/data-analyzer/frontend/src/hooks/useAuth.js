@@ -159,7 +159,7 @@ export default function useAuth() {
             await refreshToken()
             setLoading(false)
             return
-          } catch (err) {
+          } catch (_err) {
             // refreshToken already handles redirect to login
             return
           }
