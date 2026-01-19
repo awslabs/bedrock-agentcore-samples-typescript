@@ -1,0 +1,10 @@
+# Runtime stage - use the built tar
+FROM node:22-slim
+WORKDIR /app
+COPY package.json ./
+COPY --from=builder /build/*.tgz ./
+RUN npm install
+COPY tsconfig.json ./
+COPY src ./src
+EXPOSE 8080
+CMD ["npm", "start"]
