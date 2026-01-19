@@ -60,6 +60,7 @@ export class AgentStack extends cdk.Stack {
         },
       },
     })
+    runtime.node.addDependency(runtimeRole)
 
     new cdk.CfnOutput(this, 'RuntimeArn', {
       description: 'Agent Runtime ARN',

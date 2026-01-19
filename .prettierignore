@@ -7,3 +7,6 @@ coverage/
 
 # Lock files
 package-lock.json
+
+# CDK output
+cdk.out/

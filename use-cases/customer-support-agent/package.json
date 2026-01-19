@@ -3,21 +3,27 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "tsx src/index.ts",
-    "start": "tsx src/index.ts",
-    "cdk": "cdk"
+    "dev": "docker-compose up --build",
+    "start": "tsx watch src/index.ts",
+    "build": "tsc",
+    "cdk": "cdk",
+    "synth": "cdk synth",
+    "deploy": "cdk deploy --require-approval never",
+    "destroy": "cdk destroy --force",
+    "bootstrap": "cdk bootstrap"
   },
   "dependencies": {
     "@strands-agents/sdk": "^0.1.4",
     "bedrock-agentcore": "file:./bedrock-agentcore-0.1.1.tgz",
-    "tsx": "^4.19.0",
     "zod": "^4.0.0"
   },
   "devDependencies": {
     "@aws-sdk/client-bedrock-agentcore": "^3.971.0",
     "@types/node": "^22.0.0",
+    "aws-cdk": "^2.170.0",
     "aws-cdk-lib": "^2.170.0",
     "constructs": "^10.4.0",
+    "tsx": "^4.19.0",
     "typescript": "^5.7.0"
   }
 }
