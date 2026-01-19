@@ -1,0 +1,21 @@
+{
+  "name": "hosting-agent-strands",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "start": "node --require @aws/aws-distro-opentelemetry-node-autoinstrumentation/register dist/index.js",
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@aws/aws-distro-opentelemetry-node-autoinstrumentation": "^0.8.1",
+    "@strands-agents/sdk": "^0.1.0",
+    "bedrock-agentcore": "file:./bedrock-agentcore-0.1.1.tgz",
+    "tsx": "^4.19.0",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.0"
+  }
+}
