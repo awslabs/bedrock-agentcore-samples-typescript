@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Frontend Deploy S3 - Cognito Auth</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/amazon-cognito-identity-js@6.3.7/dist/amazon-cognito-identity.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#475569",
+              "background-light": "#f8fafc",
+              "background-outer": "#e2e8f0",
+              "chat-incoming": "#ffffff",
+              "chat-outgoing": "#475569",
+              charcoal: "#334155",
+            },
+            fontFamily: {
+              display: ["Inter", "sans-serif"],
+            },
+            borderRadius: {
+              DEFAULT: "0.25rem",
+              lg: "0.5rem",
+              xl: "0.75rem",
+              "2xl": "1.25rem",
+              full: "9999px",
+            },
+          },
+        },
+      };
+    </script>
+    <style type="text/tailwindcss">
+      .material-symbols-outlined {
+        font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+      }
+      body {
+        font-family: "Inter", sans-serif;
+      }
+      .no-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+      .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+      .chat-bubble-container {
+        width: 88%;
+        max-width: 440px;
+      }
+      .message-content {
+        white-space: pre-wrap;
+        word-wrap: break-word;
+      }
+    </style>
+    <style>
+      body {
+        min-height: max(884px, 100dvh);
+      }
+      .hidden {
+        display: none !important;
+      }
+    </style>
+  </head>
+  <body class="bg-background-outer text-charcoal font-display min-h-screen">
+    <div class="flex justify-center min-h-screen w-full">
+      <div
+        class="relative w-full max-w-[800px] flex flex-col bg-background-light shadow-2xl min-h-screen"
+      >
+        <!-- Header -->
+        <header
+          class="sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-slate-200"
+        >
+          <div class="flex items-center px-4 h-16 justify-between">
+            <div class="flex items-center w-12">
+              <button
+                id="newSessionBtn"
+                class="flex size-10 items-center justify-center rounded-full text-charcoal hover:bg-slate-100 transition-colors"
+                title="New Session"
+              >
+                <span class="material-symbols-outlined">add</span>
+              </button>
+            </div>
+            <div class="flex flex-col items-center flex-1">
+              <h1
+                class="text-charcoal text-base font-semibold leading-tight tracking-tight"
+                id="headerTitle"
+              >
+                Sign In
+              </h1>
+            </div>
+            <div class="flex w-12 items-center justify-end">
+              <button
+                class="flex size-10 items-center justify-center rounded-full text-charcoal hover:bg-slate-100 transition-colors"
+                id="infoBtn"
+              >
+                <span class="material-symbols-outlined">info</span>
+              </button>
+              <button
+                id="logoutBtn"
+                class="hidden flex size-10 items-center justify-center rounded-full text-charcoal hover:bg-slate-100 transition-colors"
+                title="Sign Out"
+              >
+                <span class="material-symbols-outlined">logout</span>
+              </button>
+            </div>
+          </div>
+        </header>
+
+        <!-- Login Section -->
+        <main id="loginSection" class="flex-1 overflow-y-auto px-4 py-6">
+          <div class="max-w-md mx-auto space-y-4">
+            <!-- Info Box: Cognito Config -->
+            <div
+              class="bg-white rounded-xl p-4 border border-slate-200 shadow-sm"
+            >
+              <h3 class="text-sm font-semibold text-charcoal mb-2">
+                Cognito Configuration
+              </h3>
+              <div class="space-y-1 text-xs text-slate-600">
+                <p>
+                  <strong>Client ID:</strong>
+                  <code
+                    class="bg-slate-100 px-2 py-0.5 rounded text-xs"
+                    id="clientIdDisplay"
+                    >Loading...</code
+                  >
+                </p>
+                <p>
+                  <strong>Discovery URL:</strong>
+                  <code
+                    class="bg-slate-100 px-2 py-0.5 rounded text-xs break-all"
+                    id="discoveryUrlDisplay"
+                    >Loading...</code
+                  >
+                </p>
+              </div>
+            </div>
+
+            <!-- Info Box: Default Credentials -->
+            <div
+              class="bg-white rounded-xl p-4 border border-slate-200 shadow-sm"
+            >
+              <h3 class="text-sm font-semibold text-charcoal mb-2">
+                Default User Credentials
+              </h3>
+              <div class="space-y-1 text-xs text-slate-600">
+                <p>
+                  <strong>Username:</strong>
+                  <code class="bg-slate-100 px-2 py-0.5 rounded">admin</code>
+                </p>
+                <p>
+                  <strong>Email:</strong>
+                  <code class="bg-slate-100 px-2 py-0.5 rounded"
+                    >admin@example.com</code
+                  >
+                </p>
+                <p>
+                  <strong>Password:</strong>
+                  <code class="bg-slate-100 px-2 py-0.5 rounded"
+                    >TempPassword123!</code
+                  >
+                </p>
+              </div>
+            </div>
+
+            <!-- Login Form -->
+            <form id="loginForm" class="space-y-4">
+              <div>
+                <label
+                  for="username"
+                  class="block text-sm font-medium text-charcoal mb-1"
+                  >Username or Email</label
+                >
+                <input
+                  type="text"
+                  id="username"
+                  name="username"
+                  required
+                  placeholder="admin"
+                  class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-[15px] focus:outline-none focus:ring-1 focus:ring-slate-300 text-charcoal placeholder-slate-400 transition-all"
+                />
+              </div>
+
+              <div>
+                <label
+                  for="password"
+                  class="block text-sm font-medium text-charcoal mb-1"
+                  >Password</label
+                >
+                <input
+                  type="password"
+                  id="password"
+                  name="password"
+                  required
+                  placeholder="Enter password"
+                  class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-[15px] focus:outline-none focus:ring-1 focus:ring-slate-300 text-charcoal placeholder-slate-400 transition-all"
+                />
+              </div>
+
+              <button
+                type="submit"
+                id="loginBtn"
+                class="w-full bg-chat-outgoing text-white rounded-xl px-4 py-3 text-[15px] font-semibold hover:opacity-90 transition-opacity shadow-sm disabled:opacity-50"
+              >
+                Sign In<span id="loginLoading" class="hidden">...</span>
+              </button>
+            </form>
+
+            <!-- Message Display -->
+            <div id="message" class="hidden rounded-xl p-3 text-sm"></div>
+          </div>
+        </main>
+
+        <!-- Authenticated Section -->
+        <div
+          id="authenticatedSection"
+          class="hidden flex-1 flex flex-col min-h-0"
+        >
+          <!-- Chat Messages Area -->
+          <main
+            class="flex-1 overflow-y-auto px-4 py-6 pb-8 space-y-6 no-scrollbar"
+            id="chatMessagesContainer"
+          >
+            <div class="flex justify-center">
+              <span
+                class="text-[11px] font-medium text-slate-400 uppercase tracking-widest px-3 py-1"
+                >Today</span
+              >
+            </div>
+            <div class="chat-empty text-center text-slate-400 py-12 text-sm">
+              Start a conversation by typing a message below...
+            </div>
+          </main>
+
+          <!-- Chat Input Footer -->
+          <footer
+            class="sticky bottom-0 p-4 bg-white border-t border-slate-200 pb-8 sm:pb-6 mt-auto"
+          >
+            <div class="flex items-center gap-2 max-w-full mx-auto">
+              <button
+                id="clearChatBtn"
+                class="flex size-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 transition-colors"
+                title="Clear chat"
+              >
+                <span class="material-symbols-outlined">delete</span>
+              </button>
+              <div class="relative flex-1">
+                <input
+                  id="chatInput"
+                  class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-2.5 text-[15px] focus:outline-none focus:ring-1 focus:ring-slate-300 text-charcoal placeholder-slate-400 transition-all"
+                  placeholder="Message..."
+                  type="text"
+                />
+              </div>
+              <button
+                id="sendBtn"
+                class="flex size-10 shrink-0 items-center justify-center rounded-full bg-chat-outgoing text-white hover:opacity-90 transition-opacity shadow-sm disabled:opacity-50"
+              >
+                <span class="material-symbols-outlined text-xl">send</span>
+              </button>
+            </div>
+            <div class="h-4 sm:hidden"></div>
+          </footer>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let awsConfig = null;
+      let userPool = null;
+      let currentUser = null;
+      let chatMessages = [];
+      let sessionId = null;
+      let isSending = false;
+
+      // Load config from .bedrock_agentcore.yaml
+      async function loadConfig() {
+        try {
+          const response = await fetch("/bedrock_agentcore.yaml");
+          if (!response.ok) {
+            throw new Error("Failed to load config");
+          }
+          const yamlText = await response.text();
+          const yamlConfig = jsyaml.load(yamlText);
+          
+          // Extract configuration from YAML
+          const defaultAgent = yamlConfig.default_agent || 'main';
+          const agentConfig = yamlConfig.agents[defaultAgent];
+          
+          if (!agentConfig) {
+            throw new Error(`Agent '${defaultAgent}' not found in configuration`);
+          }
+          
+          // Extract Cognito configuration from authorizer_configuration
+          const authConfig = agentConfig.authorizer_configuration?.customJWTAuthorizer;
+          if (!authConfig) {
+            throw new Error("Custom JWT Authorizer configuration not found");
+          }
+          
+          // Parse discovery URL to extract User Pool ID and region
+          const discoveryUrl = authConfig.discoveryUrl;
+          const urlMatch = discoveryUrl.match(/cognito-idp\.([^.]+)\.amazonaws\.com\/([^/]+)/);
+          
+          if (!urlMatch) {
+            throw new Error("Invalid discovery URL format");
+          }
+          
+          const region = urlMatch[1];
+          const userPoolId = urlMatch[2];
+          const clientId = authConfig.allowedClients[0];
+          
+          // Build awsConfig object compatible with existing code
+          awsConfig = {
+            aws_user_pools_id: userPoolId,
+            aws_user_pools_web_client_id: clientId,
+            aws_cognito_region: region,
+            agentcore_runtime_arn: agentConfig.bedrock_agentcore?.agent_arn
+          };
+          
+          console.log("Loaded configuration from .bedrock_agentcore.yaml:", awsConfig);
+          initializeCognito();
+        } catch (error) {
+          console.error("Error loading config:", error);
+          showMessage(
+            "error",
+            "Failed to load configuration. Please check deployment."
+          );
+        }
+      }
+
+      // Initialize Cognito User Pool
+      function initializeCognito() {
+        const poolData = {
+          UserPoolId: awsConfig.aws_user_pools_id,
+          ClientId: awsConfig.aws_user_pools_web_client_id,
+        };
+        userPool = new AmazonCognitoIdentity.CognitoUserPool(poolData);
+
+        // Display Client ID and Discovery URL
+        const clientId = awsConfig.aws_user_pools_web_client_id;
+        const userPoolId = awsConfig.aws_user_pools_id;
+        const region = awsConfig.aws_cognito_region;
+        const discoveryUrl = `https://cognito-idp.${region}.amazonaws.com/${userPoolId}/.well-known/openid-configuration`;
+
+        document.getElementById("clientIdDisplay").textContent = clientId;
+        document.getElementById("discoveryUrlDisplay").textContent =
+          discoveryUrl;
+
+        // Check if user is already logged in
+        currentUser = userPool.getCurrentUser();
+        if (currentUser) {
+          currentUser.getSession((err, session) => {
+            if (err || !session.isValid()) {
+              showLoginSection();
+            } else {
+              getUserAttributes();
+            }
+          });
+        }
+      }
+
+      // Show message
+      function showMessage(type, text) {
+        const messageEl = document.getElementById("message");
+        messageEl.className = "rounded-xl p-3 text-sm";
+
+        if (type === "success") {
+          messageEl.classList.add(
+            "bg-emerald-50",
+            "border",
+            "border-emerald-200",
+            "text-emerald-800"
+          );
+        } else if (type === "error") {
+          messageEl.classList.add(
+            "bg-red-50",
+            "border",
+            "border-red-200",
+            "text-red-800"
+          );
+        } else if (type === "info") {
+          messageEl.classList.add(
+            "bg-blue-50",
+            "border",
+            "border-blue-200",
+            "text-blue-800"
+          );
+        }
+
+        messageEl.textContent = text;
+        messageEl.classList.remove("hidden");
+      }
+
+      // Login function
+      function authenticateUser(username, password) {
+        const authenticationData = {
+          Username: username,
+          Password: password,
+        };
+        const authenticationDetails =
+          new AmazonCognitoIdentity.AuthenticationDetails(authenticationData);
+
+        const userData = {
+          Username: username,
+          Pool: userPool,
+        };
+        const cognitoUser = new AmazonCognitoIdentity.CognitoUser(userData);
+
+        return new Promise((resolve, reject) => {
+          cognitoUser.authenticateUser(authenticationDetails, {
+            onSuccess: (result) => {
+              currentUser = cognitoUser;
+              resolve(result);
+            },
+            onFailure: (err) => {
+              reject(err);
+            },
+          });
+        });
+      }
+
+      // Get user attributes
+      function getUserAttributes() {
+        if (!currentUser) return;
+
+        currentUser.getSession((err, session) => {
+          if (err || !session.isValid()) {
+            showLoginSection();
+            return;
+          }
+
+          currentUser.getUserAttributes((err, attributes) => {
+            if (err) {
+              console.error("Error getting attributes:", err);
+              showLoginSection();
+              return;
+            }
+
+            const email =
+              attributes.find((attr) => attr.Name === "email")?.Value || "N/A";
+            const username = currentUser.getUsername();
+
+            showAuthenticatedSection(username, email);
+          });
+        });
+      }
+
+      // Show login section
+      function showLoginSection() {
+        document.getElementById("loginSection").classList.remove("hidden");
+        document.getElementById("authenticatedSection").classList.add("hidden");
+        document.getElementById("headerTitle").textContent = "Sign In";
+        document.getElementById("infoBtn").classList.remove("hidden");
+        document.getElementById("logoutBtn").classList.add("hidden");
+      }
+
+      // Show authenticated section
+      function showAuthenticatedSection(username, email) {
+        document.getElementById("loginSection").classList.add("hidden");
+        document
+          .getElementById("authenticatedSection")
+          .classList.remove("hidden");
+        document.getElementById("headerTitle").textContent = "AI Assistant";
+        document.getElementById("infoBtn").classList.add("hidden");
+        document.getElementById("logoutBtn").classList.remove("hidden");
+      }
+
+      // Logout function
+      function logout() {
+        if (currentUser) {
+          currentUser.signOut();
+          currentUser = null;
+          showLoginSection();
+          clearChat();
+        }
+      }
+
+      // Format timestamp
+      function formatTime() {
+        const now = new Date();
+        return now.toLocaleTimeString("en-US", {
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+      }
+
+      // Display a message in the chat
+      function displayMessage(text, isUser) {
+        const messagesContainer = document.getElementById(
+          "chatMessagesContainer"
+        );
+        const emptyMessage = messagesContainer.querySelector(".chat-empty");
+
+        // Remove empty state message if it exists
+        if (emptyMessage) {
+          emptyMessage.remove();
+        }
+
+        const messageDiv = document.createElement("div");
+        messageDiv.className = `flex items-end gap-2 ${
+          isUser ? "justify-end" : ""
+        } group`;
+
+        if (!isUser) {
+          // AI avatar
+          const avatarDiv = document.createElement("div");
+          avatarDiv.className =
+            "size-8 flex items-center justify-center rounded-full bg-slate-200 shrink-0 shadow-sm border border-slate-100 overflow-hidden";
+          avatarDiv.innerHTML =
+            '<span class="material-symbols-outlined text-slate-500 text-xl">smart_toy</span>';
+          messageDiv.appendChild(avatarDiv);
+        }
+
+        const bubbleContainer = document.createElement("div");
+        bubbleContainer.className = `chat-bubble-container flex flex-col gap-1 ${
+          isUser ? "items-end" : "items-start"
+        }`;
+
+        const bubbleWrapper = document.createElement("div");
+        bubbleWrapper.className = "relative w-full";
+
+        const bubbleDiv = document.createElement("div");
+        bubbleDiv.className = `message-content text-[15px] font-normal leading-relaxed w-full rounded-2xl px-4 py-3 ${
+          isUser
+            ? "rounded-br-none bg-chat-outgoing text-white shadow-md"
+            : "rounded-bl-none bg-white text-charcoal shadow-sm border border-slate-100"
+        }`;
+
+        // Remove surrounding quotes if present and handle newlines
+        let processedText = text;
+        // Remove quotes from start and end if they exist
+        if (
+          (processedText.startsWith('"') && processedText.endsWith('"')) ||
+          (processedText.startsWith("'") && processedText.endsWith("'"))
+        ) {
+          processedText = processedText.slice(1, -1);
+        }
+
+        // Replace \n with actual line breaks (textContent already handles HTML safely)
+        const displayText = processedText.replace(/\\n/g, "\n");
+
+        bubbleDiv.textContent = displayText;
+
+        const timeDiv = document.createElement("div");
+        timeDiv.className = `flex items-center gap-1 mt-1 ${
+          isUser ? "justify-end mr-1" : "ml-1"
+        }`;
+
+        const timeSpan = document.createElement("span");
+        timeSpan.className = `text-[10px] ${
+          isUser ? "text-slate-400/80" : "text-slate-400"
+        }`;
+        timeSpan.textContent = formatTime();
+        timeDiv.appendChild(timeSpan);
+
+        if (isUser) {
+          const checkIcon = document.createElement("span");
+          checkIcon.className =
+            "material-symbols-outlined text-[14px] text-slate-400/80";
+          checkIcon.textContent = "done_all";
+          timeDiv.appendChild(checkIcon);
+        }
+
+        bubbleWrapper.appendChild(bubbleDiv);
+        bubbleWrapper.appendChild(timeDiv);
+        bubbleContainer.appendChild(bubbleWrapper);
+        messageDiv.appendChild(bubbleContainer);
+        messagesContainer.appendChild(messageDiv);
+
+        // Scroll the new message into view
+        setTimeout(() => {
+          timeDiv.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        }, 0);
+
+        // Store message
+        chatMessages.push({
+          text: text,
+          isUser: isUser,
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      // Show typing indicator
+      function showTypingIndicator() {
+        const messagesContainer = document.getElementById(
+          "chatMessagesContainer"
+        );
+        const typingDiv = document.createElement("div");
+        typingDiv.className = "flex items-end gap-2 group";
+        typingDiv.id = "typingIndicator";
+
+        const avatarDiv = document.createElement("div");
+        avatarDiv.className =
+          "size-8 flex items-center justify-center rounded-full bg-slate-200 shrink-0 shadow-sm border border-slate-100 overflow-hidden";
+        avatarDiv.innerHTML =
+          '<span class="material-symbols-outlined text-slate-500 text-xl">smart_toy</span>';
+        typingDiv.appendChild(avatarDiv);
+
+        const indicator = document.createElement("div");
+        indicator.className =
+          "flex gap-1 px-4 py-3 bg-white rounded-2xl rounded-bl-none shadow-sm border border-slate-100";
+        indicator.innerHTML = `
+          <span class="w-2 h-2 rounded-full bg-slate-400 animate-bounce" style="animation-delay: 0s;"></span>
+          <span class="w-2 h-2 rounded-full bg-slate-400 animate-bounce" style="animation-delay: 0.2s;"></span>
+          <span class="w-2 h-2 rounded-full bg-slate-400 animate-bounce" style="animation-delay: 0.4s;"></span>
+        `;
+        typingDiv.appendChild(indicator);
+
+        messagesContainer.appendChild(typingDiv);
+
+        // Scroll typing indicator into view
+        setTimeout(() => {
+          typingDiv.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        }, 0);
+      }
+
+      // Remove typing indicator
+      function removeTypingIndicator() {
+        const indicator = document.getElementById("typingIndicator");
+        if (indicator) {
+          indicator.remove();
+        }
+      }
+
+      // Get endpoint URL from ARN
+      function getEndpointFromArn(arn) {
+        if (!arn || typeof arn !== "string") {
+          throw new Error("Invalid ARN");
+        }
+        const parts = arn.split(":");
+        const region = parts[3] || awsConfig.aws_cognito_region;
+        const safeArn = encodeURIComponent(arn);
+        return `https://bedrock-agentcore.${region}.amazonaws.com/runtimes/${safeArn}/invocations?qualifier=DEFAULT`;
+      }
+
+      // Send message to AgentCore
+      async function sendChatMessage(text) {
+        if (!text.trim() || isSending) return;
+
+        isSending = true;
+        const sendBtn = document.getElementById("sendBtn");
+        const chatInput = document.getElementById("chatInput");
+
+        // Disable input
+        sendBtn.disabled = true;
+        chatInput.disabled = true;
+
+        try {
+          // Display user message
+          displayMessage(text, true);
+
+          // Clear input
+          chatInput.value = "";
+
+          // Show typing indicator
+          showTypingIndicator();
+
+          // Get endpoint from ARN
+          if (!awsConfig.agentcore_runtime_arn) {
+            throw new Error("AgentCore Runtime ARN not found in configuration");
+          }
+
+          const endpoint = getEndpointFromArn(awsConfig.agentcore_runtime_arn);
+
+          // Get JWT token from current session
+          const session = await new Promise((resolve, reject) => {
+            currentUser.getSession((err, session) => {
+              if (err) reject(err);
+              else resolve(session);
+            });
+          });
+
+          const jwtToken = session.getAccessToken().getJwtToken();
+
+          // Send POST request with session ID header
+          const response = await fetch(endpoint, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Accept": "text/event-stream",
+              Authorization: `Bearer ${jwtToken}`,
+              "X-Amzn-Bedrock-AgentCore-Runtime-Session-Id": sessionId,
+            },
+            body: JSON.stringify({
+              prompt: text,
+            }),
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+
+          // Check if response is event stream
+          const contentType = response.headers.get("content-type");
+          if (contentType && contentType.includes("text/event-stream")) {
+            // Handle Server-Sent Events (SSE) streaming
+            removeTypingIndicator();
+            
+            let accumulatedText = "";
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = "";
+
+            while (true) {
+              const { done, value } = await reader.read();
+              
+              if (done) break;
+              
+              buffer += decoder.decode(value, { stream: true });
+              const lines = buffer.split("\n");
+              
+              // Keep the last incomplete line in the buffer
+              buffer = lines.pop() || "";
+              
+              for (const line of lines) {
+                if (line.startsWith("data: ")) {
+                  const data = line.slice(6); // Remove "data: " prefix
+                  
+                  try {
+                    const parsed = JSON.parse(data);
+                    if (parsed.text) {
+                      accumulatedText += parsed.text;
+                      
+                      // Update or create the message bubble with accumulated text
+                      updateStreamingMessage(accumulatedText);
+                    }
+                  } catch (e) {
+                    console.error("Error parsing SSE data:", e);
+                  }
+                }
+              }
+            }
+            
+            // Finalize the message
+            if (accumulatedText) {
+              finalizeStreamingMessage();
+            } else {
+              displayMessage("No response received from the assistant.", false);
+            }
+          } else {
+            // Handle regular JSON response
+            const data = await response.json();
+
+            // Remove typing indicator
+            removeTypingIndicator();
+
+            // Display assistant response
+            const assistantMessage =
+              data.response || data.message || data.text || JSON.stringify(data);
+            displayMessage(assistantMessage, false);
+          }
+        } catch (error) {
+          console.error("Error sending message:", error);
+          removeTypingIndicator();
+
+          // Display error message
+          displayMessage(
+            `Error: ${error.message}. Please check your configuration and try again.`,
+            false
+          );
+        } finally {
+          isSending = false;
+          sendBtn.disabled = false;
+          chatInput.disabled = false;
+          chatInput.focus();
+        }
+      }
+
+      // Update streaming message in real-time
+      let streamingMessageElement = null;
+      
+      function updateStreamingMessage(text) {
+        const messagesContainer = document.getElementById("chatMessagesContainer");
+        
+        if (!streamingMessageElement) {
+          // Create new message element for streaming
+          const messageDiv = document.createElement("div");
+          messageDiv.className = "flex items-end gap-2 group";
+          messageDiv.id = "streamingMessage";
+
+          // AI avatar
+          const avatarDiv = document.createElement("div");
+          avatarDiv.className =
+            "size-8 flex items-center justify-center rounded-full bg-slate-200 shrink-0 shadow-sm border border-slate-100 overflow-hidden";
+          avatarDiv.innerHTML =
+            '<span class="material-symbols-outlined text-slate-500 text-xl">smart_toy</span>';
+          messageDiv.appendChild(avatarDiv);
+
+          const bubbleContainer = document.createElement("div");
+          bubbleContainer.className = "chat-bubble-container flex flex-col gap-1 items-start";
+
+          const bubbleWrapper = document.createElement("div");
+          bubbleWrapper.className = "relative w-full";
+
+          const bubbleDiv = document.createElement("div");
+          bubbleDiv.className =
+            "message-content text-[15px] font-normal leading-relaxed w-full rounded-2xl px-4 py-3 rounded-bl-none bg-white text-charcoal shadow-sm border border-slate-100";
+          bubbleDiv.id = "streamingBubble";
+
+          bubbleWrapper.appendChild(bubbleDiv);
+          bubbleContainer.appendChild(bubbleWrapper);
+          messageDiv.appendChild(bubbleContainer);
+          messagesContainer.appendChild(messageDiv);
+
+          streamingMessageElement = bubbleDiv;
+        }
+
+        // Update the text content
+        streamingMessageElement.textContent = text;
+
+        // Scroll streaming message into view
+        setTimeout(() => {
+          streamingMessageElement.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        }, 0);
+      }
+
+      function finalizeStreamingMessage() {
+        if (streamingMessageElement) {
+          const text = streamingMessageElement.textContent;
+          const messageDiv = document.getElementById("streamingMessage");
+          
+          // Add timestamp
+          const bubbleContainer = messageDiv.querySelector(".chat-bubble-container");
+          const timeDiv = document.createElement("div");
+          timeDiv.className = "flex items-center gap-1 mt-1 ml-1";
+
+          const timeSpan = document.createElement("span");
+          timeSpan.className = "text-[10px] text-slate-400";
+          timeSpan.textContent = formatTime();
+          timeDiv.appendChild(timeSpan);
+
+          bubbleContainer.appendChild(timeDiv);
+          
+          // Remove streaming ID
+          messageDiv.removeAttribute("id");
+          streamingMessageElement.removeAttribute("id");
+          
+          // Store message
+          chatMessages.push({
+            text: text,
+            isUser: false,
+            timestamp: new Date().toISOString(),
+          });
+          
+          // Reset streaming element
+          streamingMessageElement = null;
+        }
+      }
+
+      // Clear chat
+      function clearChat() {
+        const messagesContainer = document.getElementById(
+          "chatMessagesContainer"
+        );
+        messagesContainer.innerHTML = `
+          <div class="flex justify-center">
+            <span class="text-[11px] font-medium text-slate-400 uppercase tracking-widest px-3 py-1">Today</span>
+          </div>
+          <div class="chat-empty text-center text-slate-400 py-12 text-sm">
+            Start a conversation by typing a message below...
+          </div>
+        `;
+        chatMessages = [];
+      }
+
+      // Function to generate a new session ID
+      function generateSessionId() {
+        const randomPart = Array.from({ length: 30 }, () =>
+          Math.random().toString().charAt(2)
+        ).join('');
+        sessionId = "session-" + Date.now() + "-" + randomPart;
+        console.log("New chat session ID:", sessionId);
+
+        return sessionId;
+      }
+
+      // Initialize session ID
+      generateSessionId();
+
+      // Event Listeners
+      document
+        .getElementById("loginForm")
+        .addEventListener("submit", async function (e) {
+          e.preventDefault();
+
+          const username = document.getElementById("username").value;
+          const password = document.getElementById("password").value;
+          const loginBtn = document.getElementById("loginBtn");
+          const loadingSpan = document.getElementById("loginLoading");
+
+          loginBtn.disabled = true;
+          loadingSpan.classList.remove("hidden");
+          showMessage("info", "Authenticating...");
+
+          try {
+            const result = await authenticateUser(username, password);
+            console.log("Authentication successful:", result);
+            showMessage("success", "Authentication successful!");
+
+            setTimeout(() => {
+              getUserAttributes();
+            }, 1000);
+          } catch (error) {
+            console.error("Authentication error:", error);
+            let errorMessage = "Authentication failed. ";
+
+            if (error.code === "UserNotFoundException") {
+              errorMessage += "User does not exist.";
+            } else if (error.code === "NotAuthorizedException") {
+              errorMessage += "Incorrect username or password.";
+            } else if (error.code === "UserNotConfirmedException") {
+              errorMessage += "User account is not confirmed.";
+            } else {
+              errorMessage += error.message || "Please try again.";
+            }
+
+            showMessage("error", errorMessage);
+          } finally {
+            loginBtn.disabled = false;
+            loadingSpan.classList.add("hidden");
+          }
+        });
+
+      document.getElementById("logoutBtn").addEventListener("click", logout);
+
+      document.getElementById("sendBtn").addEventListener("click", function () {
+        const chatInput = document.getElementById("chatInput");
+        sendChatMessage(chatInput.value);
+      });
+
+      document
+        .getElementById("chatInput")
+        .addEventListener("keypress", function (e) {
+          if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            sendChatMessage(this.value);
+          }
+        });
+
+      document
+        .getElementById("clearChatBtn")
+        .addEventListener("click", function () {
+          if (confirm("Are you sure you want to clear the chat history?")) {
+            clearChat();
+          }
+        });
+
+      document
+        .getElementById("newSessionBtn")
+        .addEventListener("click", function () {
+          if (
+            confirm("Start a new session? This will clear the current chat.")
+          ) {
+            generateSessionId();
+            clearChat();
+            showMessage("success", "New session started!");
+            setTimeout(() => {
+              document.getElementById("message").classList.add("hidden");
+            }, 2000);
+          }
+        });
+
+      // Load config on page load
+      loadConfig();
+    </script>
+  </body>
+</html>
