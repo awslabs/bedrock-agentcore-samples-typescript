@@ -151,7 +151,66 @@ This will stream the agent's response as Server-Sent Events.
 
 ## Deploying to AWS
 
-TBD
+This sample includes AWS CDK infrastructure to deploy the agent to AWS Bedrock AgentCore Runtime.
+
+### Prerequisites
+
+- AWS CLI configured with credentials
+- Node.js 22+ installed
+- Docker installed (for building container images)
+
+### Deployment Steps
+
+1. **Install Dependencies**
+
+```bash
+npm install
+```
+
+2. **Bootstrap CDK** (first time only)
+
+If this is your first time using CDK in your AWS account/region:
+
+```bash
+npm run bootstrap
+```
+
+3. **Deploy the Stack**
+
+```bash
+npm run deploy
+```
+
+This will:
+- Build a Docker image for the agent
+- Push it to Amazon ECR
+- Create an IAM role with permissions for Bedrock and CloudWatch
+- Deploy the agent to Bedrock AgentCore Runtime
+
+The deployment outputs the Runtime ARN which you can use to invoke the agent.
+
+### Managing the Deployment
+
+**View synthesized CloudFormation template:**
+```bash
+npm run synth
+```
+
+**Destroy the stack:**
+```bash
+npm run destroy
+```
+
+### Architecture
+
+The CDK stack (`cdk/agent-stack.ts`) creates:
+
+- **Docker Image Asset**: Containerizes the agent and pushes to ECR
+- **IAM Role**: Grants the runtime permissions to:
+  - Invoke Bedrock models (`bedrock:InvokeModel`, `bedrock:InvokeModelWithResponseStream`)
+  - Pull container images from ECR
+  - Write logs to CloudWatch
+- **Bedrock AgentCore Runtime**: Runs the containerized agent with HTTP protocol and public network access
 
 ## Architecture
 
