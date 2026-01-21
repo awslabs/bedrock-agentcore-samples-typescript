@@ -67,6 +67,8 @@ BedrockAgentCoreApp server listening on port 8080
 
 ## Testing the Async Agent
 
+**Note:** The `/ping` endpoint is only accessible when running locally. In deployed agents, AgentCore uses this endpoint internally for health monitoring and does not expose it to external traffic.
+
 ### 1. Check Initial Health Status
 
 ```bash
@@ -86,13 +88,13 @@ Response when no tasks are running:
 ```bash
 curl -X POST http://localhost:8080/invocations \
   -H "Content-Type: application/json" \
-  -d '{"prompt": "start a 5 second task"}'
+  -d '{"prompt": "start a 20 second task"}'
 ```
 
-Response:
+Sample response:
 ```json
 {
-  "message": "Started background task (ID: 1) for 5 seconds. Agent status is now BUSY."
+  "message": "Started background task (ID: 1) for 20 seconds. Agent status is now BUSY."
 }
 ```
 
@@ -132,7 +134,7 @@ Response after task completes:
 curl -X POST http://localhost:8080/invocations \
   -H "Content-Type: application/json" \
   -H "Accept: text/event-stream" \
-  -d '{"prompt": "start a 3 second background task"}'
+  -d '{"prompt": "start a 10 second background task"}'
 ```
 
 This will stream the agent's response as Server-Sent Events.
@@ -172,7 +174,7 @@ The deployment outputs the Runtime ARN which you can use to invoke the agent.
 
 ```bash
 # Invoke the deployed agent
-agentcore invoke --payload '{"prompt": "start a 5 second task"}'
+agentcore invoke --payload '{"prompt": "start a 10 second task"}'
 ```
 
 ## Architecture
