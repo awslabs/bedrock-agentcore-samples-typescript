@@ -39,10 +39,14 @@ const calculator = tool({
   }),
   callback: ({ operation, a, b }) => {
     switch (operation) {
-      case 'add': return a + b
-      case 'subtract': return a - b
-      case 'multiply': return a * b
-      case 'divide': return a / b
+      case 'add':
+        return a + b
+      case 'subtract':
+        return a - b
+      case 'multiply':
+        return a * b
+      case 'divide':
+        return a / b
     }
   },
 })

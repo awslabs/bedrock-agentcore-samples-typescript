@@ -138,7 +138,7 @@ Examples include customer support agents, data analyzers, and other practical ap
 
 - Use kebab-case for directory names (e.g., `code-interpreter`, `customer-support-agent`)
 - Use kebab-case for multi-word file names
-- Main entry point should be `src/index.ts` or `index.ts`
+- Main entry point should be `src/index.ts` or `index.ts` (when using AgentCore Starter Toolkit, use flat structure with `agent.ts`)
 - Keep examples focused and in separate directories
 
 ## Dependencies

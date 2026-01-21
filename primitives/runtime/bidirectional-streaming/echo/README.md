@@ -2,11 +2,11 @@
 
 This sample demonstrates WebSocket bidirectional communication on AgentCore Runtime.
 
-|                         |                          |
-| ----------------------- | ------------------------ |
-| **AgentCore component** | Runtime                  |
+|                         |                  |
+| ----------------------- | ---------------- |
+| **AgentCore component** | Runtime          |
 | **Protocol**            | HTTP (WebSocket) |
-| **Pattern**             | Echo server              |
+| **Pattern**             | Echo server      |
 
 ## What This Sample Demonstrates
 
@@ -43,7 +43,7 @@ const app = new BedrockAgentCoreApp({
   // HTTP handler (required)
   invocationHandler: {
     process: async (_request, _context) => {
-      return { message: 'Use WebSocket endpoint /ws' }
+      return { message: 'Use WebSocket endpoint /ws for bidirectional streaming' }
     },
   },
 

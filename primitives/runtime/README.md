@@ -154,6 +154,14 @@ Long-running tasks (coming soon)
 
 ## Running Locally
 
+Install the [AgentCore Starter Toolkit](https://github.com/aws/bedrock-agentcore-starter-toolkit):
+
+```bash
+pip install bedrock-agentcore-starter-toolkit
+```
+
+Then run any sample:
+
 ```bash
 cd hosting-agent/strands
 npm install
