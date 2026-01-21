@@ -23,6 +23,21 @@ Unlike HTTP request/response, WebSocket enables full-duplex communication — bo
 - **Live updates** — Server pushes data as it becomes available
 - **Voice/audio** — Continuous audio streaming (future: Nova Sonic integration)
 
+## Prerequisites
+
+Install the AgentCore toolkit:
+
+```bash
+pip install git+https://github.com/aidandaly24/bedrock-agentcore-starter-toolkit.git@feat/typescript-container-deployment
+```
+
+Requires:
+
+- Python 3.9+
+- Node.js 20+
+- Docker
+- AWS credentials configured (for deployment)
+
 ## Implementation
 
 ```typescript
@@ -70,7 +85,9 @@ app.run()
 No AWS credentials required (this is a simple echo server).
 
 ```bash
-make dev
+npm install
+agentcore configure
+agentcore dev
 ```
 
 ## Test - Local Development
@@ -98,8 +115,7 @@ Connected
 ## Deploy to AgentCore
 
 ```bash
-make build-and-push
-make deploy
+agentcore deploy
 ```
 
 ## Test - Deployed Runtime
@@ -109,9 +125,6 @@ Deployed runtimes require authenticated WebSocket connections (see [Invoking an 
 ### Using the Test Client
 
 ```bash
-# Get runtime ARN from deployment
-make outputs
-
 # Run the test client (uses IAM authentication)
 npm run test:deployed -- "<runtime-arn>"
 ```

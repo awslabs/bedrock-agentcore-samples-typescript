@@ -10,6 +10,16 @@ Deploy a Strands agent to Amazon Bedrock AgentCore Runtime.
 
 → See [parent README](../README.md) for full context on hosting agents.
 
+## Prerequisites
+
+- Node.js 20+
+- AWS credentials configured
+- [AgentCore Starter Toolkit](https://github.com/aidandaly24/bedrock-agentcore-starter-toolkit/tree/feat/typescript-container-deployment):
+
+```bash
+pip install git+https://github.com/aidandaly24/bedrock-agentcore-starter-toolkit.git@feat/typescript-container-deployment
+```
+
 ## Implementation
 
 ```typescript
@@ -29,14 +39,10 @@ const calculator = tool({
   }),
   callback: ({ operation, a, b }) => {
     switch (operation) {
-      case 'add':
-        return a + b
-      case 'subtract':
-        return a - b
-      case 'multiply':
-        return a * b
-      case 'divide':
-        return a / b
+      case 'add': return a + b
+      case 'subtract': return a - b
+      case 'multiply': return a * b
+      case 'divide': return a / b
     }
   },
 })
@@ -44,7 +50,7 @@ const calculator = tool({
 const agent = new Agent({
   model: new BedrockModel({
     modelId: 'global.amazon.nova-2-lite-v1:0',
-    region: 'us-east-1',
+    region: process.env['AWS_REGION'] ?? 'us-east-1',
   }),
   tools: [calculator],
 })
@@ -52,12 +58,9 @@ const agent = new Agent({
 const app = new BedrockAgentCoreApp({
   invocationHandler: {
     requestSchema,
-    process: async function* (request, _context) {
-      for await (const event of agent.stream(request.prompt)) {
-        if (event.type === 'modelContentBlockDeltaEvent' && event.delta?.type === 'textDelta') {
-          yield { event: 'message', data: { text: event.delta.text } }
-        }
-      }
+    process: async (request, _context) => {
+      const response = await agent.invoke(request.prompt)
+      return response
     },
   },
 })
@@ -65,22 +68,45 @@ const app = new BedrockAgentCoreApp({
 app.run()
 ```
 
-→ [Full source](./src/index.ts)
+→ [Full source](./agent.ts)
 
 ## Quick Start
 
-Requires AWS credentials in your shell (for Bedrock model access).
+Install dependencies:
 
 ```bash
-make dev
+npm install
 ```
 
-## Test
+Configure the agent (specify `agent.ts` as the entrypoint):
+
+```bash
+agentcore configure
+```
+
+Accept defaults for all prompts, except for memory—enter `s` to skip memory creation.
+
+## Local Development
+
+Start the local dev server:
+
+```bash
+agentcore dev
+# or
+npm run dev
+```
+
+Test with the CLI:
+
+```bash
+agentcore invoke --local '{"prompt": "What is 25 * 4?"}'
+```
+
+Or with curl:
 
 ```bash
 curl -X POST http://localhost:8080/invocations \
   -H "Content-Type: application/json" \
-  -H "Accept: text/event-stream" \
   -H "x-amzn-bedrock-agentcore-runtime-session-id: test-123" \
   -d '{"prompt": "What is 25 * 4?"}'
 ```
@@ -88,36 +114,17 @@ curl -X POST http://localhost:8080/invocations \
 ## Deploy to AWS
 
 ```bash
-make build-and-push
-make deploy
+agentcore deploy
 ```
 
 ## Test Deployed Agent
 
-Invoke using AWS CLI, AWS SDKs, or HTTP requests to the AgentCore endpoint.
-
-Get the Runtime ARN from the stack outputs:
-
 ```bash
-make outputs
-```
-
-Invoke the deployed agent:
-
-```bash
-aws bedrock-agentcore invoke-agent-runtime \
-  --agent-runtime-arn "<RuntimeArn from outputs>" \
-  --runtime-session-id "test-session-00000000000000000001" \
-  --content-type "application/json" \
-  --accept "text/event-stream" \
-  --payload '{"prompt": "What is 25 * 4?"}' \
-  --cli-binary-format raw-in-base64-out \
-  --region us-east-1 \
-  /dev/stdout
+agentcore invoke '{"prompt": "What is 25 * 4?"}'
 ```
 
 ## Clean Up
 
 ```bash
-make delete
+agentcore destroy
 ```

@@ -10,6 +10,21 @@ Deploy an agent using Vercel AI SDK to Amazon Bedrock AgentCore Runtime.
 
 → See [parent README](../README.md) for full context on hosting agents.
 
+## Prerequisites
+
+Install the AgentCore toolkit:
+
+```bash
+pip install git+https://github.com/aidandaly24/bedrock-agentcore-starter-toolkit.git@feat/typescript-container-deployment
+```
+
+Requires:
+
+- Python 3.9+
+- Node.js 20+
+- Docker
+- AWS credentials configured
+
 ## Implementation
 
 ```typescript
@@ -67,10 +82,10 @@ app.run()
 
 ## Quick Start
 
-Requires AWS credentials in your shell (for Bedrock model access).
-
 ```bash
-make dev
+npm install
+agentcore configure
+agentcore dev
 ```
 
 ## Test
@@ -86,36 +101,17 @@ curl -X POST http://localhost:8080/invocations \
 ## Deploy to AWS
 
 ```bash
-make build-and-push
-make deploy
+agentcore deploy
 ```
 
 ## Test Deployed Agent
 
-Invoke using AWS CLI, AWS SDKs, or HTTP requests to the AgentCore endpoint.
-
-Get the Runtime ARN from the stack outputs:
-
 ```bash
-make outputs
-```
-
-Invoke the deployed agent:
-
-```bash
-aws bedrock-agentcore invoke-agent-runtime \
-  --agent-runtime-arn "<RuntimeArn from outputs>" \
-  --runtime-session-id "test-session-00000000000000000001" \
-  --content-type "application/json" \
-  --accept "text/event-stream" \
-  --payload '{"prompt": "What is 25 * 4?"}' \
-  --cli-binary-format raw-in-base64-out \
-  --region us-east-1 \
-  /dev/stdout
+agentcore invoke --payload '{"prompt": "What is 25 * 4?"}'
 ```
 
 ## Clean Up
 
 ```bash
-make delete
+agentcore destroy
 ```

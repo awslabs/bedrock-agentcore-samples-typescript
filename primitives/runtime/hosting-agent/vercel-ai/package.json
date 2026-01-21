@@ -3,19 +3,21 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "tsx src/index.ts",
-    "start": "tsx src/index.ts"
+    "build": "./node_modules/typescript/bin/tsc",
+    "dev": "tsx watch agent.ts",
+    "start": "node dist/agent.js"
   },
   "dependencies": {
     "@ai-sdk/amazon-bedrock": "^4.0.0",
     "@aws-sdk/credential-providers": "^3.0.0",
+    "@opentelemetry/auto-instrumentations-node": "^0.68.0",
     "ai": "^6.0.0",
     "bedrock-agentcore": "file:./bedrock-agentcore-0.1.1.tgz",
-    "tsx": "^4.19.0",
     "zod": "^4.0.0"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
     "typescript": "^5.7.0"
   }
 }

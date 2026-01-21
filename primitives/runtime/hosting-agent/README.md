@@ -89,10 +89,9 @@ const app = new BedrockAgentCoreApp({
 cd strands  # or vercel-ai
 
 npm install
-
-make dev            # Run locally
-make build-and-push # Build and push to ECR
-make deploy         # Deploy to AgentCore
+agentcore configure
+agentcore dev       # Run locally
+agentcore deploy    # Deploy to AgentCore
 ```
 
 ## How It Works

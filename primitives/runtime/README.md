@@ -156,34 +156,14 @@ Long-running tasks (coming soon)
 
 ```bash
 cd hosting-agent/strands
-make dev
+npm install
+agentcore configure
+agentcore dev
 ```
 
 ## Deploying to AgentCore
 
 ```bash
-make build-and-push  # Build ARM64 image, push to ECR
-make deploy          # Deploy CloudFormation stack
-make delete          # Clean up
-```
-
-## CloudFormation
-
-Each sample includes `template.yaml` that creates:
-
-- **IAM Role** — Permissions for Bedrock, ECR, CloudWatch
-- **AgentCore Runtime** — The `AWS::BedrockAgentCore::Runtime` resource
-
-```yaml
-AgentRuntime:
-  Type: AWS::BedrockAgentCore::Runtime
-  Properties:
-    AgentRuntimeName: my_agent
-    AgentRuntimeArtifact:
-      ContainerConfiguration:
-        ContainerUri: !Ref ContainerImageUri
-    ProtocolConfiguration: HTTP # Or MCP and A2A
-    RoleArn: !GetAtt RuntimeRole.Arn
-    NetworkConfiguration:
-      NetworkMode: PUBLIC
+agentcore deploy    # Build and deploy to AgentCore
+agentcore destroy   # Clean up
 ```

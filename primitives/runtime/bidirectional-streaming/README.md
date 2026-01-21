@@ -6,7 +6,7 @@ Real-time, full-duplex communication using WebSocket connections.
 
 ### Local Development
 
-Run `make dev` and connect directly with any WebSocket client:
+Run `agentcore dev` and connect directly with any WebSocket client:
 
 ```bash
 wscat -c ws://localhost:8080/ws \
