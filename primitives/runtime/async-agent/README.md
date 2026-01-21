@@ -10,8 +10,10 @@ Deploy an AI agent that handles long-running background tasks asynchronously usi
 
 ## What This Sample Demonstrates
 
+Agent code communicates its processing status using the "/ping" endpoint health status. 200 HTTP Status response with payload {"status": "HealthyBusy"} indicates the agent is busy processing background tasks. {"status": "Healthy"} indicates it is idle (waiting for requests). A session in idle state for 15 minutes gets automatically terminated.
+
 - Background task management with automatic health status tracking
-- Agent status changes from `Healthy` to `HealthyBusy` during task execution
+- Agent status changes from `Healthy` to `HealthyBusy` during task execution. 
 - Tool-based API for starting long-running operations
 - Streaming responses with Server-Sent Events (SSE)
 - Integration between Strands SDK and Bedrock AgentCore Runtime
