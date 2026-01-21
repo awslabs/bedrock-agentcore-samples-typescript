@@ -5,6 +5,7 @@ node_modules/
 dist/
 build/
 *.tsbuildinfo
+cdk.out/
 
 # IDE
 .idea/
