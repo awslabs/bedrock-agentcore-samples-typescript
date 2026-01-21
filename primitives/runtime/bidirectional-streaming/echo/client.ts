@@ -1,7 +1,6 @@
 import { RuntimeClient } from 'bedrock-agentcore/runtime'
 import { WebSocket } from 'ws'
 
-const REGION = process.env['AWS_REGION'] ?? process.env['AWS_DEFAULT_REGION'] ?? 'us-east-1'
 const RUNTIME_ARN = process.argv[2]
 
 if (!RUNTIME_ARN) {
@@ -9,6 +8,8 @@ if (!RUNTIME_ARN) {
   console.error('Example: npx tsx client.ts arn:aws:bedrock-agentcore:us-east-1:123456789:runtime/my-runtime-xyz')
   process.exit(1)
 }
+
+const REGION = RUNTIME_ARN.split(':')[3]
 
 async function main(): Promise<void> {
   console.log('Connecting to:', RUNTIME_ARN)
@@ -52,7 +53,7 @@ async function main(): Promise<void> {
   setTimeout(() => {
     console.log('Closing connection...')
     ws.close()
-  }, 15000)
+  }, 5000)
 }
 
 main().catch(console.error)
