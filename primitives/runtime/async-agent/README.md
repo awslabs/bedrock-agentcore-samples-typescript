@@ -2,18 +2,18 @@
 
 Deploy an AI agent that handles long-running background tasks asynchronously using the Strands Agents SDK and Bedrock AgentCore Runtime.
 
-|                    |                        |
-| ------------------ | ---------------------- |
-| **Framework**      | Strands Agents SDK     |
-| **Model**          | Amazon Nova 2 Lite     |
-| **Protocol**       | HTTP                   |
+|               |                    |
+| ------------- | ------------------ |
+| **Framework** | Strands Agents SDK |
+| **Model**     | Amazon Nova 2 Lite |
+| **Protocol**  | HTTP               |
 
 ## What This Sample Demonstrates
 
 Agent code communicates its processing status using the "/ping" endpoint health status. 200 HTTP Status response with payload {"status": "HealthyBusy"} indicates the agent is busy processing background tasks. {"status": "Healthy"} indicates it is idle (waiting for requests). A session in idle state for 15 minutes gets automatically terminated.
 
 - Background task management with automatic health status tracking
-- Agent status changes from `Healthy` to `HealthyBusy` during task execution. 
+- Agent status changes from `Healthy` to `HealthyBusy` during task execution.
 - Tool-based API for starting long-running operations
 - Streaming responses with Server-Sent Events (SSE)
 - Integration between Strands SDK and Bedrock AgentCore Runtime
@@ -59,6 +59,7 @@ agentcore dev
 ```
 
 The agent will start and display:
+
 ```
 🚀 Simple Async Strands Example
 Test: curl -X POST http://localhost:8080/invocations -H "Content-Type: application/json" -d '{"prompt": "start a 3 second task"}'
@@ -76,6 +77,7 @@ curl http://localhost:8080/ping
 ```
 
 Response when no tasks are running:
+
 ```json
 {
   "status": "Healthy",
@@ -93,6 +95,7 @@ curl -X POST http://localhost:8080/invocations \
 ```
 
 Sample response:
+
 ```json
 {
   "message": "Started background task (ID: 1) for 20 seconds. Agent status is now BUSY."
@@ -106,6 +109,7 @@ curl http://localhost:8080/ping
 ```
 
 Response while task is active:
+
 ```json
 {
   "status": "HealthyBusy",
@@ -122,6 +126,7 @@ curl http://localhost:8080/ping
 ```
 
 Response after task completes:
+
 ```json
 {
   "status": "Healthy",
@@ -153,6 +158,7 @@ agentcore deploy
 ```
 
 This will:
+
 - Build and containerize the agent
 - Push the container image to Amazon ECR
 - Create necessary IAM roles and permissions
