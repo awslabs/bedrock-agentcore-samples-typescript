@@ -88,6 +88,7 @@ Response when no tasks are running:
 ```bash
 curl -X POST http://localhost:8080/invocations \
   -H "Content-Type: application/json" \
+   -H "Accept: text/event-stream" \
   -d '{"prompt": "start a 20 second task"}'
 ```
 
@@ -127,17 +128,6 @@ Response after task completes:
   "time_of_last_update": "2024-01-19T10:30:10.000Z"
 }
 ```
-
-### 5. Test with Streaming Response
-
-```bash
-curl -X POST http://localhost:8080/invocations \
-  -H "Content-Type: application/json" \
-  -H "Accept: text/event-stream" \
-  -d '{"prompt": "start a 10 second background task"}'
-```
-
-This will stream the agent's response as Server-Sent Events.
 
 ## Deploying to AWS
 
