@@ -79,14 +79,13 @@ Built-in tools for common agent capabilities.
 **Code Interpreter** — Execute Python, JavaScript, or shell commands in a secure sandbox:
 
 ```typescript
-import { CodeInterpreterTools } from 'bedrock-agentcore/tools/code-interpreter/strands'
+import { CodeInterpreterTools } from 'bedrock-agentcore/code-interpreter/strands'
 
 const codeInterpreter = new CodeInterpreterTools({ region: 'us-east-1' })
-const tools = codeInterpreter.getTools() // executeCode, fileOperations, executeCommand
 
 const agent = new Agent({
   model: new BedrockModel({ modelId: 'global.amazon.nova-2-lite-v1:0', region: 'us-east-1' }),
-  tools,
+  tools: codeInterpreter.tools,
 })
 
 // Agent can now run: "Calculate the standard deviation of [1, 2, 3, 4, 5]"
@@ -98,15 +97,14 @@ const agent = new Agent({
 **Browser** — Automate web browsing with a remote browser session:
 
 ```typescript
-import { BrowserTools } from 'bedrock-agentcore/tools/browser/strands'
+import { BrowserTools } from 'bedrock-agentcore/browser/strands'
 
 const browserTools = new BrowserTools({ region: 'us-east-1' })
 await browserTools.startSession()
-const tools = browserTools.getTools() // navigate, click, type, getText, screenshot
 
 const agent = new Agent({
   model: new BedrockModel({ modelId: 'global.amazon.nova-2-lite-v1:0', region: 'us-east-1' }),
-  tools,
+  tools: browserTools.tools,
 })
 
 // Agent can now: "Go to amazon.com and find the Echo Show"
