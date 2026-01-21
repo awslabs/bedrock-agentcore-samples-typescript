@@ -1,45 +1,26 @@
-# Async Agent with Background Task Management
+# Async Agent - Strands
 
-This sample shows how to build AI agents that handle long-running background tasks with automatic health status tracking. The agent status automatically changes from `Healthy` to `HealthyBusy` while tasks are running, enabling AgentCore Runtime to properly monitor and manage background operations.
+Deploy an AI agent that handles long-running background tasks asynchronously using the Strands Agents SDK and Bedrock AgentCore Runtime.
 
-|                         |                    |
-| ----------------------- | ------------------ |
-| **AgentCore component** | Runtime            |
-| **Protocol**            | HTTP               |
-| **Model**               | Amazon Nova 2 Lite |
-| **Frameworks**          | Strands Agents     |
+|                    |                        |
+| ------------------ | ---------------------- |
+| **Framework**      | Strands Agents SDK     |
+| **Model**          | Amazon Nova 2 Lite     |
+| **Protocol**       | HTTP                   |
 
 ## What This Sample Demonstrates
 
 - Background task management with automatic health status tracking
-- Agent status transitions (`Healthy` ↔ `HealthyBusy`)
+- Agent status changes from `Healthy` to `HealthyBusy` during task execution
 - Tool-based API for starting long-running operations
-- Streaming responses with Server-Sent Events
+- Streaming responses with Server-Sent Events (SSE)
 - Integration between Strands SDK and Bedrock AgentCore Runtime
 
-## Choose Your Framework
+## How It Works
 
-### [Strands Agents](./strands/)
-
-Uses `@strands-agents/sdk` with background task tracking via Bedrock AgentCore Runtime.
+The agent uses the Bedrock AgentCore Runtime's task tracking system to manage background jobs:
 
 ```typescript
-import { Agent, BedrockModel, tool } from '@strands-agents/sdk'
-import { BedrockAgentCoreApp } from 'bedrock-agentcore/runtime'
-
-const app = new BedrockAgentCoreApp({
-  invocationHandler: {
-    requestSchema: z.object({ prompt: z.string() }),
-    process: async function* (request, _context) {
-      for await (const event of agent.stream(request.prompt)) {
-        if (event.type === 'modelContentBlockDeltaEvent' && event.delta?.type === 'textDelta') {
-          yield { event: 'message', data: { text: event.delta.text } }
-        }
-      }
-    },
-  },
-})
-
 const startBackgroundTask = tool({
   name: 'start_background_task',
   description: 'Start a simple background task that runs for specified duration',
@@ -56,69 +37,148 @@ const startBackgroundTask = tool({
     return `Started background task (ID: ${taskId}) for ${duration} seconds. Agent status is now BUSY.`
   },
 })
-
-const agent = new Agent({
-  model: new BedrockModel({
-    modelId: 'global.amazon.nova-2-lite-v1:0',
-    region: 'us-east-1',
-  }),
-  tools: [startBackgroundTask],
-})
 ```
 
-→ [Full source](./strands/src/index.ts)
+When a task is registered with `addAsyncTask()`, the runtime's health endpoint (`/ping`) automatically returns `HealthyBusy`. Once `completeAsyncTask()` is called, the status returns to `Healthy`.
 
----
+## Build and Run Locally
 
-## Quick Start
+### Prerequisites
+
+- Node.js 20 or later
+- AWS credentials configured (for Bedrock API access)
+- Bedrock AgentCore Starter Toolkit installed
+
+### Run Locally with Hot Reload
 
 ```bash
-cd strands
-
-# Build Docker image
-docker build \
-  --build-arg REPO_PATH=${SDK_REPO_PATH} \
-  -t async-agent \
-  .
-
-# Run locally
-docker run -p 8080:8080 \
-  -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
-  -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
-  -e AWS_SESSION_TOKEN=$AWS_SESSION_TOKEN \
-  -e AWS_REGION=us-east-1 \
-  async-agent
+# Start dev server with automatic reload
+agentcore dev
 ```
 
-## How It Works
-
+The agent will start and display:
 ```
-┌────────┐       ┌───────────────────────────────────┐       ┌─────────┐
-│        │       │    AgentCore Runtime Container    │       │         │
-│ Client │──────▶│                                   │──────▶│ Bedrock │
-│        │◀──────│  BedrockAgentCoreApp              │◀──────│  Model  │
-│        │       │    ├── Agent                      │       │         │
-└────────┘       │    └── Tools (longRunningTask)    │       └─────────┘
-                 │                                   │
-                 └───────────────────────────────────┘
+🚀 Simple Async Strands Example
+Test: curl -X POST http://localhost:8080/invocations -H "Content-Type: application/json" -d '{"prompt": "start a 3 second task"}'
+BedrockAgentCoreApp server listening on port 8080
 ```
 
-1. Client sends request to AgentCore Runtime endpoint
-2. `BedrockAgentCoreApp` receives request, passes to handler
-3. Agent streams response, executing async tools as needed
-4. Handler yields events back to client during processing
+## Testing the Async Agent
 
-## Request/Response Format
+### 1. Check Initial Health Status
 
-**Request:**
+```bash
+curl http://localhost:8080/ping
+```
 
+Response when no tasks are running:
 ```json
-{ "prompt": "Analyze the following data: sample input" }
+{
+  "status": "Healthy",
+  "time_of_last_update": "2024-01-19T10:30:00.000Z"
+}
 ```
 
-**Response (streamed):**
+### 2. Start a Background Task
 
+```bash
+curl -X POST http://localhost:8080/invocations \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "start a 5 second task"}'
+```
+
+Response:
 ```json
-{ "event": "message", "data": { "text": "I'll analyze that data for you..." } }
-{ "event": "message", "data": { "text": "Analysis complete." } }
+{
+  "message": "Started background task (ID: 1) for 5 seconds. Agent status is now BUSY."
+}
 ```
+
+### 3. Check Status While Task is Running
+
+```bash
+curl http://localhost:8080/ping
+```
+
+Response while task is active:
+```json
+{
+  "status": "HealthyBusy",
+  "time_of_last_update": "2024-01-19T10:30:05.000Z"
+}
+```
+
+### 4. Check Status After Task Completes
+
+Wait for the task duration to complete, then check again:
+
+```bash
+curl http://localhost:8080/ping
+```
+
+Response after task completes:
+```json
+{
+  "status": "Healthy",
+  "time_of_last_update": "2024-01-19T10:30:10.000Z"
+}
+```
+
+### 5. Test with Streaming Response
+
+```bash
+curl -X POST http://localhost:8080/invocations \
+  -H "Content-Type: application/json" \
+  -H "Accept: text/event-stream" \
+  -d '{"prompt": "start a 3 second background task"}'
+```
+
+This will stream the agent's response as Server-Sent Events.
+
+## Deploying to AWS
+
+### Prerequisites
+
+- AWS credentials configured
+- Bedrock AgentCore Starter Toolkit installed
+
+### Deployment Steps
+
+1. **Configure the Agent**
+
+```bash
+agentcore configure
+```
+
+This will prompt you to configure deployment settings for your agent.
+
+2. **Deploy to AWS**
+
+```bash
+agentcore deploy
+```
+
+This will:
+- Build and containerize the agent
+- Push the container image to Amazon ECR
+- Create necessary IAM roles and permissions
+- Deploy the agent to Bedrock AgentCore Runtime
+
+The deployment outputs the Runtime ARN which you can use to invoke the agent.
+
+### Testing the Deployed Agent
+
+```bash
+# Invoke the deployed agent
+agentcore invoke --payload '{"prompt": "start a 5 second task"}'
+```
+
+## Architecture
+
+The sample demonstrates the integration pattern between Strands SDK and Bedrock AgentCore Runtime:
+
+1. **Tool Definition**: Define tools using Strands SDK's `tool()` function
+2. **Task Tracking**: Use `app.addAsyncTask()` and `app.completeAsyncTask()` for health monitoring
+3. **Agent Creation**: Create a Strands `Agent` with the tools
+4. **Runtime Integration**: Use `BedrockAgentCoreApp` to handle HTTP requests and SSE streaming
+5. **Automatic Health Management**: The runtime automatically reports `HealthyBusy` when tasks are active
