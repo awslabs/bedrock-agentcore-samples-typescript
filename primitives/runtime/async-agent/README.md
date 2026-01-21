@@ -58,11 +58,13 @@ When a task is registered with `addAsyncTask()`, the runtime's health endpoint (
 agentcore dev
 ```
 
-The agent will start and display:
-
+Test with the CLI:
+```bash
+agentcore invoke --dev '{"prompt": "What is 25 * 4?"}'
 ```
-🚀 Simple Async Strands Example
-Test: curl -X POST http://localhost:8080/invocations -H "Content-Type: application/json" -d '{"prompt": "start a 3 second task"}'
+Or with curl:
+```
+curl -X POST http://localhost:8080/invocations -H "Content-Type: application/json" -d '{"prompt": "start a 3 second task"}'
 BedrockAgentCoreApp server listening on port 8080
 ```
 

@@ -41,8 +41,4 @@ const app = new BedrockAgentCoreApp({
   },
 })
 
-console.log('🚀 Simple Async Strands Example')
-console.log(
-  'Test: curl -X POST http://localhost:8080/invocations -H "Content-Type: application/json" -d \'{"prompt": "start a 3 second task"}\''
-)
 app.run()
