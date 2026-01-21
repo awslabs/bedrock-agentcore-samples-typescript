@@ -12,18 +12,13 @@ Deploy an agent using Vercel AI SDK to Amazon Bedrock AgentCore Runtime.
 
 ## Prerequisites
 
-Install the AgentCore toolkit:
+- Node.js 20+
+- AWS credentials configured
+- [AgentCore Starter Toolkit](https://github.com/aws/bedrock-agentcore-starter-toolkit):
 
 ```bash
-pip install git+https://github.com/aidandaly24/bedrock-agentcore-starter-toolkit.git@feat/typescript-container-deployment
+pip install bedrock-agentcore-starter-toolkit
 ```
-
-Requires:
-
-- Python 3.9+
-- Node.js 20+
-- Docker
-- AWS credentials configured
 
 ## Implementation
 
@@ -78,17 +73,39 @@ const app = new BedrockAgentCoreApp({
 app.run()
 ```
 
-→ [Full source](./src/index.ts)
+→ [Full source](./agent.ts)
 
 ## Quick Start
 
+Install dependencies:
+
 ```bash
 npm install
+```
+
+Configure the agent (specify `agent.ts` as the entrypoint):
+
+```bash
 agentcore configure
+```
+
+Accept defaults for all prompts, except for memory—enter `s` to skip memory creation.
+
+## Local Development
+
+Start the local dev server:
+
+```bash
 agentcore dev
 ```
 
-## Test
+Test with the CLI:
+
+```bash
+agentcore invoke --dev '{"prompt": "What is 25 * 4?"}'
+```
+
+Or with curl:
 
 ```bash
 curl -X POST http://localhost:8080/invocations \
@@ -107,8 +124,10 @@ agentcore deploy
 ## Test Deployed Agent
 
 ```bash
-agentcore invoke --payload '{"prompt": "What is 25 * 4?"}'
+agentcore invoke '{"prompt": "What is 25 * 4?"}'
 ```
+
+After deployment, your agent can also be invoked via AWS SDKs, APIs, or HTTP requests.
 
 ## Clean Up
 

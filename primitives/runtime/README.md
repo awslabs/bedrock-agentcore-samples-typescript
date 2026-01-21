@@ -18,8 +18,8 @@ You provide a container image or just agent code. AgentCore handles everything e
 
 ```
 ┌──────────────┐     ┌─────────────────────────────────────┐     ┌──────────────┐
-│    Client    │────▶│         AgentCore Runtime           │────▶│   Bedrock    │
-│              │◀────│  ┌─────────────────────────────┐    │◀────│    Models    │
+│    Client    │────▶│         AgentCore Runtime           │────▶│     LLMs     │
+│              │◀────│  ┌─────────────────────────────┐    │◀────│              │
 └──────────────┘     │  │     Your Container          │    │     └──────────────┘
                      │  │  ┌─────────────────────┐    │    │
                      │  │  │ BedrockAgentCoreApp │    │    │

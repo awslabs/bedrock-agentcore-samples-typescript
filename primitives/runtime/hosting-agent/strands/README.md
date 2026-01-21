@@ -14,10 +14,10 @@ Deploy a Strands agent to Amazon Bedrock AgentCore Runtime.
 
 - Node.js 20+
 - AWS credentials configured
-- [AgentCore Starter Toolkit](https://github.com/aidandaly24/bedrock-agentcore-starter-toolkit/tree/feat/typescript-container-deployment):
+- [AgentCore Starter Toolkit](https://github.com/aws/bedrock-agentcore-starter-toolkit):
 
 ```bash
-pip install git+https://github.com/aidandaly24/bedrock-agentcore-starter-toolkit.git@feat/typescript-container-deployment
+pip install bedrock-agentcore-starter-toolkit
 ```
 
 ## Implementation
@@ -58,9 +58,12 @@ const agent = new Agent({
 const app = new BedrockAgentCoreApp({
   invocationHandler: {
     requestSchema,
-    process: async (request, _context) => {
-      const response = await agent.invoke(request.prompt)
-      return response
+    process: async function* (request, _context) {
+      for await (const event of agent.stream(request.prompt)) {
+        if (event.type === 'modelContentBlockDeltaEvent' && event.delta?.type === 'textDelta') {
+          yield { event: 'message', data: { text: event.delta.text } }
+        }
+      }
     },
   },
 })
@@ -92,14 +95,12 @@ Start the local dev server:
 
 ```bash
 agentcore dev
-# or
-npm run dev
 ```
 
 Test with the CLI:
 
 ```bash
-agentcore invoke --local '{"prompt": "What is 25 * 4?"}'
+agentcore invoke --dev '{"prompt": "What is 25 * 4?"}'
 ```
 
 Or with curl:
@@ -107,6 +108,7 @@ Or with curl:
 ```bash
 curl -X POST http://localhost:8080/invocations \
   -H "Content-Type: application/json" \
+  -H "Accept: text/event-stream" \
   -H "x-amzn-bedrock-agentcore-runtime-session-id: test-123" \
   -d '{"prompt": "What is 25 * 4?"}'
 ```
@@ -122,6 +124,8 @@ agentcore deploy
 ```bash
 agentcore invoke '{"prompt": "What is 25 * 4?"}'
 ```
+
+After deployment, your agent can also be invoked via AWS SDKs, APIs, or HTTP requests.
 
 ## Clean Up
 

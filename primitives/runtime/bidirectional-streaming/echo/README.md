@@ -5,7 +5,7 @@ This sample demonstrates WebSocket bidirectional communication on AgentCore Runt
 |                         |                          |
 | ----------------------- | ------------------------ |
 | **AgentCore component** | Runtime                  |
-| **Protocol**            | HTTP (WebSocket upgrade) |
+| **Protocol**            | HTTP (WebSocket) |
 | **Pattern**             | Echo server              |
 
 ## What This Sample Demonstrates
@@ -25,18 +25,13 @@ Unlike HTTP request/response, WebSocket enables full-duplex communication — bo
 
 ## Prerequisites
 
-Install the AgentCore toolkit:
+- Node.js 20+
+- AWS credentials configured (for deployment)
+- [AgentCore Starter Toolkit](https://github.com/aws/bedrock-agentcore-starter-toolkit):
 
 ```bash
-pip install git+https://github.com/aidandaly24/bedrock-agentcore-starter-toolkit.git@feat/typescript-container-deployment
+pip install bedrock-agentcore-starter-toolkit
 ```
-
-Requires:
-
-- Python 3.9+
-- Node.js 20+
-- Docker
-- AWS credentials configured (for deployment)
 
 ## Implementation
 
@@ -78,15 +73,29 @@ const app = new BedrockAgentCoreApp({
 app.run()
 ```
 
-→ [Full source](./src/index.ts)
+→ [Full source](./agent.ts)
 
 ## Quick Start
 
-No AWS credentials required (this is a simple echo server).
+Install dependencies:
 
 ```bash
 npm install
+```
+
+Configure the agent (specify `agent.ts` as the entrypoint):
+
+```bash
 agentcore configure
+```
+
+Accept defaults for all prompts, except for memory—enter `s` to skip memory creation.
+
+## Local Development
+
+Start the local dev server (no AWS credentials required for this echo server):
+
+```bash
 agentcore dev
 ```
 
@@ -120,18 +129,17 @@ agentcore deploy
 
 ## Test - Deployed Runtime
 
-Deployed runtimes require authenticated WebSocket connections (see [Invoking an Agent](../../README.md#invoking-an-agent)).
+Deployed runtimes require authenticated WebSocket connections. Use the included test client which handles IAM authentication.
 
 ### Using the Test Client
 
 ```bash
-# Run the test client (uses IAM authentication)
 npm run test:deployed -- "<runtime-arn>"
 ```
 
 ### How It Works
 
-The test client ([src/client.ts](./src/client.ts)) uses `RuntimeClient` to handle SigV4 signing:
+The test client ([client.ts](./client.ts)) uses `RuntimeClient` to handle SigV4 signing:
 
 ```typescript
 import { RuntimeClient } from 'bedrock-agentcore/runtime'
@@ -152,6 +160,12 @@ const ws = new WebSocket(url, { headers })
 - AWS credential resolution (environment, profile, IAM role)
 - SigV4 request signing
 - Session ID generation
+
+## Clean Up
+
+```bash
+agentcore destroy
+```
 
 ## Key Concepts
 
