@@ -59,10 +59,13 @@ agentcore dev
 ```
 
 Test with the CLI:
+
 ```bash
 agentcore invoke --dev '{"prompt": "What is 25 * 4?"}'
 ```
+
 Or with curl:
+
 ```
 curl -X POST http://localhost:8080/invocations -H "Content-Type: application/json" -d '{"prompt": "start a 3 second task"}'
 BedrockAgentCoreApp server listening on port 8080
