@@ -74,8 +74,6 @@ const fetchCalendar = withAccessToken({
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-**Why session binding?** It prevents authorization URL hijacking where an attacker could trick a victim into authorizing access to the attacker's agent.
-
 ## Prerequisites
 
 - Node.js 20+
@@ -276,34 +274,6 @@ Open http://localhost:9090 in your browser. The UI provides:
 
 - Token is cached in AgentCore Token Vault
 - No authorization needed - agent accesses calendar immediately
-
-### Alternative: Using curl
-
-You can also test with curl, though session binding requires using the same browser for the OAuth callback.
-
-First, get a Cognito token:
-
-```bash
-# Get your ClientId from the CDK stack output
-CLIENT_ID="your-cognito-client-id"
-
-TOKEN=$(aws cognito-idp initiate-auth \
-  --client-id $CLIENT_ID \
-  --auth-flow USER_PASSWORD_AUTH \
-  --auth-parameters USERNAME=user@example.com,PASSWORD=password \
-  --query 'AuthenticationResult.AccessToken' --output text)
-
-echo "Token: $TOKEN"
-```
-
-Then call the web app:
-
-```bash
-curl -X POST http://localhost:9090/api/chat \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"prompt": "What events do I have on my calendar?"}'
-```
 
 ## Session Binding Security
 
