@@ -347,15 +347,6 @@
           }
         }
 
-        // Check if response contains auth URL (might be in the text)
-        const responseText = document.getElementById('response').textContent;
-        const urlMatch = responseText.match(/https:\/\/accounts\.google\.com[^\s]+/);
-        if (urlMatch) {
-          document.getElementById('authUrl').href = urlMatch[0];
-          document.getElementById('authUrl').textContent = 'Click here to authorize';
-          document.getElementById('authUrlContainer').style.display = 'block';
-        }
-
       } catch (error) {
         document.getElementById('response').textContent = `Error: ${error.message}`;
       } finally {
