@@ -1,6 +1,6 @@
 # Outbound Authentication with Google Calendar (3LO)
 
-Access Google Calendar on behalf of users using Three-Legged OAuth with proper session binding.
+Access Google Calendar on behalf of users using Three-Legged OAuth with automatic token management.
 
 |                         |                    |
 | ----------------------- | ------------------ |
@@ -10,11 +10,40 @@ Access Google Calendar on behalf of users using Three-Legged OAuth with proper s
 
 ## Overview
 
-This sample demonstrates **outbound authentication** using Three-Legged OAuth (3LO) to access Google Calendar on behalf of users. It includes:
+This sample demonstrates **outbound authentication** using Three-Legged OAuth (3LO) to access Google Calendar on behalf of users. The key features:
 
-- **Inbound auth**: Cognito JWT validates who can call the agent
-- **Outbound auth**: Google 3LO accesses calendar on user's behalf
-- **Session binding**: Web app manages sessions, callback uses same session to identify user
+- **Automatic token injection** via `withAccessToken` - tokens managed per-user in AgentCore's Token Vault
+- **First call** triggers OAuth flow, **subsequent calls** use cached tokens
+- **Automatic refresh** - expired tokens are refreshed transparently
+- **Session binding** ensures only the user who started OAuth can complete it
+
+## How It Works
+
+The `withAccessToken` wrapper handles all OAuth complexity:
+
+```typescript
+const fetchCalendar = withAccessToken({
+  providerName: 'google-cal-provider',
+  scopes: ['https://www.googleapis.com/auth/calendar.readonly'],
+  authFlow: 'USER_FEDERATION',
+  callbackUrl: 'http://localhost:9090/oauth2/callback',
+  onAuthUrl: (url) => {
+    /* redirect user here */
+  },
+})(async (maxResults, token) => {
+  // token is automatically injected - just use it
+  return fetch('https://www.googleapis.com/calendar/v3/...', {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+})
+```
+
+**Token lifecycle:**
+
+1. First call → no token found → `onAuthUrl` fires with OAuth URL
+2. User completes OAuth → token stored in AgentCore Token Vault
+3. Subsequent calls → token auto-injected, no OAuth needed
+4. Token expires → automatic refresh using stored refresh token
 
 ## Architecture
 
@@ -57,31 +86,6 @@ This sample demonstrates **outbound authentication** using Three-Legged OAuth (3
 pip install bedrock-agentcore-starter-toolkit
 ```
 
-## Implementation
-
-The agent uses `withAccessToken` to wrap tools that need OAuth tokens:
-
-```typescript
-import { withAccessToken } from 'bedrock-agentcore/identity'
-
-// Can be defined outside the handler - workloadIdentityToken is auto-injected from context
-const fetchCalendarWithAuth = withAccessToken({
-  providerName: 'google-cal-provider',
-  scopes: ['https://www.googleapis.com/auth/calendar.readonly'],
-  authFlow: 'USER_FEDERATION',
-  callbackUrl: 'http://localhost:9090/oauth2/callback',
-  onAuthUrl: (url) => console.log('Auth URL:', url),
-})(async (maxResults, token) => {
-  // Token automatically injected - call Google Calendar API
-  const response = await fetch('https://www.googleapis.com/calendar/v3/...', {
-    headers: { Authorization: `Bearer ${token}` },
-  })
-  return response.json()
-})
-```
-
-> [Full source](./agent.ts)
-
 ## Setup
 
 > **Note:** Replace `us-east-1` with your AWS region in all commands below.
@@ -96,8 +100,9 @@ cd ..  # Return to google-cal directory
 ```
 
 Note the outputs (save these for later):
-- **DiscoveryUrl**: Use in step 6 (`agentcore configure`)
-- **ClientId**: Use in step 6 and when getting tokens
+
+- **DiscoveryUrl**: Use in step 5 (`agentcore configure`)
+- **ClientId**: Use in step 5 and when getting tokens
 
 ### 2. Create Google OAuth Credentials
 
@@ -169,7 +174,7 @@ From the `google-cal` directory (not `cdk`):
 npm install
 ```
 
-### 6. Configure the Agent
+### 5. Configure the Agent
 
 ```bash
 agentcore configure
@@ -184,13 +189,13 @@ When prompted:
   - **Discovery URL**: The `DiscoveryUrl` from step 1
   - **Audience** (if prompted): The `ClientId` from step 1
 
-### 7. Deploy to Create Workload Identity
+### 6. Deploy to Create Workload Identity
 
 ```bash
 agentcore deploy
 ```
 
-### 8. Update Workload Identity with Callback URL
+### 7. Update Workload Identity with Callback URL
 
 After deployment, update the workload identity to allow your local callback URL.
 
@@ -303,12 +308,14 @@ curl -X POST http://localhost:9090/api/chat \
 ## Session Binding Security
 
 Without session binding, an attacker could:
+
 1. Start an OAuth flow and get an authorization URL
 2. Send the URL to a victim via email
 3. Victim clicks and authorizes (thinking it's legit)
 4. Attacker's agent now has victim's calendar access
 
 With session binding:
+
 1. The callback checks if the user who completed OAuth is the same user who started it
 2. Uses the session cookie to verify identity
 3. Attacker can't use victim's authorization

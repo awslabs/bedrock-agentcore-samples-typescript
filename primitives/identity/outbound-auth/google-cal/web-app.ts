@@ -1,4 +1,4 @@
-/* global fetch */
+/* global fetch, TextDecoder */
 import express, { Request, Response } from 'express'
 import session from 'express-session'
 import { BedrockAgentCoreClient, CompleteResourceTokenAuthCommand } from '@aws-sdk/client-bedrock-agentcore'
@@ -34,7 +34,6 @@ function getAgentConfig(): AgentConfig | null {
   }
 
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const config = yaml.load(fs.readFileSync(configPath, 'utf8')) as any
     const defaultAgent = config.default_agent
     const agentConfig = config.agents?.[defaultAgent]
@@ -96,18 +95,18 @@ const client = new BedrockAgentCoreClient({ region: REGION })
 
 // Check AWS credentials at startup
 const stsClient = new STSClient({ region: REGION })
-stsClient.send(new GetCallerIdentityCommand({}))
-  .then(identity => {
+stsClient
+  .send(new GetCallerIdentityCommand({}))
+  .then((identity) => {
     console.log('[webapp] AWS credentials OK:', identity.Arn)
   })
-  .catch(err => {
+  .catch((err) => {
     console.error('[webapp] WARNING: AWS credentials not available:', err.message)
     console.error('[webapp] CompleteResourceTokenAuth will fail without valid credentials')
   })
 
 // Health check
 app.get('/ping', (_req: Request, res: Response) => {
-  console.log('[webapp] Health check')
   res.json({ status: 'success' })
 })
 
@@ -121,13 +120,11 @@ app.get('/api/config', (_req: Request, res: Response) => {
 
 // POST /api/chat - Invoke agent with JWT authentication
 app.post('/api/chat', async (req: Request, res: Response) => {
-  console.log('[webapp] ========================================')
   console.log('[webapp] POST /api/chat')
 
   // Extract JWT from Authorization header
   const authHeader = req.headers.authorization
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    console.error('[webapp] ERROR: Missing or invalid Authorization header')
     res.status(401).json({ error: 'Missing or invalid Authorization header' })
     return
   }
@@ -139,38 +136,25 @@ app.post('/api/chat', async (req: Request, res: Response) => {
   try {
     const payload = JSON.parse(Buffer.from(jwt.split('.')[1], 'base64').toString())
     userId = payload.sub
-    console.log('[webapp] Decoded JWT, userId:', userId)
-  } catch (error) {
-    console.error('[webapp] ERROR: Invalid JWT format')
+  } catch {
     res.status(401).json({ error: 'Invalid JWT format' })
     return
   }
 
   // Store userId and full JWT in session for the OAuth callback
   req.session.userId = userId
-  req.session.userToken = jwt // Full JWT needed for CompleteResourceTokenAuth
-  lastUserId = userId // DEMO: fallback for curl testing
-  lastUserToken = jwt // DEMO: fallback for curl testing
-  console.log('[webapp] Stored userId in session:', userId)
-  console.log('[webapp] Stored full JWT in session (length):', jwt.length)
+  req.session.userToken = jwt
+  lastUserId = userId
+  lastUserToken = jwt
 
-  // Get prompt from request body
   const { prompt } = req.body
   if (!prompt) {
     res.status(400).json({ error: 'Missing prompt in request body' })
     return
   }
 
-  console.log('[webapp] Prompt:', prompt)
-
   try {
-    // Generate a session ID for the runtime (must be >= 33 chars)
-    // Use a UUID which is 36 characters
     const runtimeSessionId = `${userId}-${randomUUID()}`
-
-    // Invoke AgentCore Runtime with required headers
-    console.log('[webapp] Invoking Runtime at:', RUNTIME_URL)
-    console.log('[webapp] Runtime Session ID:', runtimeSessionId)
     const response = await fetch(RUNTIME_URL, {
       method: 'POST',
       headers: {
@@ -190,7 +174,6 @@ app.post('/api/chat', async (req: Request, res: Response) => {
       return
     }
 
-    // Stream response back to client
     res.setHeader('Content-Type', 'text/event-stream')
     res.setHeader('Cache-Control', 'no-cache')
     res.setHeader('Connection', 'keep-alive')
@@ -207,17 +190,14 @@ app.post('/api/chat', async (req: Request, res: Response) => {
     while (!done) {
       const result = await reader.read()
       done = result.done
-
       if (result.value) {
-        const chunk = decoder.decode(result.value, { stream: true })
-        res.write(chunk)
+        res.write(decoder.decode(result.value, { stream: true }))
       }
     }
 
     res.end()
-    console.log('[webapp] Response stream complete')
   } catch (error) {
-    console.error('[webapp] ERROR invoking runtime:', error)
+    console.error('[webapp] Runtime invocation error:', error)
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
     res.status(500).json({ error: `Failed to invoke runtime: ${errorMessage}` })
   }
@@ -225,26 +205,13 @@ app.post('/api/chat', async (req: Request, res: Response) => {
 
 // GET /oauth2/callback - Complete OAuth binding using session
 app.get('/oauth2/callback', async (req: Request, res: Response) => {
+  console.log('[webapp] GET /oauth2/callback')
+
   const sessionUri = req.query.session_id as string
 
   // DEMO: Use fallbacks when testing with curl (different session than browser)
   const userId = req.session.userId || lastUserId
   const userToken = req.session.userToken || lastUserToken
-
-  console.log('[webapp] ========================================')
-  console.log('[webapp] OAuth callback received')
-  console.log('[webapp] Full URL:', req.protocol + '://' + req.get('host') + req.originalUrl)
-  console.log('[webapp] session_id (from query):', sessionUri)
-  console.log('[webapp] error (from query):', req.query.error)
-  console.log('[webapp] error_description:', req.query.error_description)
-  console.log('[webapp] userId (from session):', req.session.userId)
-  console.log('[webapp] userId (fallback):', lastUserId)
-  console.log('[webapp] userId (using):', userId)
-  console.log('[webapp] userToken (from session):', req.session.userToken ? `${req.session.userToken.substring(0, 30)}...` : 'undefined')
-  console.log('[webapp] userToken (fallback):', lastUserToken ? `${lastUserToken.substring(0, 30)}...` : 'null')
-  console.log('[webapp] userToken (using):', userToken ? `${userToken.substring(0, 30)}...` : 'MISSING')
-  console.log('[webapp] All query params:', req.query)
-  console.log('[webapp] ========================================')
 
   if (!sessionUri) {
     console.error('[webapp] ERROR: Missing session_id in query params')
@@ -278,18 +245,13 @@ app.get('/oauth2/callback', async (req: Request, res: Response) => {
   }
 
   try {
-    console.log('[webapp] Calling CompleteResourceTokenAuth...')
-    console.log('[webapp]   sessionUri:', sessionUri)
-    console.log('[webapp]   userToken:', userToken.substring(0, 30) + '...')
-
     const command = new CompleteResourceTokenAuthCommand({
       sessionUri,
-      userIdentifier: { userToken },  // Use full JWT, not just userId
+      userIdentifier: { userToken },
     })
 
     await client.send(command)
-
-    console.log('[webapp] SUCCESS: Token auth completed!')
+    console.log('[webapp] OAuth completed for user:', userId)
 
     const usingFallback = !req.session.userId && lastUserId
     res.send(`
@@ -313,16 +275,7 @@ app.get('/oauth2/callback', async (req: Request, res: Response) => {
       </html>
     `)
   } catch (error) {
-    console.error('[webapp] ERROR completing auth:', error)
-    // Log more details about the error
-    if (error && typeof error === 'object') {
-      const e = error as Record<string, unknown>
-      console.error('[webapp] Error details:')
-      console.error('[webapp]   name:', e.name)
-      console.error('[webapp]   message:', e.message)
-      console.error('[webapp]   $fault:', e['$fault'])
-      console.error('[webapp]   $metadata:', JSON.stringify(e['$metadata']))
-    }
+    console.error('[webapp] OAuth completion error:', error)
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
     res.status(500).send(`
       <!DOCTYPE html>
@@ -339,22 +292,11 @@ app.get('/oauth2/callback', async (req: Request, res: Response) => {
 })
 
 app.listen(PORT, () => {
-  console.log('[webapp] ========================================')
-  console.log('[webapp] Web App with Session Management Started')
   console.log(`[webapp] Listening on http://localhost:${PORT}`)
-  console.log('[webapp]')
-  console.log(`[webapp] Frontend: http://localhost:${PORT}`)
-  console.log(`[webapp] API endpoint: POST http://localhost:${PORT}/api/chat`)
-  console.log(`[webapp] OAuth callback: http://localhost:${PORT}/oauth2/callback`)
-  console.log('[webapp]')
+  console.log('[webapp] Endpoints: POST /api/chat, GET /oauth2/callback')
   if (agentConfig?.runtimeArn) {
-    console.log('[webapp] Using DEPLOYED runtime:')
-    console.log(`[webapp]   Region: ${REGION}`)
-    console.log(`[webapp]   ARN: ${agentConfig.runtimeArn}`)
+    console.log(`[webapp] Runtime: deployed (${REGION})`)
   } else {
-    console.log('[webapp] Using LOCAL runtime (agentcore dev):')
-    console.log(`[webapp]   URL: ${RUNTIME_URL}`)
-    console.log('[webapp]   Note: Deploy with "agentcore deploy" to use deployed runtime')
+    console.log(`[webapp] Runtime: local (${RUNTIME_URL})`)
   }
-  console.log('[webapp] ========================================')
 })
