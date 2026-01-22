@@ -330,8 +330,8 @@
                   document.getElementById('response').textContent += data.message;
                 }
 
-                if (data.authUrl) {
-                  // Show auth URL
+                if (data.authUrl && data.authUrl.startsWith('https://')) {
+                  // Show auth URL (validated as HTTPS to prevent javascript: XSS)
                   document.getElementById('authUrl').href = data.authUrl;
                   document.getElementById('authUrl').textContent = data.authUrl;
                   document.getElementById('authUrlContainer').style.display = 'block';
