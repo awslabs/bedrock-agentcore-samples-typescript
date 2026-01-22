@@ -59,11 +59,6 @@ function getAgentConfig(): AgentConfig | null {
 
 const agentConfig = getAgentConfig()
 
-// DEMO ONLY: Store last user info for callback fallback when testing with curl
-// In production, rely on proper session binding only
-let lastUserId: string | null = null
-let lastUserToken: string | null = null // Full JWT for CompleteResourceTokenAuth
-
 // Build deployed endpoint URL (falls back to localhost if not deployed)
 const PORT = parseInt(process.env.WEBAPP_PORT || '9090')
 const REGION = agentConfig?.region || process.env.AWS_REGION || 'us-east-1'
@@ -144,8 +139,9 @@ app.post('/api/chat', async (req: Request, res: Response) => {
   // Store userId and full JWT in session for the OAuth callback
   req.session.userId = userId
   req.session.userToken = jwt
-  lastUserId = userId
-  lastUserToken = jwt
+  await new Promise<void>((resolve, reject) => {
+    req.session.save((err) => (err ? reject(err) : resolve()))
+  })
 
   const { prompt } = req.body
   if (!prompt) {
@@ -208,10 +204,7 @@ app.get('/oauth2/callback', async (req: Request, res: Response) => {
   console.log('[webapp] GET /oauth2/callback')
 
   const sessionUri = req.query.session_id as string
-
-  // DEMO: Use fallbacks when testing with curl (different session than browser)
-  const userId = req.session.userId || lastUserId
-  const userToken = req.session.userToken || lastUserToken
+  const { userId, userToken } = req.session
 
   if (!sessionUri) {
     console.error('[webapp] ERROR: Missing session_id in query params')
@@ -253,7 +246,6 @@ app.get('/oauth2/callback', async (req: Request, res: Response) => {
     await client.send(command)
     console.log('[webapp] OAuth completed for user:', userId)
 
-    const usingFallback = !req.session.userId && lastUserId
     res.send(`
       <!DOCTYPE html>
       <html>
@@ -262,15 +254,12 @@ app.get('/oauth2/callback', async (req: Request, res: Response) => {
           <style>
             body { font-family: -apple-system, sans-serif; text-align: center; padding: 50px; }
             .success { color: #10b981; font-size: 48px; }
-            .warning { color: #f59e0b; font-size: 12px; margin-top: 20px; }
           </style>
         </head>
         <body>
           <div class="success">&#10003;</div>
           <h1>Authorization Complete</h1>
-          <p>You can close this window and retry your request.</p>
-          <p style="color: #666; font-size: 12px;">Session bound to user: ${userId}</p>
-          ${usingFallback ? '<p class="warning">Note: Used fallback userId (curl testing mode). In production, use browser-based flow for proper session binding.</p>' : ''}
+          <p>You can close this window and return to the app.</p>
         </body>
       </html>
     `)
