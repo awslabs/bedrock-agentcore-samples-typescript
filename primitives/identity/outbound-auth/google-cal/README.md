@@ -244,31 +244,17 @@ You should see (note it detects the deployed runtime from `.bedrock_agentcore.ya
 [webapp]   ARN: arn:aws:bedrock-agentcore:eu-west-1:...
 ```
 
-### Terminal 2: Tail Agent Logs (Optional)
-
-To see what's happening in the deployed agent:
-
-```bash
-# Replace with your agent ID and region
-aws logs tail /aws/vendedlogs/bedrock-agentcore/YOUR_AGENT_ID --follow --region YOUR_REGION
-```
-
-The agent ID is in `.bedrock_agentcore.yaml` under `bedrock_agentcore.agent_id`.
-
 ### Using the Web UI
 
-Open http://localhost:9090 in your browser. The UI provides:
-
-1. **Get Cognito Token**: Enter your Cognito Client ID and credentials to authenticate
-2. **Chat with Agent**: Send messages to query your calendar
+Open http://localhost:9090 in your browser. The UI comes preconfigured with the Cognito Client ID and sample user credentials from the CDK stack.
 
 **First time flow:**
 
-1. Get a Cognito token using the form (or paste one directly)
+1. Click "Get Token" to authenticate with Cognito
 2. Send a message like "What events do I have on my calendar?"
 3. An authorization URL will appear - click it to authorize Google Calendar access
 4. Sign in with Google and grant access
-5. Return to the web app and retry your message - calendar data will be returned
+5. Return to the web app - the agent will automatically receive your calendar data
 
 **Subsequent requests:**
 
@@ -276,6 +262,10 @@ Open http://localhost:9090 in your browser. The UI provides:
 - No authorization needed - agent accesses calendar immediately
 
 ## Session Binding Security
+
+Session binding ties each OAuth flow to the user who initiated it. When a user calls `/api/chat`, the web app stores their identity in a session cookie. When the OAuth callback arrives after Google authorization, the web app verifies that the same user is completing the flow.
+
+**Why this matters:**
 
 Without session binding, an attacker could:
 
@@ -289,47 +279,6 @@ With session binding:
 1. The callback checks if the user who completed OAuth is the same user who started it
 2. Uses the session cookie to verify identity
 3. Attacker can't use victim's authorization
-
-## Troubleshooting
-
-### "No workloadAccessToken in context"
-
-The deployed runtime isn't providing the workload access token. Ensure:
-
-- You have deployed the agent with `agentcore deploy`
-- The web app is using the deployed runtime (check startup logs)
-- JWT authentication is configured (check `.bedrock_agentcore.yaml` for `authorizer_configuration`)
-
-### "Using LOCAL runtime" in web app logs
-
-The web app couldn't find `.bedrock_agentcore.yaml` or the agent ARN. This means you haven't deployed yet:
-
-```bash
-agentcore deploy
-```
-
-After deployment, restart the web app to pick up the new config.
-
-### "Session Not Found" on callback
-
-The user must authenticate via `/api/chat` before the OAuth callback can complete. This establishes the session that binds the user to the OAuth flow.
-
-### "WorkloadIdentity not found"
-
-The workload identity name includes a random suffix. List identities to find the exact name:
-
-```bash
-aws bedrock-agentcore-control list-workload-identities --region us-east-1
-```
-
-### "Polling timed out after 600 seconds"
-
-The user didn't complete authorization within 10 minutes. Try again and complete the Google sign-in faster.
-
-### Google OAuth errors
-
-- **redirect_uri_mismatch**: The callback URL isn't registered in Google. Add the AgentCore callback URL to your Google OAuth app's redirect URIs.
-- **access_denied**: User denied the permission request.
 
 ## Clean Up
 

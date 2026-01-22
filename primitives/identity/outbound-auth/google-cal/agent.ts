@@ -13,16 +13,27 @@ interface CalendarEvent {
   end?: { dateTime?: string; date?: string }
 }
 
-// Signaling mechanism to stream auth URLs to the client immediately
-let pendingAuthUrl: string | null = null
-let notifyAuthUrl: (() => void) | null = null
-let authUrlSignal = createAuthUrlSignal()
-
-function createAuthUrlSignal() {
-  return new Promise<void>((resolve) => {
-    notifyAuthUrl = resolve
+// Signal to stream auth URLs to the client immediately during agent execution
+function createAuthSignal() {
+  let resolve: ((url: string) => void) | null = null
+  let promise = new Promise<string>((r) => {
+    resolve = r
   })
+
+  return {
+    emit(url: string) {
+      resolve?.(url)
+      promise = new Promise<string>((r) => {
+        resolve = r
+      })
+    },
+    wait() {
+      return promise
+    },
+  }
 }
+
+const authSignal = createAuthSignal()
 
 const fetchCalendarEvents = withAccessToken({
   providerName: PROVIDER_NAME,
@@ -32,9 +43,7 @@ const fetchCalendarEvents = withAccessToken({
   customParameters: { access_type: 'offline', prompt: 'consent' },
   onAuthUrl: (url) => {
     console.log('[agent] Auth required - URL received')
-    pendingAuthUrl = url
-    notifyAuthUrl?.()
-    authUrlSignal = createAuthUrlSignal()
+    authSignal.emit(url)
   },
 })(async (maxResults: number, token: string) => {
   const url =
@@ -92,20 +101,16 @@ const app = new BedrockAgentCoreApp({
         return
       }
 
-      pendingAuthUrl = null
-      authUrlSignal = createAuthUrlSignal()
-
       const stream = agent.stream(request.prompt)[Symbol.asyncIterator]()
 
       while (true) {
         const result = await Promise.race([
           stream.next().then((r) => ({ type: 'stream' as const, ...r })),
-          authUrlSignal.then(() => ({ type: 'auth' as const })),
+          authSignal.wait().then((url) => ({ type: 'auth' as const, url })),
         ])
 
         if (result.type === 'auth') {
-          yield { event: 'auth_url', data: { authUrl: pendingAuthUrl } }
-          pendingAuthUrl = null
+          yield { event: 'auth_url', data: { authUrl: result.url } }
           continue
         }
 
