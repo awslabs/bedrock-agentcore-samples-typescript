@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "build": "./node_modules/typescript/bin/tsc",
+    "build": "tsc",
     "dev": "tsx watch agent.ts",
     "dev:agent": "tsx watch agent.ts",
     "dev:webapp": "tsx watch web-app.ts",
@@ -16,7 +16,7 @@
     "@aws-sdk/client-sts": "^3.972.0",
     "@opentelemetry/auto-instrumentations-node": "^0.68.0",
     "@strands-agents/sdk": "^0.1.0",
-    "bedrock-agentcore": "file:./bedrock-agentcore-0.1.1.tgz",
+    "bedrock-agentcore": "^0.2.0",
     "express": "^4.18.0",
     "express-session": "^1.18.0",
     "js-yaml": "^4.1.0",
