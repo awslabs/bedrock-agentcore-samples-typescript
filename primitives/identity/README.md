@@ -30,4 +30,4 @@ Authenticate clients calling your agent (coming soon).
 
 ### [outbound-auth](./outbound-auth/)
 
-Your agent accessing external services securely (coming soon).
+Your agent accessing external services on behalf of users.
