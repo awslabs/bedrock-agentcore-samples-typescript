@@ -2,12 +2,6 @@
 
 Deploy a Strands agent to Amazon Bedrock AgentCore Runtime.
 
-|                         |                    |
-| ----------------------- | ------------------ |
-| **AgentCore component** | Runtime            |
-| **Framework**           | Strands Agents SDK |
-| **Model**               | Amazon Nova 2 Lite |
-
 → See [parent README](../README.md) for full context on hosting agents.
 
 ## Prerequisites

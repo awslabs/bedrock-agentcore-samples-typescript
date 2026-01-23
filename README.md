@@ -79,7 +79,7 @@ Built-in tools for common agent capabilities.
 **Code Interpreter** — Execute Python, JavaScript, or shell commands in a secure sandbox:
 
 ```typescript
-import { CodeInterpreterTools } from 'bedrock-agentcore/code-interpreter/strands'
+import { CodeInterpreterTools } from 'bedrock-agentcore/experimental/code-interpreter/strands'
 
 const codeInterpreter = new CodeInterpreterTools({ region: 'us-east-1' })
 
@@ -97,7 +97,7 @@ const agent = new Agent({
 **Browser** — Automate web browsing with a remote browser session:
 
 ```typescript
-import { BrowserTools } from 'bedrock-agentcore/browser/strands'
+import { BrowserTools } from 'bedrock-agentcore/experimental/browser/strands'
 
 const browserTools = new BrowserTools({ region: 'us-east-1' })
 await browserTools.startSession()

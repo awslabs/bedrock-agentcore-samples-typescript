@@ -2,7 +2,4 @@
 
 Authenticate clients that call your agent.
 
-|                         |             |
-| ----------------------- | ----------- |
-| **AgentCore component** | Identity    |
-| **Status**              | Coming soon |
+See [cognito](./cognito/) for a sample using Amazon Cognito as the identity provider.

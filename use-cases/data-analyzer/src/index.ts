@@ -1,7 +1,7 @@
 import 'dotenv/config'
 import { Agent, BedrockModel } from '@strands-agents/sdk'
 import { BedrockAgentCoreApp } from 'bedrock-agentcore/runtime'
-import { CodeInterpreterTools } from 'bedrock-agentcore/code-interpreter/strands'
+import { CodeInterpreterTools } from 'bedrock-agentcore/experimental/code-interpreter/strands'
 import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import { z } from 'zod'

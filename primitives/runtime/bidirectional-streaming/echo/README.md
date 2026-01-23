@@ -2,12 +2,6 @@
 
 This sample demonstrates WebSocket bidirectional communication on AgentCore Runtime.
 
-|                         |                  |
-| ----------------------- | ---------------- |
-| **AgentCore component** | Runtime          |
-| **Protocol**            | HTTP (WebSocket) |
-| **Pattern**             | Echo server      |
-
 ## What This Sample Demonstrates
 
 - Using `websocketHandler` in `BedrockAgentCoreApp`

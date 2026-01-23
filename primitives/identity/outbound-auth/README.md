@@ -2,10 +2,6 @@
 
 Your agent accessing external services on behalf of users.
 
-|                         |          |
-| ----------------------- | -------- |
-| **AgentCore component** | Identity |
-
 ## Overview
 
 Agents become useful when they can take actions — read calendars, send emails, query databases. These services require authentication, and managing OAuth tokens per-user is complex: handling consent flows, secure storage, token refresh, and revocation.

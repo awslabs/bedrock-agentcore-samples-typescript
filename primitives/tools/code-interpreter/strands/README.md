@@ -57,7 +57,7 @@ For deployment, see [runtime examples](../../../runtime/).
 
 ```typescript
 import { Agent, BedrockModel } from '@strands-agents/sdk'
-import { CodeInterpreterTools } from 'bedrock-agentcore/code-interpreter/strands'
+import { CodeInterpreterTools } from 'bedrock-agentcore/experimental/code-interpreter/strands'
 
 const codeInterpreter = new CodeInterpreterTools({ region: 'us-east-1' })
 

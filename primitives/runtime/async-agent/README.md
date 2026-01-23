@@ -2,12 +2,6 @@
 
 Deploy an AI agent that handles long-running background tasks asynchronously using the Strands Agents SDK and Amazon Bedrock AgentCore Runtime.
 
-|               |                    |
-| ------------- | ------------------ |
-| **Framework** | Strands Agents SDK |
-| **Model**     | Amazon Nova 2 Lite |
-| **Protocol**  | HTTP               |
-
 ## What This Sample Demonstrates
 
 Agent code communicates its processing status using the "/ping" endpoint health status. 200 HTTP Status response with payload {"status": "HealthyBusy"} indicates the agent is busy processing background tasks. {"status": "Healthy"} indicates it is idle (waiting for requests). A session in idle state for 15 minutes gets automatically terminated.

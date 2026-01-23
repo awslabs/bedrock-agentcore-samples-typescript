@@ -2,12 +2,6 @@
 
 Access Google Calendar on behalf of users using Three-Legged OAuth with automatic token management.
 
-|                         |                    |
-| ----------------------- | ------------------ |
-| **AgentCore component** | Identity           |
-| **Framework**           | Strands Agents SDK |
-| **Model**               | Claude Haiku 4.5   |
-
 ## Overview
 
 This sample demonstrates **outbound authentication** using Three-Legged OAuth (3LO) to access Google Calendar on behalf of users. The key features:

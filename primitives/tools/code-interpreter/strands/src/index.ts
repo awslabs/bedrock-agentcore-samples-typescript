@@ -1,6 +1,6 @@
 import { Agent, BedrockModel } from '@strands-agents/sdk'
 import { BedrockAgentCoreApp } from 'bedrock-agentcore/runtime'
-import { CodeInterpreterTools } from 'bedrock-agentcore/code-interpreter/strands'
+import { CodeInterpreterTools } from 'bedrock-agentcore/experimental/code-interpreter/strands'
 import { z } from 'zod'
 import * as fs from 'fs'
 import * as path from 'path'

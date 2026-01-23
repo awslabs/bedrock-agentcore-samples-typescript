@@ -1,6 +1,6 @@
 import { Agent, BedrockModel } from '@strands-agents/sdk'
 import { BedrockAgentCoreApp } from 'bedrock-agentcore/runtime'
-import { BrowserTools } from 'bedrock-agentcore/browser/strands'
+import { BrowserTools } from 'bedrock-agentcore/experimental/browser/strands'
 import { z } from 'zod'
 
 const requestSchema = z.object({

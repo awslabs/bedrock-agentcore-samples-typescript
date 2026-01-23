@@ -2,13 +2,6 @@
 
 This sample shows how to deploy an AI agent to AgentCore Runtime. The agent receives prompts, uses tools to gather information, and streams responses back.
 
-|                         |                           |
-| ----------------------- | ------------------------- |
-| **AgentCore component** | Runtime                   |
-| **Protocol**            | HTTP                      |
-| **Model**               | Amazon Nova 2 Lite        |
-| **Frameworks**          | Strands Agents, Vercel AI |
-
 ## What This Sample Demonstrates
 
 - Wrapping an agent framework with `BedrockAgentCoreApp`

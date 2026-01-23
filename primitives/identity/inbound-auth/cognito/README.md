@@ -2,12 +2,6 @@
 
 Configure OAuth for inbound authentication—AgentCore validates JWTs before requests reach your container.
 
-|                         |                    |
-| ----------------------- | ------------------ |
-| **AgentCore component** | Identity           |
-| **Framework**           | Strands Agents SDK |
-| **Model**               | Amazon Nova 2 Lite |
-
 ## Overview
 
 This sample demonstrates how to configure inbound authentication for an AgentCore Runtime using Amazon Cognito as the identity provider. AgentCore validates JWT tokens before requests reach your container, so your agent code stays simple—no auth logic required.

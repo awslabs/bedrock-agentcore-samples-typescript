@@ -48,7 +48,7 @@ For deployment, see [runtime examples](../../../runtime/).
 
 ```typescript
 import { Agent, BedrockModel } from '@strands-agents/sdk'
-import { BrowserTools } from 'bedrock-agentcore/browser/strands'
+import { BrowserTools } from 'bedrock-agentcore/experimental/browser/strands'
 
 const browserTools = new BrowserTools({ region: 'us-east-1' })
 

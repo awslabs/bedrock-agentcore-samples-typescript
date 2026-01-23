@@ -2,12 +2,10 @@
 
 Deploy a multi-agent customer support system to Amazon Bedrock AgentCore Runtime.
 
-|                         |                    |
-| ----------------------- | ------------------ |
-| **AgentCore component** | Runtime            |
-| **Framework**           | Strands Agents SDK |
-| **Model**               | Amazon Nova 2 Lite |
-| **Pattern**             | Agents-as-Tools    |
+## Prerequisites
+
+- Node.js 20+
+- AWS credentials configured
 
 ## Architecture
 
