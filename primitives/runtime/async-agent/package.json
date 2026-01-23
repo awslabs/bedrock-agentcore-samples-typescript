@@ -4,7 +4,7 @@
   "type": "module",
   "main": "dist/agent.js",
   "scripts": {
-    "build": "tsc",
+    "build": "./node_modules/typescript/bin/tsc",
     "dev": "tsx watch agent.ts",
     "start": "node dist/agent.js"
   },

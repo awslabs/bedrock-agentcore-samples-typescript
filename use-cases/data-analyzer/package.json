@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "docker-compose up --build",
     "start": "tsx watch src/index.ts",
-    "build": "tsc",
+    "build": "./node_modules/typescript/bin/tsc",
     "cdk": "cdk",
     "synth": "cdk synth",
     "deploy": "cdk deploy --require-approval never",

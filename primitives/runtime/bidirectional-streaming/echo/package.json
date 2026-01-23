@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "build": "tsc",
+    "build": "./node_modules/typescript/bin/tsc",
     "dev": "tsx watch agent.ts",
     "start": "node dist/agent.js",
     "test:deployed": "tsx client.ts"
