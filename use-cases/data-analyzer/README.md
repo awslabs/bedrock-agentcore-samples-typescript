@@ -95,10 +95,10 @@ The agent accepts JSON requests with the following schema:
 }
 ```
 
-| Field   | Type   | Required | Description                                      |
-| ------- | ------ | -------- | ------------------------------------------------ |
-| `prompt`| string | Yes      | The analysis request or question                 |
-| `files` | array  | No       | Files to upload (name + base64-encoded content)  |
+| Field    | Type   | Required | Description                                     |
+| -------- | ------ | -------- | ----------------------------------------------- |
+| `prompt` | string | Yes      | The analysis request or question                |
+| `files`  | array  | No       | Files to upload (name + base64-encoded content) |
 
 Files are written to the `artifacts/` directory in the sandbox and referenced in the prompt automatically.
 
