@@ -52,9 +52,7 @@ This repository demonstrates the following AgentCore capabilities:
 
 ## SDK Dependency
 
-All samples in this repository depend on `private-bedrock-agentcore-sdk-typescript-staging`.
-
-**IMPORTANT: Always pull the latest changes from the SDK repository before making changes to samples or checking compatibility.**
+All samples in this repository depend on `bedrock-agentcore` (the public npm package).
 
 When making changes to samples, ensure compatibility with the current SDK version.
 

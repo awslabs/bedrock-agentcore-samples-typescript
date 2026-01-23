@@ -26,7 +26,7 @@ AgentCore Identity handles authentication in both directions:
 
 ### [inbound-auth](./inbound-auth/)
 
-Authenticate clients calling your agent (coming soon).
+Authenticate clients calling your agent.
 
 ### [outbound-auth](./outbound-auth/)
 
