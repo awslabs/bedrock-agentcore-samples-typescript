@@ -17,7 +17,7 @@
     "@aws-sdk/client-s3": "^3.0.0",
     "@aws-sdk/s3-request-presigner": "^3.0.0",
     "@strands-agents/sdk": "^0.1.0",
-    "bedrock-agentcore": "file:./bedrock-agentcore-0.1.1.tgz",
+    "bedrock-agentcore": "^0.2.0",
     "dotenv": "^16.0.0",
     "zod": "^4.0.0"
   },

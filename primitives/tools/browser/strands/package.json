@@ -8,7 +8,7 @@
   },
   "dependencies": {
     "@strands-agents/sdk": "^0.1.0",
-    "bedrock-agentcore": "file:./bedrock-agentcore-0.1.1.tgz",
+    "bedrock-agentcore": "^0.2.0",
     "playwright": "^1.52.0",
     "tsx": "^4.19.0",
     "zod": "^4.0.0"

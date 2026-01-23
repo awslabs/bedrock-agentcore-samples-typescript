@@ -3,14 +3,14 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "build": "./node_modules/typescript/bin/tsc",
+    "build": "tsc",
     "dev": "tsx watch agent.ts",
     "start": "node dist/agent.js"
   },
   "dependencies": {
     "@opentelemetry/auto-instrumentations-node": "^0.68.0",
     "@strands-agents/sdk": "^0.1.0",
-    "bedrock-agentcore": "file:./bedrock-agentcore-0.1.1.tgz",
+    "bedrock-agentcore": "^0.2.0",
     "zod": "^4.0.0"
   },
   "devDependencies": {
