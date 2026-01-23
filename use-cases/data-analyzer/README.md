@@ -79,6 +79,29 @@ Open http://localhost:3000 and login with:
 
 To test, try uploading `data/sample_sales_data.csv` and ask the agent to show sales per region per category.
 
+## Request Format
+
+The agent accepts JSON requests with the following schema:
+
+```json
+{
+  "prompt": "Analyze this data and create a chart",
+  "files": [
+    {
+      "name": "data.csv",
+      "content": "<base64-encoded content>"
+    }
+  ]
+}
+```
+
+| Field   | Type   | Required | Description                                      |
+| ------- | ------ | -------- | ------------------------------------------------ |
+| `prompt`| string | Yes      | The analysis request or question                 |
+| `files` | array  | No       | Files to upload (name + base64-encoded content)  |
+
+Files are written to the `artifacts/` directory in the sandbox and referenced in the prompt automatically.
+
 ## Local Development
 
 For backend development without deploying:
@@ -102,7 +125,7 @@ npm run dev
 
 The frontend can switch between local (`localhost:8080`) and deployed endpoints using the dropdown.
 
-## Cleanup
+## Clean Up
 
 ```bash
 npm run destroy

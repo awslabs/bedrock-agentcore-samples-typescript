@@ -148,7 +148,7 @@ Full-duplex WebSocket communication for real-time applications.
 
 ### [async-agent](./async-agent/)
 
-Long-running tasks (coming soon)
+Long-running background tasks with automatic health status tracking.
 
 ---
 

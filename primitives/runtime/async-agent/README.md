@@ -1,6 +1,6 @@
 # Async Agent - Strands
 
-Deploy an AI agent that handles long-running background tasks asynchronously using the Strands Agents SDK and Bedrock AgentCore Runtime.
+Deploy an AI agent that handles long-running background tasks asynchronously using the Strands Agents SDK and Amazon Bedrock AgentCore Runtime.
 
 |               |                    |
 | ------------- | ------------------ |
@@ -16,11 +16,11 @@ Agent code communicates its processing status using the "/ping" endpoint health 
 - Agent status changes from `Healthy` to `HealthyBusy` during task execution.
 - Tool-based API for starting long-running operations
 - Streaming responses with Server-Sent Events (SSE)
-- Integration between Strands SDK and Bedrock AgentCore Runtime
+- Integration between Strands SDK and Amazon Bedrock AgentCore Runtime
 
 ## How It Works
 
-The agent uses the Bedrock AgentCore Runtime's task tracking system to manage background jobs:
+The agent uses the AgentCore Runtime's task tracking system to manage background jobs:
 
 ```typescript
 const startBackgroundTask = tool({
@@ -47,9 +47,9 @@ When a task is registered with `addAsyncTask()`, the runtime's health endpoint (
 
 ### Prerequisites
 
-- Node.js 20 or later
+- Node.js 20+
 - AWS credentials configured (for Bedrock API access)
-- Bedrock AgentCore Starter Toolkit installed
+- AgentCore Starter Toolkit installed
 
 ### Run Locally with Hot Reload
 
@@ -144,7 +144,7 @@ Response after task completes:
 ### Prerequisites
 
 - AWS credentials configured
-- Bedrock AgentCore Starter Toolkit installed
+- AgentCore Starter Toolkit installed
 
 ### Deployment Steps
 
@@ -167,7 +167,7 @@ This will:
 - Build and containerize the agent
 - Push the container image to Amazon ECR
 - Create necessary IAM roles and permissions
-- Deploy the agent to Bedrock AgentCore Runtime
+- Deploy the agent to Amazon Bedrock AgentCore Runtime
 
 The deployment outputs the Runtime ARN which you can use to invoke the agent.
 
@@ -180,7 +180,7 @@ agentcore invoke --payload '{"prompt": "start a 10 second task"}'
 
 ## Architecture
 
-The sample demonstrates the integration pattern between Strands SDK and Bedrock AgentCore Runtime:
+The sample demonstrates the integration pattern between Strands SDK and Amazon Bedrock AgentCore Runtime:
 
 1. **Tool Definition**: Define tools using Strands SDK's `tool()` function
 2. **Task Tracking**: Use `app.addAsyncTask()` and `app.completeAsyncTask()` for health monitoring
