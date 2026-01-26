@@ -1,6 +1,6 @@
 # Customization Guide
 
-This guide explains how to customize common aspects of the SAFE-AI application. Each section includes the files to modify and code examples.
+This guide explains how to customize common aspects of the Digital Operations Agent application. Each section includes the files to modify and code examples.
 
 ## Table of Contents
 
@@ -9,7 +9,7 @@ This guide explains how to customize common aspects of the SAFE-AI application. 
 3. [AI Models](#ai-models)
 4. [Data Schema](#data-schema)
 5. [Authentication](#authentication)
-6. [Dashboard](#dashboard)
+6. [Map Layers](#map-layers)
 7. [Navigation](#navigation)
 8. [Styling](#styling)
 
