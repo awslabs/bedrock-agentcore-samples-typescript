@@ -43,8 +43,23 @@ Since this is a monorepo, you must specify the app location:
 
 **What this does:**
 - Sets the `AMPLIFY_MONOREPO_APP_ROOT` environment variable automatically
-- Tells Amplify where to find the `amplify.yml` build specification
+- Tells Amplify to look for `amplify.yml` with the `applications` key structure
 - Ensures builds run from the correct directory
+
+**Important:** The `amplify.yml` file uses the monorepo format with the `applications` key:
+```yaml
+version: 1
+applications:
+  - appRoot: use-cases/digital-operations
+    backend:
+      phases:
+        build:
+          commands: [...]
+    frontend:
+      phases:
+        build:
+          commands: [...]
+```
 
 ### 4. Configure Build Settings
 
@@ -147,23 +162,79 @@ Amplify automatically sets required environment variables:
 
 Additional variables are configured in the backend deployment.
 
+## Troubleshooting
+
+### "Monorepo spec provided without 'applications' key"
+
+**Cause**: The `amplify.yml` file doesn't use the monorepo format when the app is configured as a monorepo in the Amplify Console.
+
+**Solution**: 
+1. Ensure your `amplify.yml` uses the `applications` key structure:
+   ```yaml
+   version: 1
+   applications:
+     - appRoot: use-cases/digital-operations
+       backend:
+         phases:
+           build:
+             commands: [...]
+       frontend:
+         phases:
+           build:
+             commands: [...]
+   ```
+2. Commit and push the updated `amplify.yml` to your repository
+3. Retry the deployment in Amplify Console
+
+### "My app is a monorepo" option not visible
+
+**Cause**: Using an older version of the Amplify Console.
+
+**Solution**: Manually set the environment variable:
+1. Go to **App settings** → **Environment variables**
+2. Add variable:
+   - Key: `AMPLIFY_MONOREPO_APP_ROOT`
+   - Value: `use-cases/digital-operations`
+
 ### Build Fails with "exec format error"
 
 **Cause**: The build image doesn't support Docker multi-architecture builds.
 
-**Solution**: Ensure you've set the custom build image to `aws/codebuild/amazonlinux2-x86_64-standard:5.0` as described in Step 2.
+**Solution**: Ensure you've set the custom build image to `aws/codebuild/amazonlinux2-x86_64-standard:5.0`.
 
-### Docker Build Fails with 403 Forbidden
+### Docker build fails with "403 Forbidden" or "unauthorized"
 
-**Cause**: Unable to pull Docker images from AWS ECR Public.
+**Cause**: Unable to pull Docker images from public registries.
 
-**Solution**: This is resolved by the `--platform=linux/arm64` flags in the Dockerfiles, which ensures the correct image architecture is pulled.
+**Solution**: The QEMU setup in `amplify.yml` uses public ECR images. Ensure your AWS account can access public ECR. The build commands handle this automatically.
 
-### npm ci Fails During Docker Build
+### Backend build fails with "amplify/ folder not found"
 
-**Cause**: Platform-specific dependencies can't be built for ARM64.
+**Cause**: Monorepo app root not configured correctly.
 
-**Solution**: The QEMU emulation setup in `amplify.yml` resolves this by allowing ARM64 binaries to run on the x86_64 build host.
+**Solution**: 
+1. Verify `AMPLIFY_MONOREPO_APP_ROOT=use-cases/digital-operations`
+2. Check that `amplify/` folder exists at `use-cases/digital-operations/amplify/`
+3. Ensure the `appRoot` in `amplify.yml` matches the environment variable
+
+### Frontend build fails with "Module not found"
+
+**Cause**: Dependencies not installed or wrong Node.js version.
+
+**Solution**: The `amplify.yml` installs Node.js 20 using `n`. Check build logs to verify:
+```
+Frontend - Node.js version: v20.x.x
+```
+
+### AgentCore Runtime deployment fails
+
+**Cause**: Docker images failed to build or push.
+
+**Solution**: 
+1. Check backend build logs for Docker errors
+2. Verify QEMU emulation setup succeeded
+3. Ensure Docker buildx is configured correctly
+4. Confirm custom build image is set to `aws/codebuild/amazonlinux2-x86_64-standard:5.0`
 
 ## Architecture Notes
 

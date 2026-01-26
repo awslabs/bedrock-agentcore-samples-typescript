@@ -1,55 +1,35 @@
 version: 1
-backend:
-  phases:
-    # install:
-    #   commands:
-        
-    #   runtime-versions:
-    #     nodejs: 20
-    build:
-      commands:
-        - echo "Build environment is $CODEBUILD_BUILD_IMAGE"
-        - which docker || true
-        # - aws ecr-public get-login-password | docker login --username AWS --password-stdin public.ecr.aws || true # Authenticate with ECR
-        # # Install Node.js 20 using n
-        # - npm install -g n
-        - n 20
-        - hash -r  # Refresh shell hash table
-        # - echo "Installing and switching to Node.js v20..."
-        # - nvm install 20
-        # - nvm use 20
-        # - nvm alias default 20
-        - echo "Backend - Node.js version:" && node --version
-        - echo "Backend - npm version:" && npm --version
-        # Enable multi-architecture Docker builds with QEMU emulation
-        - echo "Setting up QEMU for ARM64 emulation..."
-        # - docker run --rm --privileged public.ecr.aws/k1t8c0v2/multiarch/qemu-user-static --reset -p yes
-        - docker run --privileged --rm public.ecr.aws/eks-distro-build-tooling/binfmt-misc:qemu-v7.0.0 --install all ;
-        - docker buildx create --use --name multiarch --driver docker-container || true
-        - docker buildx inspect --bootstrap
-        - echo "Multi-arch Docker support enabled"
-        - npm ci --cache .npm --prefer-offline
-        - npx ampx pipeline-deploy --branch $AWS_BRANCH --app-id $AWS_APP_ID
-frontend:
-  phases:
-    # install:
-    #   runtime-versions:
-    #     nodejs: 20
-    build:
-      commands:
-        - echo "Build environment is $CODEBUILD_BUILD_IMAGE"
-        # - echo "Installing and switching to Node.js v20..."
-        # - nvm install 20
-        # - nvm use 20
-        # - nvm alias default 20
-        - echo "Frontend - Node.js version:" && node --version
-        - echo "Frontend - npm version:" && npm --version
-        - npm run build
-  artifacts:
-    baseDirectory: .next
-    files:
-      - '**/*'
-  cache:
-    paths:
-      - .next/cache/**/*
-      - .npm/**/*
+applications:
+  - appRoot: use-cases/digital-operations
+    backend:
+      phases:
+        build:
+          commands:
+            - echo "Build environment is $CODEBUILD_BUILD_IMAGE"
+            - which docker || true
+            - n 20
+            - hash -r
+            - echo "Backend - Node.js version:" && node --version
+            - echo "Backend - npm version:" && npm --version
+            - echo "Setting up QEMU for ARM64 emulation..."
+            - docker run --privileged --rm public.ecr.aws/eks-distro-build-tooling/binfmt-misc:qemu-v7.0.0 --install all
+            - docker buildx create --use --name multiarch --driver docker-container || true
+            - docker buildx inspect --bootstrap
+            - echo "Multi-arch Docker support enabled"
+            - npm ci --cache .npm --prefer-offline
+            - npx ampx pipeline-deploy --branch $AWS_BRANCH --app-id $AWS_APP_ID
+    frontend:
+      phases:
+        build:
+          commands:
+            - echo "Frontend - Node.js version:" && node --version
+            - echo "Frontend - npm version:" && npm --version
+            - npm run build
+      artifacts:
+        baseDirectory: .next
+        files:
+          - '**/*'
+      cache:
+        paths:
+          - .next/cache/**/*
+          - .npm/**/*
