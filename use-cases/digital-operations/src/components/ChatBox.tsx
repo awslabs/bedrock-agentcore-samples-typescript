@@ -60,7 +60,7 @@ import { Loader } from '@/components/ai-elements/loader';
 
 import { saveChat, loadChat } from '@/../utils/chatStore';
 import { useDemoContext } from '@/contexts/DemoContext';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { createCriticalAlertMessage } from '@/lib/demoMessages';
 
@@ -103,6 +103,7 @@ export const ChatBox = ({ chatSessionId }: ChatBoxProps) => {
     'Which wells in T30N-R06W are most responsible for gas production being lower today than in July 2023?',
     'Which wells have recently dropped off in production?',
     `What's the status of my workover rig queue?`,
+    'Draft a work order to address the P-2201 centrifugal pump repair',
   ])
 
   // Check if AgentCore is configured, otherwise fall back to default API route
@@ -255,14 +256,14 @@ export const ChatBox = ({ chatSessionId }: ChatBoxProps) => {
           <ConversationContent>
             {messages.length === 0 && (
               <div className="flex flex-col items-center justify-center h-full space-y-4">
-                <AlertTriangle className="h-16 w-16 text-gray-300" />
+                <Zap className="h-16 w-16 text-gray-300" />
                 <div className="text-center space-y-2">
                   <h3 className="text-xl font-semibold text-gray-700">
-                    Ready for Demo
+                    Ready to Get Started
                   </h3>
                   <p className="text-gray-500 max-w-md">
-                    Click the button below to start the refinery maintenance demo.
-                    This will trigger a critical alert from the digital twin system.
+                    Ask questions about your operations, analyze production data, or manage work orders.
+                    Click below to load sample data for the demonstration.
                   </p>
                 </div>
                 <div className="flex gap-3 mt-4">
@@ -274,12 +275,12 @@ export const ChatBox = ({ chatSessionId }: ChatBoxProps) => {
                     {isStartingDemo ? (
                       <>
                         <RefreshCcwIcon className="mr-2 h-4 w-4 animate-spin" />
-                        Starting Demo...
+                        Loading Demo Data...
                       </>
                     ) : (
                       <>
                         <AlertTriangle className="mr-2 h-4 w-4" />
-                        Start Demo
+                        Load Demo Data
                       </>
                     )}
                   </Button>
@@ -292,12 +293,12 @@ export const ChatBox = ({ chatSessionId }: ChatBoxProps) => {
                     {isResettingDemo ? (
                       <>
                         <RefreshCcwIcon className="mr-2 h-4 w-4 animate-spin" />
-                        Resetting...
+                        Clearing...
                       </>
                     ) : (
                       <>
                         <RefreshCcwIcon className="mr-2 h-4 w-4" />
-                        Reset Demo
+                        Clear Demo Data
                       </>
                     )}
                   </Button>

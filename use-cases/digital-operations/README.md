@@ -6,7 +6,6 @@ An AI agent for industrial operations management with real-time data analysis, p
 
 - **AgentCore Runtime Integration** — Agent hosted on AgentCore with streaming responses
 - **Real-time Data Analysis** — Query operational data using natural language via GraphQL
-- **Predictive Analytics** — Equipment failure prediction and throughput forecasting
 - **Inline Visualizations** — Agent generates Plotly charts embedded in markdown via iframe srcdoc
 - **Interactive Mapping** — MapLibre-based map viewer with query-driven layers
 - **Amplify Data Integration** — GraphQL API with DynamoDB backend

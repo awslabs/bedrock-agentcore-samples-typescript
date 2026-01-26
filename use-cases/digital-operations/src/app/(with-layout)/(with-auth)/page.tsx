@@ -19,7 +19,7 @@ import {
 
 import { createChat } from '@/../utils/chatStore';
 
-const ChatBotDemo = () => {
+const DigitalOperations = () => {
   const [isCreatingChat, setIsCreatingChat] = useState(false);
   const router = useRouter();
 
@@ -37,48 +37,48 @@ const ChatBotDemo = () => {
 
   const features = [
     {
-      icon: Shield,
-      title: 'Comprehensive Safety Monitoring',
-      description: 'Real-time integration of near-miss events, weather alerts, active permits, and personnel status across all refinery operations.',
+      icon: TrendingUp,
+      title: 'Production Optimization',
+      description: 'Analyze well performance, identify production decline patterns, and optimize field operations across upstream, midstream, and downstream assets.',
       color: 'text-blue-600 dark:text-blue-400'
     },
     {
       icon: AlertTriangle,
-      title: 'Proactive Risk Assessment',
-      description: 'AI-powered analysis of atmospheric conditions, equipment status, and historical risk factors to prevent incidents before they occur.',
+      title: 'Predictive Maintenance',
+      description: 'AI-powered equipment monitoring and failure prediction to minimize downtime and optimize maintenance schedules across facilities.',
       color: 'text-amber-600 dark:text-amber-400'
     },
     {
-      icon: TrendingUp,
-      title: '24-Hour Risk Forecasting',
-      description: 'Generate comprehensive operational forecasts analyzing planned activities, resource availability, and potential emergency scenarios.',
+      icon: BarChart3,
+      title: 'Real-Time Analytics',
+      description: 'Query production data, equipment status, and operational metrics with natural language to make data-driven decisions.',
       color: 'text-green-600 dark:text-green-400'
     },
     {
       icon: FileCheck,
-      title: 'Automated Permit Management',
-      description: 'Track hot work, confined space, and crane lift permits with 100% compliance monitoring and automatic status updates.',
+      title: 'Work Order Management',
+      description: 'Streamline workover operations, maintenance scheduling, and resource allocation with intelligent prioritization and cost analysis.',
       color: 'text-purple-600 dark:text-purple-400'
     },
     {
       icon: Users,
-      title: 'Personnel Readiness Tracking',
-      description: 'Monitor fatigue levels, certification status, and crew assignments to ensure optimal safety performance.',
+      title: 'Asset Intelligence',
+      description: 'Comprehensive visibility into wells, facilities, and equipment with automated alerts for anomalies and performance issues.',
       color: 'text-orange-600 dark:text-orange-400'
     },
     {
-      icon: BarChart3,
-      title: 'Leading & Lagging Indicators',
-      description: 'Analyze safety observations, near-miss patterns, and incident trends to identify risks and implement preventive actions.',
+      icon: Shield,
+      title: 'Compliance & Safety',
+      description: 'Monitor regulatory compliance, environmental metrics, and safety indicators with automated reporting and risk assessment.',
       color: 'text-cyan-600 dark:text-cyan-400'
     }
   ];
 
   const metrics = [
-    { label: 'Permit Compliance', value: '100%', status: 'STABLE' },
-    { label: 'Safety Observations', value: '15+', status: 'POSITIVE' },
-    { label: 'Response Time', value: '<5min', status: 'OPTIMAL' },
-    { label: 'Recordable Incidents', value: '0', status: 'EXCELLENT' }
+    { label: 'Active Wells', value: '1,247', status: 'STABLE' },
+    { label: 'Production Today', value: '98.2%', status: 'OPTIMAL' },
+    { label: 'Avg Response', value: '<2min', status: 'EXCELLENT' },
+    { label: 'Cost Savings', value: '$2.4M', status: 'POSITIVE' }
   ];
 
   return (
@@ -93,20 +93,20 @@ const ChatBotDemo = () => {
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-100 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800">
               <Zap className="size-4 text-blue-600 dark:text-blue-400" />
               <span className="text-sm font-medium text-blue-900 dark:text-blue-300">
-                AI-Powered Refinery Safety Management
+                AI-Powered Energy Operations
               </span>
             </div>
             
             <h1 className="text-5xl md:text-7xl font-bold tracking-tight">
               <span className="bg-gradient-to-br from-slate-900 to-slate-700 dark:from-white dark:to-slate-300 bg-clip-text text-transparent">
-                SAFE-AI
+                Digital Operations
               </span>
             </h1>
             
             <p className="max-w-3xl mx-auto text-xl md:text-2xl text-slate-600 dark:text-slate-400 leading-relaxed">
-              Comprehensive safety intelligence for refinery operations. 
+              Intelligent operations management for the energy industry. 
               <span className="block mt-2 font-semibold text-slate-900 dark:text-slate-100">
-                Real-time monitoring • Predictive analytics • Proactive risk management
+                Production optimization • Asset intelligence • Predictive maintenance
               </span>
             </p>
 
@@ -124,8 +124,8 @@ const ChatBotDemo = () => {
                   </>
                 ) : (
                   <>
-                    <Shield className="group-hover:scale-110 transition-transform" />
-                    Start Safety Session
+                    <Zap className="group-hover:scale-110 transition-transform" />
+                    Start New Session
                     <ArrowRight className="group-hover:translate-x-1 transition-transform" />
                   </>
                 )}
@@ -137,7 +137,7 @@ const ChatBotDemo = () => {
                 className="h-14 px-8 text-lg"
                 onClick={() => router.push('/demo-setup')}
               >
-                View Demo Setup
+                Setup Demo Data
               </Button>
             </div>
 
@@ -168,10 +168,10 @@ const ChatBotDemo = () => {
             Key Capabilities
           </Badge>
           <h2 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white mb-4">
-            Comprehensive Safety Intelligence
+            Comprehensive Operational Intelligence
           </h2>
           <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
-            SAFE-AI integrates multiple data streams to provide actionable insights and decision support for refinery safety operations
+            Integrate data across your operations to optimize production, reduce costs, and improve decision-making
           </p>
         </div>
 
@@ -195,68 +195,68 @@ const ChatBotDemo = () => {
         </div>
       </div>
 
-      {/* Demo Scenarios Section */}
+      {/* Use Cases Section */}
       <div className="bg-slate-100 dark:bg-slate-900/50 py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <Badge variant="outline" className="mb-4">
-              Interactive Demo
+              Example Use Cases
             </Badge>
             <h2 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white mb-4">
-              Experience a Day in Refinery Safety
+              What You Can Do
             </h2>
             <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
-              Follow Firas Toumi, Safety Manager, through five critical scenarios demonstrating SAFE-AI&apos;s capabilities
+              Ask questions in natural language to analyze operations, optimize production, and manage assets
             </p>
           </div>
 
           <div className="space-y-4 max-w-4xl mx-auto">
             {[
               { 
-                title: 'Morning Safety Brief', 
-                description: 'Comprehensive status integrating overnight events, current risks, and weather impacts',
-                time: '07:00 AM'
+                title: 'Production Analysis', 
+                description: 'Which wells in T30N-R06W are most responsible for gas production being lower today than in July 2023?',
+                icon: TrendingUp
               },
               { 
-                title: 'Critical Decision Point', 
-                description: 'Detailed safety assessment for FCCU catalyst changeout with permit and personnel review',
-                time: '09:30 AM'
+                title: 'Well Performance', 
+                description: 'Which wells have recently dropped off in production and what are the potential causes?',
+                icon: BarChart3
               },
               { 
-                title: 'Emergency Response Planning', 
-                description: '24-hour risk forecast analyzing operations, resources, and potential scenarios',
-                time: '11:00 AM'
+                title: 'Work Order Status', 
+                description: 'What is the status of my workover rig queue and which jobs should be prioritized?',
+                icon: FileCheck
               },
               { 
-                title: 'Incident Prevention Analysis', 
-                description: 'Leading and lagging safety indicators analysis with pattern identification',
-                time: '02:00 PM'
+                title: 'Maintenance Planning', 
+                description: 'Draft a work order to address the P-2201 centrifugal pump repair with cost estimates',
+                icon: AlertTriangle
               },
               { 
-                title: 'End of Shift Handover', 
-                description: 'Comprehensive report highlighting critical events, active risks, and priority actions',
-                time: '04:30 PM'
+                title: 'Emergency Response', 
+                description: 'Show me all emergency work orders from last night and their current status',
+                icon: Clock
+              },
+              { 
+                title: 'Resource Optimization', 
+                description: 'How can I fit this maintenance into my current schedule and what are the cost implications?',
+                icon: Users
               }
-            ].map((scenario, index) => (
+            ].map((useCase, index) => (
               <div 
                 key={index}
                 className="bg-white dark:bg-slate-800/50 rounded-lg p-6 border border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-700 transition-colors group"
               >
                 <div className="flex items-start gap-4">
-                  <div className="size-10 rounded-full bg-blue-100 dark:bg-blue-950 flex items-center justify-center text-blue-700 dark:text-blue-400 font-bold shrink-0 group-hover:scale-110 transition-transform">
-                    {index + 1}
+                  <div className="size-10 rounded-full bg-blue-100 dark:bg-blue-950 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                    <useCase.icon className="size-5 text-blue-700 dark:text-blue-400" />
                   </div>
                   <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
-                        {scenario.title}
-                      </h3>
-                      <Badge variant="outline" className="text-xs">
-                        {scenario.time}
-                      </Badge>
-                    </div>
-                    <p className="text-slate-600 dark:text-slate-400">
-                      {scenario.description}
+                    <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+                      {useCase.title}
+                    </h3>
+                    <p className="text-slate-600 dark:text-slate-400 italic">
+                      &quot;{useCase.description}&quot;
                     </p>
                   </div>
                   <CheckCircle2 className="size-5 text-green-600 dark:text-green-400 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
@@ -279,7 +279,7 @@ const ChatBotDemo = () => {
                 </>
               ) : (
                 <>
-                  Begin Demo Experience
+                  Try It Now
                   <ArrowRight className="group-hover:translate-x-1 transition-transform" />
                 </>
               )}
@@ -293,12 +293,12 @@ const ChatBotDemo = () => {
         <Card className="relative overflow-hidden border-2 border-blue-200 dark:border-blue-900">
           <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20" />
           <CardContent className="relative p-12 text-center">
-            <Shield className="size-16 mx-auto mb-6 text-blue-600 dark:text-blue-400" />
+            <Zap className="size-16 mx-auto mb-6 text-blue-600 dark:text-blue-400" />
             <h2 className="text-3xl font-bold text-slate-900 dark:text-white mb-4">
-              Ready to Transform Refinery Safety?
+              Ready to Optimize Your Operations?
             </h2>
             <p className="text-lg text-slate-600 dark:text-slate-400 mb-8 max-w-2xl mx-auto">
-              Experience how SAFE-AI combines real-time monitoring, predictive analytics, and proactive risk management to create safer refinery operations.
+              Experience how AI-powered digital operations can transform your energy business with intelligent insights and automated workflows.
             </p>
             <Button 
               onClick={handleNewChat}
@@ -313,8 +313,8 @@ const ChatBotDemo = () => {
                 </>
               ) : (
                 <>
-                  <Shield className="group-hover:scale-110 transition-transform" />
-                  Launch SAFE-AI Session
+                  <Zap className="group-hover:scale-110 transition-transform" />
+                  Get Started
                   <ArrowRight className="group-hover:translate-x-1 transition-transform" />
                 </>
               )}
@@ -326,4 +326,4 @@ const ChatBotDemo = () => {
   );
 };
 
-export default ChatBotDemo;
+export default DigitalOperations;
