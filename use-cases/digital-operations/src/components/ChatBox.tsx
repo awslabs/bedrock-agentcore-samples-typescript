@@ -100,8 +100,7 @@ export const ChatBox = ({ chatSessionId }: ChatBoxProps) => {
   const [isStartingDemo, setIsStartingDemo] = useState(false);
   const [isResettingDemo, setIsResettingDemo] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([ // Default suggestions for when there are no messages
-    'Which wells in T30N-R06W are most responsible for gas production being lower today than in July 2023?',
-    'Which wells have recently dropped off in production?',
+    'Show me a map of the largest ports in the US, and plot their throughput over the past 5 years.',
     `What's the status of my workover rig queue?`,
     'Draft a work order to address the P-2201 centrifugal pump repair',
   ])
@@ -168,6 +167,7 @@ export const ChatBox = ({ chatSessionId }: ChatBoxProps) => {
   }, [messages]);
 
   const handleDemoStart = async () => {
+    return
     setIsStartingDemo(true);
     try {
       // Start the demo (creates alerts in database)
