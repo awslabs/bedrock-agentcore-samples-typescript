@@ -253,7 +253,13 @@ export function preprocessContent(content: string, chatSessionId: string): strin
   }
   
   const dummyHtml = '<html><body><p>Invalid HTML content</p></body></html>';
-  const loadingHtml = "<html><body style='display:flex;align-items:center;justify-content:center;height:100vh;margin:0;font-family:sans-serif;'><div style='text-align:center;'><div style='border:3px solid #f3f3f3;border-top:3px solid #3498db;border-radius:50%;width:40px;height:40px;animation:spin 1s linear infinite;margin:0 auto 10px;'></div><p style='color:#666;'>Loading...</p></div><style>@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}</style></body></html>";
+  
+  const createLoadingHtml = (currentLength: number) => {
+    // Use a timestamp-based rotation to ensure continuous spinning even when iframe is recreated
+    const timestamp = Date.now();
+    const rotationDegrees = (timestamp % 1000) * 0.36; // 360 degrees per second
+    return `<html><body style='display:flex;align-items:center;justify-content:center;height:100vh;margin:0;font-family:sans-serif;'><div style='text-align:center;'><div id='spinner' style='border:3px solid #f3f3f3;border-top:3px solid #3498db;border-radius:50%;width:40px;height:40px;margin:0 auto 10px;transform:rotate(${rotationDegrees}deg);'></div><p style='color:#666;'>Loading...</p><p style='color:#999;font-size:12px;margin-top:8px;'>${currentLength.toLocaleString()} characters</p></div><script>(function(){var s=document.getElementById('spinner');var start=Date.now()-${timestamp};function rotate(){var elapsed=Date.now()-start;var deg=(elapsed%1000)*0.36;s.style.transform='rotate('+deg+'deg)';requestAnimationFrame(rotate);}rotate();})();</script></body></html>`;
+  };
   
   let result = '';
   let position = 0;
@@ -303,8 +309,10 @@ export function preprocessContent(content: string, chatSessionId: string): strin
     
     // If we couldn't find the end of the tag, treat as incomplete
     if (tagEnd === -1) {
-      console.log('Detected incomplete iframe during streaming, replacing with loading indicator');
-      result += `<iframe width="100%" srcdoc="${loadingHtml}"/>`;
+      const partialContent = content.substring(iframeStart);
+      const estimatedLength = partialContent.length;
+      console.log(`Detected incomplete iframe during streaming (${estimatedLength} chars), replacing with loading indicator`);
+      result += `<iframe width="100%" srcdoc="${createLoadingHtml(estimatedLength)}"/>`;
       position = content.length;
       break;
     }
@@ -405,8 +413,9 @@ export function preprocessContent(content: string, chatSessionId: string): strin
     const isComplete = iframeEnd !== -1;
     
     if (!isComplete) {
-      console.log('Detected incomplete iframe during streaming, replacing with loading indicator');
-      result += `<iframe width="100%" srcdoc="${loadingHtml}"/>`;
+      const estimatedLength = iframeContent.length;
+      console.log(`Detected incomplete iframe during streaming (${estimatedLength} chars), replacing with loading indicator`);
+      result += `<iframe width="100%" srcdoc="${createLoadingHtml(estimatedLength)}"/>`;
       position = iframeStart + iframeContent.length;
       break; // Stop processing, rest of content is incomplete
     }
