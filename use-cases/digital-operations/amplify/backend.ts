@@ -36,22 +36,22 @@ new SeedDataConstruct(backend.stack, 'SeedData', {
   settingsTable: SettingsDdbTable,
 })
 
-// Deploy MCP server
-const mcpServer = new AgentCoreRuntimeWithBuild(backend.stack, 'McpServer', {
-  protocolConfiguration: 'MCP',
-  imageAssetDirectory: path.join(__dirname, 'mcp/server'),
-  cognitoClientId: backend.auth.resources.userPoolClient.userPoolClientId,
-  cognitoDiscoveryUrl: `https://cognito-idp.${backend.auth.stack.region}.amazonaws.com/${backend.auth.resources.userPool.userPoolId}/.well-known/openid-configuration`,
-  description: 'MCP server for custom tools and resources',
-  environment: {
-    AMPLIFY_DATA_GRAPHQL_ENDPOINT: backend.data.graphqlUrl,
-  },
-})
+// // Deploy MCP server
+// const mcpServer = new AgentCoreRuntimeWithBuild(backend.stack, 'McpServer', {
+//   protocolConfiguration: 'MCP',
+//   imageAssetDirectory: path.join(__dirname, 'mcp/server'),
+//   cognitoClientId: backend.auth.resources.userPoolClient.userPoolClientId,
+//   cognitoDiscoveryUrl: `https://cognito-idp.${backend.auth.stack.region}.amazonaws.com/${backend.auth.resources.userPool.userPoolId}/.well-known/openid-configuration`,
+//   description: 'MCP server for custom tools and resources',
+//   environment: {
+//     AMPLIFY_DATA_GRAPHQL_ENDPOINT: backend.data.graphqlUrl,
+//   },
+// })
 
-// Grant MCP server runtime permission to execute AppSync GraphQL operations
-backend.data.resources.graphqlApi.grantMutation(mcpServer.executionRole, '*')
-backend.data.resources.graphqlApi.grantQuery(mcpServer.executionRole, '*')
-backend.data.resources.graphqlApi.grantSubscription(mcpServer.executionRole, '*')
+// // Grant MCP server runtime permission to execute AppSync GraphQL operations
+// backend.data.resources.graphqlApi.grantMutation(mcpServer.executionRole, '*')
+// backend.data.resources.graphqlApi.grantQuery(mcpServer.executionRole, '*')
+// backend.data.resources.graphqlApi.grantSubscription(mcpServer.executionRole, '*')
 
 // Deploy GenAI Agent to ECR with HTTP protocol
 const agentServer = new AgentCoreRuntimeWithBuild(backend.stack, 'AgentServer', {
@@ -188,7 +188,7 @@ agentServer.executionRole.addToPrincipalPolicy(
 
 backend.addOutput({
   custom: {
-    mcpServerAgentArn: mcpServer.runtime.attrAgentRuntimeArn,
+    // mcpServerAgentArn: mcpServer.runtime.attrAgentRuntimeArn,
     agentServerAgentArn: agentServer.runtime.attrAgentRuntimeArn,
   },
 })
