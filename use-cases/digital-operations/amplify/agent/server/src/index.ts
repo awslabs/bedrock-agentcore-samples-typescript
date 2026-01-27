@@ -158,9 +158,9 @@ app.get('/health', (req: Request, res: Response) => {
     // Start server after initialization
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`AgentCore GenAI Agent running on port ${PORT}`)
-      console.log(`Endpoints:`)
-      console.log(`  POST /invocations - Main agent endpoint`)
-      console.log(`  GET  /health - Health check`)
+      console.log('Endpoints:')
+      console.log('  POST /invocations - Main agent endpoint')
+      console.log('  GET  /health - Health check')
     })
   } catch (error) {
     console.error('Failed to initialize agent:', error)

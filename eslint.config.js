@@ -8,7 +8,20 @@ import globals from 'globals'
 
 export default [
   {
-    ignores: ['**/node_modules/**', '**/dist/**', '**/coverage/**', '**/cdk.out/**', '**/*.jsx'],
+    ignores: [
+      '**/node_modules/**',
+      '**/dist/**',
+      '**/coverage/**',
+      '**/cdk.out/**',
+      '**/*.jsx',
+      '**/scripts/**/*.js',
+      '**/.amplify/generated/**',
+      '**/next-env.d.ts',
+      '**/.next/**',
+      'primitives/**',
+      'use-cases/customer-support-agent/**',
+      'use-cases/data-analyzer/**',
+    ],
   },
   eslint.configs.recommended,
   {

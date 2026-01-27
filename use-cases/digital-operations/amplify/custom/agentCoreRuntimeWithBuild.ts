@@ -1,7 +1,6 @@
 import { Construct } from 'constructs'
 import cdk, { aws_ecr_assets as ecr_assets, aws_bedrockagentcore as bedrock_agent_core } from 'aws-cdk-lib'
 
-import * as path from 'path'
 import { fileURLToPath } from 'url'
 import { dirname } from 'path'
 

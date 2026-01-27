@@ -1,14 +1,9 @@
 import { Amplify } from 'aws-amplify'
 import { generateClient } from 'aws-amplify/data'
 
-// Function to safely load outputs
 export const loadOutputs = () => {
-  try {
-    return require('../amplify_outputs.json')
-  } catch (error) {
-    console.warn('amplify_outputs.json not found - this is expected during initial build')
-    return null
-  }
+  console.warn('amplify_outputs.json not used in MCP server - configuration comes from environment variables')
+  return null
 }
 
 export const getConfiguredAmplifyClient = () => {

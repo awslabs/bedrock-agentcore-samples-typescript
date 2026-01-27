@@ -77,7 +77,7 @@ agentServer.executionRole.addToPrincipalPolicy(
     effect: iam.Effect.ALLOW,
     actions: ['bedrock:InvokeModel', 'bedrock:InvokeModelWithResponseStream'],
     resources: [
-      `arn:aws:bedrock:*::foundation-model/*`,
+      'arn:aws:bedrock:*::foundation-model/*',
       `arn:aws:bedrock:*:${backend.stack.account}:inference-profile/*`,
     ],
   })
@@ -90,7 +90,7 @@ backend.auth.resources.authenticatedUserIamRole.addToPrincipalPolicy(
     actions: ['bedrock:InvokeModel', 'bedrock:InvokeModelWithResponseStream'],
     resources: [
       // Specific model ARN or use * for all models
-      `arn:aws:bedrock:*::foundation-model/*`,
+      'arn:aws:bedrock:*::foundation-model/*',
       `arn:aws:bedrock:*:${backend.stack.account}:inference-profile/*`, // inference profiles may call for responses from multiple regions
     ],
   })
@@ -199,4 +199,15 @@ const isSandbox = backend.stack.stackName.includes('-sandbox-')
 if (isSandbox) {
   console.log('Applying cdk nag')
   applyCdkNag(backend.stack)
+
+  // Also apply to nested stacks (auth, data, function)
+  const authStack = backend.auth.stack
+  const dataStack = backend.data.stack
+
+  if (authStack) {
+    applyCdkNag(authStack)
+  }
+  if (dataStack) {
+    applyCdkNag(dataStack)
+  }
 }

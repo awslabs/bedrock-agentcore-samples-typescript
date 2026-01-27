@@ -1,13 +1,24 @@
 import { CloudFormationClient, ListStackResourcesCommand } from '@aws-sdk/client-cloudformation'
 import { LambdaClient, GetFunctionConfigurationCommand } from '@aws-sdk/client-lambda'
-
 import { STSClient } from '@aws-sdk/client-sts'
-import { generateClient } from 'aws-amplify/data'
-import { Amplify } from 'aws-amplify'
-import { Schema } from '@/../amplify/data/resource'
-import outputs from '@/../amplify_outputs.json'
+import { readFileSync } from 'fs'
+import { join } from 'path'
 
 const stsClient = new STSClient()
+
+let outputs: any = null
+
+const loadOutputs = () => {
+  if (outputs) return outputs
+  try {
+    const outputsPath = join(process.cwd(), 'amplify_outputs.json')
+    const outputsContent = readFileSync(outputsPath, 'utf-8')
+    outputs = JSON.parse(outputsContent)
+    return outputs
+  } catch {
+    return null
+  }
+}
 
 export async function getDeployedResourceArn(rootStackName: string, targetLogicalIdPrefix: string): Promise<string> {
   const cloudformation = new CloudFormationClient()
@@ -98,6 +109,11 @@ export async function getLambdaEnvironmentVariables(functionName: string): Promi
 }
 
 export const setAmplifyClientEnvVars = async () => {
+  const outputs = loadOutputs()
+  if (!outputs) {
+    throw new Error('amplify_outputs.json not found')
+  }
+
   process.env.AMPLIFY_DATA_GRAPHQL_ENDPOINT = outputs.data.url
   process.env.AWS_DEFAULT_REGION = outputs.auth.aws_region
 

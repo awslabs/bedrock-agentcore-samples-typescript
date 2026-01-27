@@ -12,6 +12,13 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Amplify generated files:
+    ".amplify/**",
+    "amplify_outputs.json",
+    "tsconfig.tsbuildinfo",
+    // Build artifacts:
+    "**/dist/**",
+    "**/node_modules/**",
   ]),
 ]);
 

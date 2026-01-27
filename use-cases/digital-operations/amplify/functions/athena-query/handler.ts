@@ -58,7 +58,7 @@ export const handler = async (
     return await handleMapLayerQuery(event as AppSyncResolverEvent<MapLayerQueryInput>)
   }
 
-  const { queryString, database, outputLocation, queryExecutionId, nextToken } = event.arguments as AthenaQueryInput
+  const { queryString, database, queryExecutionId, nextToken } = event.arguments as AthenaQueryInput
 
   try {
     // If queryExecutionId is provided, check status and get results
@@ -67,10 +67,6 @@ export const handler = async (
     }
 
     // Otherwise, start a new query execution
-    const defaultOutputLocation =
-      process.env.ATHENA_OUTPUT_LOCATION ||
-      `s3://aws-athena-query-results-${process.env.AWS_ACCOUNT_ID}-${process.env.AWS_REGION}/`
-
     const params = {
       QueryString: queryString,
       QueryExecutionContext: database ? { Database: database } : undefined,

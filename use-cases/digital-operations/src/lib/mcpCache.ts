@@ -1,19 +1,28 @@
 import { experimental_createMCPClient as createMCPClient } from '@ai-sdk/mcp'
 import { loadOutputs } from '@/../utils/amplifyUtils'
 
-const outputs = loadOutputs()
+let outputs: any = null
+
+const getOutputs = () => {
+  if (!outputs) {
+    outputs = loadOutputs()
+  }
+  if (!outputs) {
+    throw new Error('amplify_outputs.json not found')
+  }
+  return outputs
+}
 
 // ==================== MCP CLIENT CACHE ====================
 // Use global object to persist cache across Next.js HMR (Hot Module Reloading)
 // This ensures the cache survives route recompilation during development
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type MCPClient = any
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 type MCPTools = any
 
-declare global {
-  var mcpCache:
+declare const global: {
+  mcpCache:
     | {
         client: MCPClient | null
         tools: MCPTools | null
@@ -55,7 +64,7 @@ async function isClientValid(client: MCPClient): Promise<boolean> {
  * Get or create a cached MCP client and tools
  * Implements caching to avoid recreating the client on every request
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 export async function getMcpClientAndTools(tokens: any) {
   const now = Date.now()
   const cache = global.mcpCache!
@@ -84,6 +93,7 @@ export async function getMcpClientAndTools(tokens: any) {
   const reason = !cache.client ? 'no cached client' : cacheAge >= CACHE_TTL ? 'cache expired' : 'client invalid'
   console.log(`Creating new MCP client (${reason})`)
 
+  const outputs = getOutputs()
   const mcpServerAgentArn = outputs.custom.mcpServerAgentArn
   const encodedArn = mcpServerAgentArn.replace(/:/g, '%3A').replace(/\//g, '%2F')
   const mcpUrl = `https://bedrock-agentcore.${outputs.auth.aws_region}.amazonaws.com/runtimes/${encodedArn}/invocations?qualifier=DEFAULT`

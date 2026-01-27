@@ -552,7 +552,7 @@ const deleteMapLayerTool = {
     try {
       const amplifyClient = getConfiguredAmplifyClient()
 
-      const result = await amplifyClient.graphql(
+      await amplifyClient.graphql(
         {
           query: mutations.deleteMapLayer,
           variables: { input: { id: params.id } },

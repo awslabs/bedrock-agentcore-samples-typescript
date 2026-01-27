@@ -4,9 +4,15 @@ node_modules/
 # Build output
 dist/
 coverage/
+.next/
+.amplify/
 
 # Lock files
 package-lock.json
 
 # CDK output
 cdk.out/
+
+# Generated files
+amplify_outputs.json
+tsconfig.tsbuildinfo

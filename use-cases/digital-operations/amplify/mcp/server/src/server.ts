@@ -2,7 +2,6 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
 
 import { executeGraphqlTool } from './tools/executeGraphql'
-import { allQueryTools } from './tools/queryTools'
 
 export const mcpServerCreate = () => {
   const mcpServer = new McpServer({

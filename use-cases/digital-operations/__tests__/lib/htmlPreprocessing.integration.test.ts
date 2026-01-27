@@ -1,7 +1,11 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'fs'
-import { join } from 'path'
+import { join, dirname } from 'path'
+import { fileURLToPath } from 'url'
 import { preprocessContent } from '../../src/lib/htmlPreprocessing'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
 
 describe('htmlPreprocessing integration tests', () => {
   const TEST_SESSION_ID = 'test-session-id'
@@ -48,8 +52,7 @@ describe('htmlPreprocessing integration tests', () => {
       const originalContent = readFileSync(samplePath, 'utf-8')
       const processedContent = preprocessContent(originalContent, TEST_SESSION_ID)
 
-      // Count srcdoc iframes
-      const srcdocMatches = processedContent.match(/<iframe[^>]*srcdoc=/gi) || []
+      // Count sandbox attributes
       const sandboxMatches = processedContent.match(/sandbox="allow-scripts allow-same-origin"/gi) || []
 
       // All srcdoc iframes should have sandbox (some may be loading indicators)

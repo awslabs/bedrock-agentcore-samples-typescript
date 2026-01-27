@@ -1,7 +1,17 @@
 import { fetchAuthSession } from 'aws-amplify/auth'
 import { loadOutputs } from '@/../utils/amplifyUtils'
 
-const outputs = loadOutputs()
+let outputs: any = null
+
+const getOutputs = () => {
+  if (!outputs) {
+    outputs = loadOutputs()
+  }
+  if (!outputs) {
+    throw new Error('amplify_outputs.json not found')
+  }
+  return outputs
+}
 
 /**
  * Get the AgentCore Runtime endpoint URL for the agent
@@ -9,6 +19,7 @@ const outputs = loadOutputs()
  * @returns The full AgentCore endpoint URL
  */
 export function getAgentCoreUrl(agentArnKey: string = 'agentServerAgentArn'): string {
+  const outputs = getOutputs()
   const agentArn = outputs.custom[agentArnKey]
 
   //   console.log({agentArn})

@@ -1,5 +1,4 @@
 /* tslint:disable */
-/* eslint-disable */
 // this is an auto generated file. This will be overwritten
 
 import * as APITypes from './API'
@@ -8,6 +7,40 @@ type GeneratedSubscription<InputType, OutputType> = string & {
   __generatedSubscriptionOutput: OutputType
 }
 
+export const onAthenaQueryResult = /* GraphQL */ `subscription OnAthenaQueryResult($queryExecutionId: String!) {
+  onAthenaQueryResult(queryExecutionId: $queryExecutionId) {
+    columns
+    data
+    error
+    nextToken
+    queryExecutionId
+    rowCount
+    status
+    __typename
+  }
+}
+` as GeneratedSubscription<APITypes.OnAthenaQueryResultSubscriptionVariables, APITypes.OnAthenaQueryResultSubscription>
+export const onCreateActionItem = /* GraphQL */ `subscription OnCreateActionItem(
+  $filter: ModelSubscriptionActionItemFilterInput
+  $owner: String
+) {
+  onCreateActionItem(filter: $filter, owner: $owner) {
+    action
+    alertId
+    createdAt
+    description
+    expectedValue
+    id
+    owner
+    risk
+    source
+    status
+    type
+    updatedAt
+    __typename
+  }
+}
+` as GeneratedSubscription<APITypes.OnCreateActionItemSubscriptionVariables, APITypes.OnCreateActionItemSubscription>
 export const onCreateChatMessage = /* GraphQL */ `subscription OnCreateChatMessage(
   $filter: ModelSubscriptionChatMessageFilterInput
   $owner: String
@@ -16,6 +49,7 @@ export const onCreateChatMessage = /* GraphQL */ `subscription OnCreateChatMessa
     chatSession {
       createdAt
       id
+      mapBounds
       name
       owner
       updatedAt
@@ -42,6 +76,11 @@ export const onCreateChatSession = /* GraphQL */ `subscription OnCreateChatSessi
   onCreateChatSession(filter: $filter, owner: $owner) {
     createdAt
     id
+    mapBounds
+    mapLayers {
+      nextToken
+      __typename
+    }
     messages {
       nextToken
       __typename
@@ -53,6 +92,42 @@ export const onCreateChatSession = /* GraphQL */ `subscription OnCreateChatSessi
   }
 }
 ` as GeneratedSubscription<APITypes.OnCreateChatSessionSubscriptionVariables, APITypes.OnCreateChatSessionSubscription>
+export const onCreateMapLayer = /* GraphQL */ `subscription OnCreateMapLayer(
+  $filter: ModelSubscriptionMapLayerFilterInput
+  $owner: String
+) {
+  onCreateMapLayer(filter: $filter, owner: $owner) {
+    athenaDatabase
+    athenaQuery
+    chatSession {
+      createdAt
+      id
+      mapBounds
+      name
+      owner
+      updatedAt
+      __typename
+    }
+    chatSessionId
+    createdAt
+    description
+    geoJsonMapping
+    id
+    lastQueryExecutedAt
+    name
+    order
+    owner
+    queryError
+    queryRefreshInterval
+    source
+    style
+    type
+    updatedAt
+    visible
+    __typename
+  }
+}
+` as GeneratedSubscription<APITypes.OnCreateMapLayerSubscriptionVariables, APITypes.OnCreateMapLayerSubscription>
 export const onCreateMcpServer = /* GraphQL */ `subscription OnCreateMcpServer(
   $filter: ModelSubscriptionMcpServerFilterInput
   $owner: String
@@ -96,6 +171,58 @@ export const onCreateSettings = /* GraphQL */ `subscription OnCreateSettings(
   }
 }
 ` as GeneratedSubscription<APITypes.OnCreateSettingsSubscriptionVariables, APITypes.OnCreateSettingsSubscription>
+export const onCreateWorkoverJob = /* GraphQL */ `subscription OnCreateWorkoverJob(
+  $filter: ModelSubscriptionWorkoverJobFilterInput
+  $owner: String
+) {
+  onCreateWorkoverJob(filter: $filter, owner: $owner) {
+    createdAt
+    description
+    estimatedCost
+    estimatedDuration
+    financialMetrics {
+      incrementalGasMCFD
+      incrementalOilBOPD
+      paybackMonths
+      presentValue
+      rateOfReturn
+      __typename
+    }
+    id
+    jobType
+    location
+    owner
+    priority
+    rigAssigned
+    scheduledDate
+    status
+    updatedAt
+    wellName
+    __typename
+  }
+}
+` as GeneratedSubscription<APITypes.OnCreateWorkoverJobSubscriptionVariables, APITypes.OnCreateWorkoverJobSubscription>
+export const onDeleteActionItem = /* GraphQL */ `subscription OnDeleteActionItem(
+  $filter: ModelSubscriptionActionItemFilterInput
+  $owner: String
+) {
+  onDeleteActionItem(filter: $filter, owner: $owner) {
+    action
+    alertId
+    createdAt
+    description
+    expectedValue
+    id
+    owner
+    risk
+    source
+    status
+    type
+    updatedAt
+    __typename
+  }
+}
+` as GeneratedSubscription<APITypes.OnDeleteActionItemSubscriptionVariables, APITypes.OnDeleteActionItemSubscription>
 export const onDeleteChatMessage = /* GraphQL */ `subscription OnDeleteChatMessage(
   $filter: ModelSubscriptionChatMessageFilterInput
   $owner: String
@@ -104,6 +231,7 @@ export const onDeleteChatMessage = /* GraphQL */ `subscription OnDeleteChatMessa
     chatSession {
       createdAt
       id
+      mapBounds
       name
       owner
       updatedAt
@@ -130,6 +258,11 @@ export const onDeleteChatSession = /* GraphQL */ `subscription OnDeleteChatSessi
   onDeleteChatSession(filter: $filter, owner: $owner) {
     createdAt
     id
+    mapBounds
+    mapLayers {
+      nextToken
+      __typename
+    }
     messages {
       nextToken
       __typename
@@ -141,6 +274,42 @@ export const onDeleteChatSession = /* GraphQL */ `subscription OnDeleteChatSessi
   }
 }
 ` as GeneratedSubscription<APITypes.OnDeleteChatSessionSubscriptionVariables, APITypes.OnDeleteChatSessionSubscription>
+export const onDeleteMapLayer = /* GraphQL */ `subscription OnDeleteMapLayer(
+  $filter: ModelSubscriptionMapLayerFilterInput
+  $owner: String
+) {
+  onDeleteMapLayer(filter: $filter, owner: $owner) {
+    athenaDatabase
+    athenaQuery
+    chatSession {
+      createdAt
+      id
+      mapBounds
+      name
+      owner
+      updatedAt
+      __typename
+    }
+    chatSessionId
+    createdAt
+    description
+    geoJsonMapping
+    id
+    lastQueryExecutedAt
+    name
+    order
+    owner
+    queryError
+    queryRefreshInterval
+    source
+    style
+    type
+    updatedAt
+    visible
+    __typename
+  }
+}
+` as GeneratedSubscription<APITypes.OnDeleteMapLayerSubscriptionVariables, APITypes.OnDeleteMapLayerSubscription>
 export const onDeleteMcpServer = /* GraphQL */ `subscription OnDeleteMcpServer(
   $filter: ModelSubscriptionMcpServerFilterInput
   $owner: String
@@ -184,6 +353,58 @@ export const onDeleteSettings = /* GraphQL */ `subscription OnDeleteSettings(
   }
 }
 ` as GeneratedSubscription<APITypes.OnDeleteSettingsSubscriptionVariables, APITypes.OnDeleteSettingsSubscription>
+export const onDeleteWorkoverJob = /* GraphQL */ `subscription OnDeleteWorkoverJob(
+  $filter: ModelSubscriptionWorkoverJobFilterInput
+  $owner: String
+) {
+  onDeleteWorkoverJob(filter: $filter, owner: $owner) {
+    createdAt
+    description
+    estimatedCost
+    estimatedDuration
+    financialMetrics {
+      incrementalGasMCFD
+      incrementalOilBOPD
+      paybackMonths
+      presentValue
+      rateOfReturn
+      __typename
+    }
+    id
+    jobType
+    location
+    owner
+    priority
+    rigAssigned
+    scheduledDate
+    status
+    updatedAt
+    wellName
+    __typename
+  }
+}
+` as GeneratedSubscription<APITypes.OnDeleteWorkoverJobSubscriptionVariables, APITypes.OnDeleteWorkoverJobSubscription>
+export const onUpdateActionItem = /* GraphQL */ `subscription OnUpdateActionItem(
+  $filter: ModelSubscriptionActionItemFilterInput
+  $owner: String
+) {
+  onUpdateActionItem(filter: $filter, owner: $owner) {
+    action
+    alertId
+    createdAt
+    description
+    expectedValue
+    id
+    owner
+    risk
+    source
+    status
+    type
+    updatedAt
+    __typename
+  }
+}
+` as GeneratedSubscription<APITypes.OnUpdateActionItemSubscriptionVariables, APITypes.OnUpdateActionItemSubscription>
 export const onUpdateChatMessage = /* GraphQL */ `subscription OnUpdateChatMessage(
   $filter: ModelSubscriptionChatMessageFilterInput
   $owner: String
@@ -192,6 +413,7 @@ export const onUpdateChatMessage = /* GraphQL */ `subscription OnUpdateChatMessa
     chatSession {
       createdAt
       id
+      mapBounds
       name
       owner
       updatedAt
@@ -218,6 +440,11 @@ export const onUpdateChatSession = /* GraphQL */ `subscription OnUpdateChatSessi
   onUpdateChatSession(filter: $filter, owner: $owner) {
     createdAt
     id
+    mapBounds
+    mapLayers {
+      nextToken
+      __typename
+    }
     messages {
       nextToken
       __typename
@@ -229,6 +456,42 @@ export const onUpdateChatSession = /* GraphQL */ `subscription OnUpdateChatSessi
   }
 }
 ` as GeneratedSubscription<APITypes.OnUpdateChatSessionSubscriptionVariables, APITypes.OnUpdateChatSessionSubscription>
+export const onUpdateMapLayer = /* GraphQL */ `subscription OnUpdateMapLayer(
+  $filter: ModelSubscriptionMapLayerFilterInput
+  $owner: String
+) {
+  onUpdateMapLayer(filter: $filter, owner: $owner) {
+    athenaDatabase
+    athenaQuery
+    chatSession {
+      createdAt
+      id
+      mapBounds
+      name
+      owner
+      updatedAt
+      __typename
+    }
+    chatSessionId
+    createdAt
+    description
+    geoJsonMapping
+    id
+    lastQueryExecutedAt
+    name
+    order
+    owner
+    queryError
+    queryRefreshInterval
+    source
+    style
+    type
+    updatedAt
+    visible
+    __typename
+  }
+}
+` as GeneratedSubscription<APITypes.OnUpdateMapLayerSubscriptionVariables, APITypes.OnUpdateMapLayerSubscription>
 export const onUpdateMcpServer = /* GraphQL */ `subscription OnUpdateMcpServer(
   $filter: ModelSubscriptionMcpServerFilterInput
   $owner: String
@@ -272,3 +535,34 @@ export const onUpdateSettings = /* GraphQL */ `subscription OnUpdateSettings(
   }
 }
 ` as GeneratedSubscription<APITypes.OnUpdateSettingsSubscriptionVariables, APITypes.OnUpdateSettingsSubscription>
+export const onUpdateWorkoverJob = /* GraphQL */ `subscription OnUpdateWorkoverJob(
+  $filter: ModelSubscriptionWorkoverJobFilterInput
+  $owner: String
+) {
+  onUpdateWorkoverJob(filter: $filter, owner: $owner) {
+    createdAt
+    description
+    estimatedCost
+    estimatedDuration
+    financialMetrics {
+      incrementalGasMCFD
+      incrementalOilBOPD
+      paybackMonths
+      presentValue
+      rateOfReturn
+      __typename
+    }
+    id
+    jobType
+    location
+    owner
+    priority
+    rigAssigned
+    scheduledDate
+    status
+    updatedAt
+    wellName
+    __typename
+  }
+}
+` as GeneratedSubscription<APITypes.OnUpdateWorkoverJobSubscriptionVariables, APITypes.OnUpdateWorkoverJobSubscription>

@@ -1,5 +1,4 @@
 /* tslint:disable */
-/* eslint-disable */
 // this is an auto generated file. This will be overwritten
 
 import * as APITypes from './API'
@@ -8,11 +7,30 @@ type GeneratedQuery<InputType, OutputType> = string & {
   __generatedQueryOutput: OutputType
 }
 
+export const getActionItem = /* GraphQL */ `query GetActionItem($id: ID!) {
+  getActionItem(id: $id) {
+    action
+    alertId
+    createdAt
+    description
+    expectedValue
+    id
+    owner
+    risk
+    source
+    status
+    type
+    updatedAt
+    __typename
+  }
+}
+` as GeneratedQuery<APITypes.GetActionItemQueryVariables, APITypes.GetActionItemQuery>
 export const getChatMessage = /* GraphQL */ `query GetChatMessage($id: ID!) {
   getChatMessage(id: $id) {
     chatSession {
       createdAt
       id
+      mapBounds
       name
       owner
       updatedAt
@@ -36,6 +54,11 @@ export const getChatSession = /* GraphQL */ `query GetChatSession($id: ID!) {
   getChatSession(id: $id) {
     createdAt
     id
+    mapBounds
+    mapLayers {
+      nextToken
+      __typename
+    }
     messages {
       nextToken
       __typename
@@ -47,6 +70,39 @@ export const getChatSession = /* GraphQL */ `query GetChatSession($id: ID!) {
   }
 }
 ` as GeneratedQuery<APITypes.GetChatSessionQueryVariables, APITypes.GetChatSessionQuery>
+export const getMapLayer = /* GraphQL */ `query GetMapLayer($id: ID!) {
+  getMapLayer(id: $id) {
+    athenaDatabase
+    athenaQuery
+    chatSession {
+      createdAt
+      id
+      mapBounds
+      name
+      owner
+      updatedAt
+      __typename
+    }
+    chatSessionId
+    createdAt
+    description
+    geoJsonMapping
+    id
+    lastQueryExecutedAt
+    name
+    order
+    owner
+    queryError
+    queryRefreshInterval
+    source
+    style
+    type
+    updatedAt
+    visible
+    __typename
+  }
+}
+` as GeneratedQuery<APITypes.GetMapLayerQueryVariables, APITypes.GetMapLayerQuery>
 export const getMcpServer = /* GraphQL */ `query GetMcpServer($id: ID!) {
   getMcpServer(id: $id) {
     createdAt
@@ -84,6 +140,60 @@ export const getSettings = /* GraphQL */ `query GetSettings($id: ID!) {
   }
 }
 ` as GeneratedQuery<APITypes.GetSettingsQueryVariables, APITypes.GetSettingsQuery>
+export const getWorkoverJob = /* GraphQL */ `query GetWorkoverJob($id: ID!) {
+  getWorkoverJob(id: $id) {
+    createdAt
+    description
+    estimatedCost
+    estimatedDuration
+    financialMetrics {
+      incrementalGasMCFD
+      incrementalOilBOPD
+      paybackMonths
+      presentValue
+      rateOfReturn
+      __typename
+    }
+    id
+    jobType
+    location
+    owner
+    priority
+    rigAssigned
+    scheduledDate
+    status
+    updatedAt
+    wellName
+    __typename
+  }
+}
+` as GeneratedQuery<APITypes.GetWorkoverJobQueryVariables, APITypes.GetWorkoverJobQuery>
+export const listActionItems = /* GraphQL */ `query ListActionItems(
+  $filter: ModelActionItemFilterInput
+  $limit: Int
+  $nextToken: String
+) {
+  listActionItems(filter: $filter, limit: $limit, nextToken: $nextToken) {
+    items {
+      action
+      alertId
+      createdAt
+      description
+      expectedValue
+      id
+      owner
+      risk
+      source
+      status
+      type
+      updatedAt
+      __typename
+    }
+    nextToken
+    __typename
+  }
+}
+` as GeneratedQuery<APITypes.ListActionItemsQueryVariables, APITypes.ListActionItemsQuery>
 export const listChatMessageByChatSessionIdAndCreatedAt =
   /* GraphQL */ `query ListChatMessageByChatSessionIdAndCreatedAt(
   $chatSessionId: ID!
@@ -193,6 +303,7 @@ export const listChatSessions = /* GraphQL */ `query ListChatSessions(
     items {
       createdAt
       id
+      mapBounds
       name
       owner
       updatedAt
@@ -203,6 +314,83 @@ export const listChatSessions = /* GraphQL */ `query ListChatSessions(
   }
 }
 ` as GeneratedQuery<APITypes.ListChatSessionsQueryVariables, APITypes.ListChatSessionsQuery>
+export const listMapLayerByChatSessionIdAndOrder = /* GraphQL */ `query ListMapLayerByChatSessionIdAndOrder(
+  $chatSessionId: ID!
+  $filter: ModelMapLayerFilterInput
+  $limit: Int
+  $nextToken: String
+  $order: ModelIntKeyConditionInput
+  $sortDirection: ModelSortDirection
+) {
+  listMapLayerByChatSessionIdAndOrder(
+    chatSessionId: $chatSessionId
+    filter: $filter
+    limit: $limit
+    nextToken: $nextToken
+    order: $order
+    sortDirection: $sortDirection
+  ) {
+    items {
+      athenaDatabase
+      athenaQuery
+      chatSessionId
+      createdAt
+      description
+      geoJsonMapping
+      id
+      lastQueryExecutedAt
+      name
+      order
+      owner
+      queryError
+      queryRefreshInterval
+      source
+      style
+      type
+      updatedAt
+      visible
+      __typename
+    }
+    nextToken
+    __typename
+  }
+}
+` as GeneratedQuery<
+  APITypes.ListMapLayerByChatSessionIdAndOrderQueryVariables,
+  APITypes.ListMapLayerByChatSessionIdAndOrderQuery
+>
+export const listMapLayers = /* GraphQL */ `query ListMapLayers(
+  $filter: ModelMapLayerFilterInput
+  $limit: Int
+  $nextToken: String
+) {
+  listMapLayers(filter: $filter, limit: $limit, nextToken: $nextToken) {
+    items {
+      athenaDatabase
+      athenaQuery
+      chatSessionId
+      createdAt
+      description
+      geoJsonMapping
+      id
+      lastQueryExecutedAt
+      name
+      order
+      owner
+      queryError
+      queryRefreshInterval
+      source
+      style
+      type
+      updatedAt
+      visible
+      __typename
+    }
+    nextToken
+    __typename
+  }
+}
+` as GeneratedQuery<APITypes.ListMapLayersQueryVariables, APITypes.ListMapLayersQuery>
 export const listMcpServers = /* GraphQL */ `query ListMcpServers(
   $filter: ModelMcpServerFilterInput
   $limit: Int
@@ -245,3 +433,31 @@ export const listSettings = /* GraphQL */ `query ListSettings(
   }
 }
 ` as GeneratedQuery<APITypes.ListSettingsQueryVariables, APITypes.ListSettingsQuery>
+export const listWorkoverJobs = /* GraphQL */ `query ListWorkoverJobs(
+  $filter: ModelWorkoverJobFilterInput
+  $limit: Int
+  $nextToken: String
+) {
+  listWorkoverJobs(filter: $filter, limit: $limit, nextToken: $nextToken) {
+    items {
+      createdAt
+      description
+      estimatedCost
+      estimatedDuration
+      id
+      jobType
+      location
+      owner
+      priority
+      rigAssigned
+      scheduledDate
+      status
+      updatedAt
+      wellName
+      __typename
+    }
+    nextToken
+    __typename
+  }
+}
+` as GeneratedQuery<APITypes.ListWorkoverJobsQueryVariables, APITypes.ListWorkoverJobsQuery>

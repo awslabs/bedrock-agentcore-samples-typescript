@@ -47,7 +47,7 @@ function logInfo(message: string) {
 
 async function runCustomQuery(client: any, query: string) {
   try {
-    log(`\n⚡ Running custom query...`, colors.bright)
+    log('\n⚡ Running custom query...', colors.bright)
     log(`Query: ${query}\n`, colors.yellow)
 
     const result = await client.graphql({ query })
@@ -57,7 +57,7 @@ async function runCustomQuery(client: any, query: string) {
     }
 
     if (result.data) {
-      logSuccess(`Query executed successfully\n`)
+      logSuccess('Query executed successfully\n')
       console.log(JSON.stringify(result.data, null, 2))
     } else {
       logInfo('No data returned from query')

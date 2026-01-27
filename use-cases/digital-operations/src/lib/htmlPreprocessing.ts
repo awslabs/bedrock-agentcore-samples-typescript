@@ -5,6 +5,8 @@
  * particularly for cleaning and validating iframe srcdoc attributes.
  */
 
+/* eslint-disable no-undef */
+
 /**
  * Validates if a string is valid HTML
  */
@@ -22,7 +24,7 @@ function isValidHtml(html: string): boolean {
   }
 
   // Try parsing with DOMParser (browser-side validation)
-  if (typeof window !== 'undefined' && window.DOMParser) {
+  if (typeof window !== 'undefined' && typeof DOMParser !== 'undefined') {
     try {
       const parser = new DOMParser()
       const doc = parser.parseFromString(html, 'text/html')
@@ -203,12 +205,14 @@ function injectAutoResizeScript(html: string): string {
   // Force body to not expand to viewport height, then measure actual content height
   // Added safeguards to prevent infinite resize loops
   // Preserves width when updating height to prevent layout issues
-  const resizeScript = `<script>(function(){document.documentElement.style.height=&quot;auto&quot;;document.body.style.height=&quot;auto&quot;;var lastHeight=0;var resizeCount=0;var maxResizes=20;var ro=null;function resize(){if(resizeCount>=maxResizes){if(ro){ro.disconnect();ro=null;}return;}var h=Math.max(document.body.scrollHeight,document.body.offsetHeight,document.documentElement.scrollHeight,document.documentElement.offsetHeight);var diff=Math.abs(h-lastHeight);if(diff>5&&window.frameElement){resizeCount++;lastHeight=h;var w=window.frameElement.style.width||window.frameElement.getAttribute(&quot;width&quot;)||&quot;100%&quot;;window.frameElement.setAttribute(&quot;style&quot;,&quot;width:&quot;+w+&quot;;height:&quot;+h+&quot;px&quot;);console.log(&quot;Iframe resized to:&quot;,w,&quot;x&quot;,h+&quot;px&quot;,&quot;(count:&quot;+resizeCount+&quot;)&quot;);if(resizeCount>=maxResizes&&ro){console.warn(&quot;Max resizes reached, disconnecting observer&quot;);ro.disconnect();ro=null;}}}if(document.readyState===&quot;loading&quot;){document.addEventListener(&quot;DOMContentLoaded&quot;,resize);}else{resize();}window.addEventListener(&quot;load&quot;,function(){resize();setTimeout(function(){if(ro){ro.disconnect();ro=null;}},2000);});if(typeof ResizeObserver!==&quot;undefined&quot;){ro=new ResizeObserver(function(){setTimeout(resize,100);});ro.observe(document.body);}var c=0;var i=setInterval(function(){resize();c++;if(c>5){clearInterval(i);}},150);})();</script>`
+  const resizeScript =
+    '<script>(function(){document.documentElement.style.height=&quot;auto&quot;;document.body.style.height=&quot;auto&quot;;var lastHeight=0;var resizeCount=0;var maxResizes=20;var ro=null;function resize(){if(resizeCount>=maxResizes){if(ro){ro.disconnect();ro=null;}return;}var h=Math.max(document.body.scrollHeight,document.body.offsetHeight,document.documentElement.scrollHeight,document.documentElement.offsetHeight);var diff=Math.abs(h-lastHeight);if(diff>5&&window.frameElement){resizeCount++;lastHeight=h;var w=window.frameElement.style.width||window.frameElement.getAttribute(&quot;width&quot;)||&quot;100%&quot;;window.frameElement.setAttribute(&quot;style&quot;,&quot;width:&quot;+w+&quot;;height:&quot;+h+&quot;px&quot;);console.log(&quot;Iframe resized to:&quot;,w,&quot;x&quot;,h+&quot;px&quot;,&quot;(count:&quot;+resizeCount+&quot;)&quot;);if(resizeCount>=maxResizes&&ro){console.warn(&quot;Max resizes reached, disconnecting observer&quot;);ro.disconnect();ro=null;}}}if(document.readyState===&quot;loading&quot;){document.addEventListener(&quot;DOMContentLoaded&quot;,resize);}else{resize();}window.addEventListener(&quot;load&quot;,function(){resize();setTimeout(function(){if(ro){ro.disconnect();ro=null;}},2000);});if(typeof ResizeObserver!==&quot;undefined&quot;){ro=new ResizeObserver(function(){setTimeout(resize,100);});ro.observe(document.body);}var c=0;var i=setInterval(function(){resize();c++;if(c>5){clearInterval(i);}},150);})();</script>'
 
   // Inject styles for minimum width and horizontal scrolling
   // Use character codes to avoid markdown parser interpreting the asterisk
   // String.fromCharCode(42) = '*'
-  const scrollStylesScript = `<script>(function(){var s=document.createElement(&quot;style&quot;);s.textContent=&quot;body{overflow-x:auto;margin:0;}body&gt;&quot;+String.fromCharCode(42)+&quot;{min-width:300px;}&quot;;document.head.appendChild(s);})();</script>`
+  const scrollStylesScript =
+    '<script>(function(){var s=document.createElement(&quot;style&quot;);s.textContent=&quot;body{overflow-x:auto;margin:0;}body&gt;&quot;+String.fromCharCode(42)+&quot;{min-width:300px;}&quot;;document.head.appendChild(s);})();</script>'
 
   let result = html
 
@@ -322,7 +326,7 @@ export function preprocessContent(content: string, chatSessionId: string): strin
       // Process self-closing iframe
       const processed = iframeContent.replace(
         /^(<iframe)([\s\S]*?)(srcdoc=(["']))([\s\S]*?)(\4)([\s\S]*?)(\/?>)$/i,
-        (_match, iframeTag, beforeSrcdoc, srcdocStart, _quote, srcdocContent, srcdocEnd, afterSrcdoc, closeTag) => {
+        (_match, iframeTag, beforeSrcdoc, srcdocStart, _quote, srcdocContent, srcdocEnd, afterSrcdoc, _closeTag) => {
           // Process script tags BEFORE removing newlines
           const processedSrcdoc = processScriptTags(srcdocContent)
 
