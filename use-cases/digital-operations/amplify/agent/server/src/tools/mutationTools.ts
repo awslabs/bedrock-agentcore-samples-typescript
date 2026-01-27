@@ -101,8 +101,22 @@ const mutations = {
 
 const queries = {
   listMapLayers: /* GraphQL */ `
-    query ListMapLayersByChatSession($chatSessionId: ID!, $limit: Int, $nextToken: String) {
-      listMapLayers(filter: { chatSessionId: { eq: $chatSessionId } }, limit: $limit, nextToken: $nextToken) {
+    query ListMapLayerByChatSessionIdAndOrder(
+      $chatSessionId: ID!
+      $order: ModelIntKeyConditionInput
+      $sortDirection: ModelSortDirection
+      $filter: ModelMapLayerFilterInput
+      $limit: Int
+      $nextToken: String
+    ) {
+      listMapLayerByChatSessionIdAndOrder(
+        chatSessionId: $chatSessionId
+        order: $order
+        sortDirection: $sortDirection
+        filter: $filter
+        limit: $limit
+        nextToken: $nextToken
+      ) {
         items {
           id
           chatSessionId
@@ -625,11 +639,14 @@ const listMapLayersTool = {
         throw new Error('chatSessionId is required but was not provided')
       }
 
+      console.log(`[list-map-layers] Querying with chatSessionId: ${chatSessionId}`)
+
       const result = await amplifyClient.graphql(
         {
           query: queries.listMapLayers,
           variables: {
             chatSessionId,
+            sortDirection: 'ASC',
             limit: params.limit,
             nextToken: params.nextToken,
           },
@@ -649,9 +666,9 @@ const listMapLayersTool = {
             text: JSON.stringify(
               {
                 success: true,
-                layers: data.listMapLayers.items,
-                nextToken: data.listMapLayers.nextToken,
-                count: data.listMapLayers.items.length,
+                layers: data.listMapLayerByChatSessionIdAndOrder.items,
+                nextToken: data.listMapLayerByChatSessionIdAndOrder.nextToken,
+                count: data.listMapLayerByChatSessionIdAndOrder.items.length,
               },
               null,
               2
