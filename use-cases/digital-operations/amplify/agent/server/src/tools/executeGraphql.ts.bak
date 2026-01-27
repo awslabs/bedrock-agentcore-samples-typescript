@@ -23,7 +23,7 @@ export const executeGraphqlTool = {
           query: query as any,
           variables: variables || {},
         },
-        { authMode: 'userPool' }
+        { authMode: 'identityPool' }
       )
 
       return {

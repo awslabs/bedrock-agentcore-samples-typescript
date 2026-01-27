@@ -77,6 +77,12 @@ npm install
 npm run sandbox
 ```
 
+Create a test user (required for authentication):
+
+```bash
+node scripts/createUser.js
+```
+
 In a separate terminal, start the Next.js dev server:
 
 ```bash

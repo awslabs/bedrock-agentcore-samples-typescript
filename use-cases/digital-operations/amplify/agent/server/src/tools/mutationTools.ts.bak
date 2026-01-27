@@ -285,7 +285,7 @@ const createMapLayerTool = {
             geoJsonMapping: JSON.stringify(params.geoJsonMapping),
           },
         },
-        { authMode: 'userPool' }
+        { authMode: 'identityPool' }
       )
 
       const queryData = 'data' in queryResult ? queryResult.data : null
@@ -485,7 +485,7 @@ const updateMapLayerTool = {
           query: mutations.updateMapLayer,
           variables: { input },
         },
-        { authMode: 'userPool' }
+        { authMode: 'identityPool' }
       )
 
       const data = 'data' in result ? result.data : null
@@ -557,7 +557,7 @@ const deleteMapLayerTool = {
           query: mutations.deleteMapLayer,
           variables: { input: { id: params.id } },
         },
-        { authMode: 'userPool' }
+        { authMode: 'identityPool' }
       )
 
       return {
@@ -634,7 +634,7 @@ const listMapLayersTool = {
             nextToken: params.nextToken,
           },
         },
-        { authMode: 'userPool' }
+        { authMode: 'identityPool' }
       )
 
       const data = 'data' in result ? result.data : null
@@ -714,7 +714,7 @@ const updateActionItemTool = {
           query: mutations.updateActionItem,
           variables: { input },
         },
-        { authMode: 'userPool' }
+        { authMode: 'identityPool' }
       )
 
       const data = 'data' in result ? result.data : null
@@ -804,7 +804,7 @@ const updateWorkoverJobTool = {
           query: mutations.updateWorkoverJob,
           variables: { input },
         },
-        { authMode: 'userPool' }
+        { authMode: 'identityPool' }
       )
 
       const data = 'data' in result ? result.data : null
