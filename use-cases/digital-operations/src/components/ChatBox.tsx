@@ -101,15 +101,8 @@ export const ChatBox = ({ chatSessionId }: ChatBoxProps) => {
   const [isResettingDemo, setIsResettingDemo] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([ // Default suggestions for when there are no messages
     'Show me a map of the largest ports in the US, and plot their throughput over the past 5 years.',
-    `What's the status of my workover rig queue?`,
     'Make a report on expected future electricty demand in the USA.',
   ])
-
-  // Check if AgentCore is configured, otherwise fall back to default API route
-  const useAgentCore = isAgentConfigured();
-  // const agentCoreUrl = useAgentCore ? getAgentCoreUrl() : undefined;
-
-  // console.log({useAgentCore, agentCoreUrl})
 
   const { messages, setMessages, sendMessage, status, error, regenerate } = useChat({
     transport: new AgentCoreChatTransport(),  // Use custom transport for AgentCore
@@ -266,7 +259,7 @@ export const ChatBox = ({ chatSessionId }: ChatBoxProps) => {
                     Click below to load sample data for the demonstration.
                   </p>
                 </div>
-                <div className="flex gap-3 mt-4">
+                {/* <div className="flex gap-3 mt-4">
                   <Button
                     onClick={handleDemoStart}
                     disabled={isStartingDemo || isResettingDemo}
@@ -302,7 +295,7 @@ export const ChatBox = ({ chatSessionId }: ChatBoxProps) => {
                       </>
                     )}
                   </Button>
-                </div>
+                </div> */}
               </div>
             )}
             {messages.map((message) => (
