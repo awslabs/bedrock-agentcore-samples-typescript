@@ -102,7 +102,7 @@ export const ChatBox = ({ chatSessionId }: ChatBoxProps) => {
   const [suggestions, setSuggestions] = useState<string[]>([ // Default suggestions for when there are no messages
     'Show me a map of the largest ports in the US, and plot their throughput over the past 5 years.',
     `What's the status of my workover rig queue?`,
-    'Draft a work order to address the P-2201 centrifugal pump repair',
+    'Make a report on expected future electricty demand in the USA.',
   ])
 
   // Check if AgentCore is configured, otherwise fall back to default API route

@@ -2,6 +2,8 @@
 
 An AI agent for industrial operations management with real-time data analysis, predictive maintenance, and operational decision support. Built with Next.js, AWS Amplify Gen 2, and AgentCore Runtime.
 
+![Digital Operations Demo](./docs/ShippingDemo.gif)
+
 ## Features
 
 - **AgentCore Runtime Integration** — Agent hosted on AgentCore with streaming responses
