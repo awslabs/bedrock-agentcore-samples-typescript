@@ -5,6 +5,7 @@
 The map layers use GraphQL subscriptions to automatically update when layers are created, updated, or deleted. This ensures that map layers appear immediately on the map without requiring a page refresh.
 
 Map layers support two modes:
+
 1. **Static GeoJSON**: Traditional approach where GeoJSON data is provided directly
 2. **Query-Based**: Store an Athena SQL query that generates GeoJSON data dynamically (see [QUERY_BASED_MAP_LAYERS.md](./QUERY_BASED_MAP_LAYERS.md))
 
@@ -16,13 +17,14 @@ The `MapLayer` model in `amplify/data/resource.ts` has authorization rules that 
 
 ```typescript
 .authorization((allow) => [
-  allow.owner(), 
-  allow.authenticated().to(["read", "create", "update", "delete"]), 
+  allow.owner(),
+  allow.authenticated().to(["read", "create", "update", "delete"]),
   allow.guest().to(["read"])
 ])
 ```
 
 This enables AWS Amplify to automatically generate GraphQL subscriptions for:
+
 - `onCreate` - Triggered when a new layer is created
 - `onUpdate` - Triggered when a layer is updated
 - `onDelete` - Triggered when a layer is deleted
@@ -34,43 +36,37 @@ The `MapViewer` component (`src/components/MapViewer.tsx`) subscribes to all thr
 ```typescript
 // Subscribe to onCreate events
 const createSub = client.models.MapLayer.onCreate({
-  filter: { chatSessionId: { eq: chatSessionId } }
+  filter: { chatSessionId: { eq: chatSessionId } },
 }).subscribe({
   next: (newLayer) => {
-    console.log('New map layer created:', newLayer);
+    console.log('New map layer created:', newLayer)
     setLayers((prevLayers) => {
-      const exists = prevLayers.some(l => l.id === newLayer.id);
-      if (exists) return prevLayers;
-      return [...prevLayers, newLayer as MapLayer];
-    });
-  }
-});
+      const exists = prevLayers.some((l) => l.id === newLayer.id)
+      if (exists) return prevLayers
+      return [...prevLayers, newLayer as MapLayer]
+    })
+  },
+})
 
 // Subscribe to onUpdate events
 const updateSub = client.models.MapLayer.onUpdate({
-  filter: { chatSessionId: { eq: chatSessionId } }
+  filter: { chatSessionId: { eq: chatSessionId } },
 }).subscribe({
   next: (updatedLayer) => {
-    console.log('Map layer updated:', updatedLayer);
-    setLayers((prevLayers) =>
-      prevLayers.map((layer) =>
-        layer.id === updatedLayer.id ? updatedLayer : layer
-      )
-    );
-  }
-});
+    console.log('Map layer updated:', updatedLayer)
+    setLayers((prevLayers) => prevLayers.map((layer) => (layer.id === updatedLayer.id ? updatedLayer : layer)))
+  },
+})
 
 // Subscribe to onDelete events
 const deleteSub = client.models.MapLayer.onDelete({
-  filter: { chatSessionId: { eq: chatSessionId } }
+  filter: { chatSessionId: { eq: chatSessionId } },
 }).subscribe({
   next: (deletedLayer) => {
-    console.log('Map layer deleted:', deletedLayer);
-    setLayers((prevLayers) =>
-      prevLayers.filter((layer) => layer.id !== deletedLayer.id)
-    );
-  }
-});
+    console.log('Map layer deleted:', deletedLayer)
+    setLayers((prevLayers) => prevLayers.filter((layer) => layer.id !== deletedLayer.id))
+  },
+})
 ```
 
 ### 3. Benefits

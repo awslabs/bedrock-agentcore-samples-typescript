@@ -33,45 +33,47 @@ __tests__/
 1. Create a new test file in `__tests__/` with `.test.ts` extension
 2. Import test utilities:
    ```typescript
-   import { describe, it, expect } from 'vitest';
+   import { describe, it, expect } from 'vitest'
    ```
 3. Write your tests:
    ```typescript
    describe('MyFeature', () => {
      it('should do something', () => {
-       expect(true).toBe(true);
-     });
-   });
+       expect(true).toBe(true)
+     })
+   })
    ```
 
 ## Test Examples
 
 ### Unit Test
+
 ```typescript
-import { describe, it, expect } from 'vitest';
-import { myFunction } from '../../src/lib/myModule';
+import { describe, it, expect } from 'vitest'
+import { myFunction } from '../../src/lib/myModule'
 
 describe('myFunction', () => {
   it('should return expected value', () => {
-    const result = myFunction('input');
-    expect(result).toBe('expected');
-  });
-});
+    const result = myFunction('input')
+    expect(result).toBe('expected')
+  })
+})
 ```
 
 ### Integration Test with Fixtures
+
 ```typescript
-import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'fs';
-import { join } from 'path';
+import { describe, it, expect } from 'vitest'
+import { readFileSync } from 'fs'
+import { join } from 'path'
 
 describe('integration test', () => {
   it('should process fixture file', () => {
-    const fixturePath = join(__dirname, '../fixtures/test.md');
-    const content = readFileSync(fixturePath, 'utf-8');
+    const fixturePath = join(__dirname, '../fixtures/test.md')
+    const content = readFileSync(fixturePath, 'utf-8')
     // Test with real data
-  });
-});
+  })
+})
 ```
 
 ## Current Test Coverage
@@ -81,6 +83,7 @@ describe('integration test', () => {
 - **All Passing**: ✅
 
 ### Coverage Areas
+
 - HTML preprocessing
 - Iframe processing
 - Auto-resize injection
@@ -91,11 +94,13 @@ describe('integration test', () => {
 ## Continuous Integration
 
 Tests are ready for CI/CD integration. Use:
+
 ```bash
 npm run test:run
 ```
 
 This command:
+
 - Runs all tests once
 - Exits with code 0 on success, 1 on failure
 - Perfect for CI/CD pipelines

@@ -37,7 +37,7 @@ You'll need to deploy your MCP server to AWS AgentCore first. Key information re
 
 - **Runtime ARN**: The AgentCore runtime ARN (e.g., `arn:aws:bedrock-agentcore:us-west-2:123456789012:runtime/my-mcp-server`)
 - **Region**: AWS region where the server is deployed (e.g., `us-west-2`)
-- **OAuth Configuration**: 
+- **OAuth Configuration**:
   - Cognito User Pool ID
   - Cognito Client ID
   - Cognito Discovery URL
@@ -76,27 +76,27 @@ Create a utility to handle Bearer token generation and caching:
 **File**: `utils/mcpAuthService.ts`
 
 ```typescript
-import { CognitoIdentityProviderClient, InitiateAuthCommand } from '@aws-sdk/client-cognito-identity-provider';
+import { CognitoIdentityProviderClient, InitiateAuthCommand } from '@aws-sdk/client-cognito-identity-provider'
 
 interface TokenCache {
-  token: string;
-  expiresAt: number;
+  token: string
+  expiresAt: number
 }
 
-let tokenCache: TokenCache | null = null;
+let tokenCache: TokenCache | null = null
 
 export async function getMCPBearerToken(): Promise<string> {
   // Return cached token if still valid
   if (tokenCache && tokenCache.expiresAt > Date.now()) {
-    return tokenCache.token;
+    return tokenCache.token
   }
 
-  const region = process.env.MCP_SERVER_REGION!;
-  const clientId = process.env.MCP_COGNITO_CLIENT_ID!;
-  const username = process.env.MCP_COGNITO_USERNAME!;
-  const password = process.env.MCP_COGNITO_PASSWORD!;
+  const region = process.env.MCP_SERVER_REGION!
+  const clientId = process.env.MCP_COGNITO_CLIENT_ID!
+  const username = process.env.MCP_COGNITO_USERNAME!
+  const password = process.env.MCP_COGNITO_PASSWORD!
 
-  const client = new CognitoIdentityProviderClient({ region });
+  const client = new CognitoIdentityProviderClient({ region })
 
   const command = new InitiateAuthCommand({
     ClientId: clientId,
@@ -105,26 +105,27 @@ export async function getMCPBearerToken(): Promise<string> {
       USERNAME: username,
       PASSWORD: password,
     },
-  });
+  })
 
-  const response = await client.send(command);
-  const accessToken = response.AuthenticationResult?.AccessToken;
+  const response = await client.send(command)
+  const accessToken = response.AuthenticationResult?.AccessToken
 
   if (!accessToken) {
-    throw new Error('Failed to obtain access token from Cognito');
+    throw new Error('Failed to obtain access token from Cognito')
   }
 
   // Cache token (expires in 1 hour by default, we'll refresh at 55 minutes)
   tokenCache = {
     token: accessToken,
-    expiresAt: Date.now() + (55 * 60 * 1000), // 55 minutes
-  };
+    expiresAt: Date.now() + 55 * 60 * 1000, // 55 minutes
+  }
 
-  return accessToken;
+  return accessToken
 }
 ```
 
 **Required package**:
+
 ```bash
 npm install @aws-sdk/client-cognito-identity-provider
 ```
@@ -137,15 +138,13 @@ Create a utility to construct the MCP endpoint URL:
 
 ```typescript
 export function getMCPServerUrl(): string {
-  const region = process.env.MCP_SERVER_REGION!;
-  const runtimeArn = process.env.MCP_SERVER_RUNTIME_ARN!;
-  
+  const region = process.env.MCP_SERVER_REGION!
+  const runtimeArn = process.env.MCP_SERVER_RUNTIME_ARN!
+
   // URL-encode the ARN
-  const encodedArn = runtimeArn
-    .replace(/:/g, '%3A')
-    .replace(/\//g, '%2F');
-  
-  return `https://bedrock-agentcore.${region}.amazonaws.com/runtimes/${encodedArn}/invocations?qualifier=DEFAULT`;
+  const encodedArn = runtimeArn.replace(/:/g, '%3A').replace(/\//g, '%2F')
+
+  return `https://bedrock-agentcore.${region}.amazonaws.com/runtimes/${encodedArn}/invocations?qualifier=DEFAULT`
 }
 ```
 
@@ -154,159 +153,154 @@ export function getMCPServerUrl(): string {
 Update `src/app/api/chat/route.ts` to integrate MCP tools:
 
 ```typescript
-import { cookies } from 'next/headers';
-import { runWithAmplifyServerContext } from '@/../utils/amplifyServerUtils';
-import { fetchAuthSession } from 'aws-amplify/auth/server';
+import { cookies } from 'next/headers'
+import { runWithAmplifyServerContext } from '@/../utils/amplifyServerUtils'
+import { fetchAuthSession } from 'aws-amplify/auth/server'
 
-import { createAmazonBedrock } from '@ai-sdk/amazon-bedrock';
-import { 
-  streamText, 
-  UIMessage, 
-  convertToModelMessages, 
-  createIdGenerator 
-} from 'ai';
-import { experimental_createMCPClient as createMCPClient } from '@ai-sdk/mcp';
+import { createAmazonBedrock } from '@ai-sdk/amazon-bedrock'
+import { streamText, UIMessage, convertToModelMessages, createIdGenerator } from 'ai'
+import { experimental_createMCPClient as createMCPClient } from '@ai-sdk/mcp'
 
-import { loadOutputs } from '@/../utils/amplifyUtils';
-import { getMCPBearerToken } from '@/../utils/mcpAuthService';
-import { getMCPServerUrl } from '@/../utils/mcpClient';
+import { loadOutputs } from '@/../utils/amplifyUtils'
+import { getMCPBearerToken } from '@/../utils/mcpAuthService'
+import { getMCPServerUrl } from '@/../utils/mcpClient'
 
-const outputs = loadOutputs();
+const outputs = loadOutputs()
 
 // Allow streaming responses up to 300 seconds
-export const maxDuration = 300;
+export const maxDuration = 300
 
 export async function POST(req: Request) {
-    let mcpClient;
-    
-    try {
-        const {
-            messages,
-            modelId
-        }: {
-            messages: UIMessage[];
-            modelId: string;
-        } = await req.json();
+  let mcpClient
 
-        console.log(`Calling model ${modelId}`);
+  try {
+    const {
+      messages,
+      modelId,
+    }: {
+      messages: UIMessage[]
+      modelId: string
+    } = await req.json()
 
-        // Get authenticated credentials from the request context
-        const { credentials } = await runWithAmplifyServerContext({
-            nextServerContext: { cookies },
-            operation: (contextSpec) => fetchAuthSession(contextSpec)
-        });
+    console.log(`Calling model ${modelId}`)
 
-        if (!credentials) {
-            return new Response('Unauthorized', { status: 401 });
-        }
+    // Get authenticated credentials from the request context
+    const { credentials } = await runWithAmplifyServerContext({
+      nextServerContext: { cookies },
+      operation: (contextSpec) => fetchAuthSession(contextSpec),
+    })
 
-        // Initialize Bedrock
-        const bedrock = createAmazonBedrock({
-            region: outputs.auth.aws_region,
-            credentialProvider: async () => ({
-                accessKeyId: credentials.accessKeyId,
-                secretAccessKey: credentials.secretAccessKey,
-                sessionToken: credentials.sessionToken,
-            }),
-        });
-
-        const model = bedrock(modelId);
-
-        // Initialize MCP client and fetch tools
-        const mcpServerUrl = getMCPServerUrl();
-        const bearerToken = await getMCPBearerToken();
-
-        mcpClient = await createMCPClient({
-            transport: {
-                type: 'http',
-                url: mcpServerUrl,
-                headers: {
-                    'Authorization': `Bearer ${bearerToken}`,
-                    'Content-Type': 'application/json',
-                },
-            },
-        });
-
-        // Get tools from MCP server
-        const mcpTools = await mcpClient.tools();
-        console.log('Loaded MCP tools:', Object.keys(mcpTools));
-
-        // Stream with MCP tools
-        const result = streamText({
-            model: model,
-            messages: convertToModelMessages(messages),
-            system: 'You are a helpful assistant that can answer questions and help with tasks. You have access to tools that can help you accomplish various tasks.',
-            tools: mcpTools,
-            onFinish: async () => {
-                // Close MCP client when streaming completes
-                if (mcpClient) {
-                    await mcpClient.close();
-                }
-            },
-        });
-
-        // Send sources and reasoning back to the client with error handling
-        return result.toUIMessageStreamResponse({
-            originalMessages: messages,
-            sendSources: true,
-            sendReasoning: true,
-            generateMessageId: createIdGenerator({
-                prefix: 'msg',
-                size: 16,
-            }),
-            onError: (error) => {
-                console.error('Stream error:', error);
-                
-                let errorMessage = 'An unknown error occurred';
-                
-                if (error && typeof error === 'object') {
-                    const apiError = error as any;
-                    
-                    if (apiError.responseBody) {
-                        try {
-                            const responseBody = typeof apiError.responseBody === 'string' 
-                                ? JSON.parse(apiError.responseBody) 
-                                : apiError.responseBody;
-                            
-                            if (responseBody.Message) {
-                                errorMessage = responseBody.Message;
-                            } else if (responseBody.message) {
-                                errorMessage = responseBody.message;
-                            } else if (apiError.message) {
-                                errorMessage = apiError.message;
-                            }
-                        } catch (parseError) {
-                            errorMessage = apiError.message || errorMessage;
-                        }
-                    } else if (apiError.message) {
-                        errorMessage = apiError.message;
-                    }
-                }
-                
-                return `Error: ${errorMessage}`;
-            }
-        });
-    } catch (error) {
-        // Ensure MCP client is closed on error
-        if (mcpClient) {
-            await mcpClient.close();
-        }
-        
-        console.error('Request error:', error);
-        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-        return new Response(
-            JSON.stringify({
-                error: errorMessage,
-                message: `Failed to initialize: ${errorMessage}`
-            }),
-            {
-                status: 500,
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-            }
-        );
+    if (!credentials) {
+      return new Response('Unauthorized', { status: 401 })
     }
+
+    // Initialize Bedrock
+    const bedrock = createAmazonBedrock({
+      region: outputs.auth.aws_region,
+      credentialProvider: async () => ({
+        accessKeyId: credentials.accessKeyId,
+        secretAccessKey: credentials.secretAccessKey,
+        sessionToken: credentials.sessionToken,
+      }),
+    })
+
+    const model = bedrock(modelId)
+
+    // Initialize MCP client and fetch tools
+    const mcpServerUrl = getMCPServerUrl()
+    const bearerToken = await getMCPBearerToken()
+
+    mcpClient = await createMCPClient({
+      transport: {
+        type: 'http',
+        url: mcpServerUrl,
+        headers: {
+          Authorization: `Bearer ${bearerToken}`,
+          'Content-Type': 'application/json',
+        },
+      },
+    })
+
+    // Get tools from MCP server
+    const mcpTools = await mcpClient.tools()
+    console.log('Loaded MCP tools:', Object.keys(mcpTools))
+
+    // Stream with MCP tools
+    const result = streamText({
+      model: model,
+      messages: convertToModelMessages(messages),
+      system:
+        'You are a helpful assistant that can answer questions and help with tasks. You have access to tools that can help you accomplish various tasks.',
+      tools: mcpTools,
+      onFinish: async () => {
+        // Close MCP client when streaming completes
+        if (mcpClient) {
+          await mcpClient.close()
+        }
+      },
+    })
+
+    // Send sources and reasoning back to the client with error handling
+    return result.toUIMessageStreamResponse({
+      originalMessages: messages,
+      sendSources: true,
+      sendReasoning: true,
+      generateMessageId: createIdGenerator({
+        prefix: 'msg',
+        size: 16,
+      }),
+      onError: (error) => {
+        console.error('Stream error:', error)
+
+        let errorMessage = 'An unknown error occurred'
+
+        if (error && typeof error === 'object') {
+          const apiError = error as any
+
+          if (apiError.responseBody) {
+            try {
+              const responseBody =
+                typeof apiError.responseBody === 'string' ? JSON.parse(apiError.responseBody) : apiError.responseBody
+
+              if (responseBody.Message) {
+                errorMessage = responseBody.Message
+              } else if (responseBody.message) {
+                errorMessage = responseBody.message
+              } else if (apiError.message) {
+                errorMessage = apiError.message
+              }
+            } catch (parseError) {
+              errorMessage = apiError.message || errorMessage
+            }
+          } else if (apiError.message) {
+            errorMessage = apiError.message
+          }
+        }
+
+        return `Error: ${errorMessage}`
+      },
+    })
+  } catch (error) {
+    // Ensure MCP client is closed on error
+    if (mcpClient) {
+      await mcpClient.close()
+    }
+
+    console.error('Request error:', error)
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred'
+    return new Response(
+      JSON.stringify({
+        error: errorMessage,
+        message: `Failed to initialize: ${errorMessage}`,
+      }),
+      {
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
+    )
+  }
 }
 ```
 
@@ -315,26 +309,26 @@ export async function POST(req: Request) {
 If you want type safety for specific tools, you can define them explicitly:
 
 ```typescript
-import { z } from 'zod';
+import { z } from 'zod'
 
 // Define tool schemas for type safety
 const toolSchemas = {
-  'get_weather': {
+  get_weather: {
     inputSchema: z.object({
       location: z.string().describe('The city and state, e.g. San Francisco, CA'),
       unit: z.enum(['celsius', 'fahrenheit']).optional(),
     }),
   },
-  'search_database': {
+  search_database: {
     inputSchema: z.object({
       query: z.string().describe('The search query'),
       limit: z.number().optional().describe('Maximum number of results'),
     }),
   },
-};
+}
 
 // Use in MCP client
-const mcpTools = await mcpClient.tools({ schemas: toolSchemas });
+const mcpTools = await mcpClient.tools({ schemas: toolSchemas })
 ```
 
 ## Configuration Options
@@ -342,30 +336,34 @@ const mcpTools = await mcpClient.tools({ schemas: toolSchemas });
 ### Option A: Use All Tools (Schema Discovery)
 
 ```typescript
-const mcpTools = await mcpClient.tools();
+const mcpTools = await mcpClient.tools()
 ```
 
 **Pros**:
+
 - Simple implementation
 - Automatically includes all server tools
 - No maintenance when server tools change
 
 **Cons**:
+
 - No TypeScript type safety
 - May include tools you don't want to expose
 
 ### Option B: Define Specific Tools (Schema Definition)
 
 ```typescript
-const mcpTools = await mcpClient.tools({ schemas: toolSchemas });
+const mcpTools = await mcpClient.tools({ schemas: toolSchemas })
 ```
 
 **Pros**:
+
 - Full TypeScript type safety
 - Control which tools are exposed
 - Better IDE autocomplete
 
 **Cons**:
+
 - Requires manual schema definition
 - Must update when server tools change
 
@@ -374,11 +372,13 @@ const mcpTools = await mcpClient.tools({ schemas: toolSchemas });
 ### Local Testing
 
 1. **Start MCP Server Locally** (for development):
+
    ```bash
    python my_mcp_server.py
    ```
 
 2. **Update environment variables** to point to localhost:
+
    ```env
    MCP_SERVER_URL=http://localhost:8000/mcp
    ```
@@ -402,12 +402,12 @@ const mcpTools = await mcpClient.tools({ schemas: toolSchemas });
 
 ### Common Issues and Solutions
 
-| Issue | Solution |
-|-------|----------|
-| `401 Unauthorized` | Verify Bearer token is valid and not expired |
-| `Connection timeout` | Check MCP server URL and network connectivity |
-| `Tool execution failed` | Check MCP server logs for tool-specific errors |
-| `Token expired` | Implement token refresh logic (already in `mcpAuthService.ts`) |
+| Issue                   | Solution                                                       |
+| ----------------------- | -------------------------------------------------------------- |
+| `401 Unauthorized`      | Verify Bearer token is valid and not expired                   |
+| `Connection timeout`    | Check MCP server URL and network connectivity                  |
+| `Tool execution failed` | Check MCP server logs for tool-specific errors                 |
+| `Token expired`         | Implement token refresh logic (already in `mcpAuthService.ts`) |
 
 ## Security Considerations
 
@@ -420,6 +420,7 @@ const mcpTools = await mcpClient.tools({ schemas: toolSchemas });
 ## Monitoring and Logging
 
 Add logging for:
+
 - MCP client initialization
 - Tool discovery
 - Tool execution
@@ -427,8 +428,9 @@ Add logging for:
 - Errors and failures
 
 Example:
+
 ```typescript
-console.log('MCP Client initialized:', { url: mcpServerUrl, toolCount: Object.keys(mcpTools).length });
+console.log('MCP Client initialized:', { url: mcpServerUrl, toolCount: Object.keys(mcpTools).length })
 ```
 
 ## Deployment Checklist

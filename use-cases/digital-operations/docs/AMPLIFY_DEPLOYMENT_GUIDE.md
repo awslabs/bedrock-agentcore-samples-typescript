@@ -11,6 +11,7 @@ This guide walks you through deploying the Digital Operations Agent using AWS Am
 ## Overview
 
 This project is part of a monorepo and requires:
+
 - **Monorepo configuration** — Specify the app root path
 - **Custom build image** — Support for Docker multi-architecture builds with ARM64 emulation
 - **Git-based deployment** — Amplify connects to your repository for CI/CD
@@ -42,11 +43,13 @@ Since this is a monorepo, you must specify the app location:
 3. Click **"Next"**
 
 **What this does:**
+
 - Sets the `AMPLIFY_MONOREPO_APP_ROOT` environment variable automatically
 - Tells Amplify to look for `amplify.yml` with the `applications` key structure
 - Ensures builds run from the correct directory
 
 **Important:** The `amplify.yml` file uses the monorepo format with the `applications` key:
+
 ```yaml
 version: 1
 applications:
@@ -84,6 +87,7 @@ Click **"Next"** to proceed.
 5. Click **"Save"**
 
 **Why this is required:**
+
 - AgentCore Runtime requires ARM64 Docker images
 - The standard Amplify image lacks QEMU emulation for cross-platform builds
 - This image includes Docker and necessary build tools for ARM64 emulation
@@ -104,7 +108,7 @@ Click **"Next"** to proceed.
 Watch the build logs in the Amplify Console:
 
 1. **Provision** — Sets up build environment
-2. **Backend Build** — 
+2. **Backend Build** —
    - Installs QEMU for ARM64 emulation
    - Builds agent and MCP server Docker images
    - Deploys Amplify backend with `npx ampx pipeline-deploy`
@@ -168,7 +172,8 @@ Additional variables are configured in the backend deployment.
 
 **Cause**: The `amplify.yml` file doesn't use the monorepo format when the app is configured as a monorepo in the Amplify Console.
 
-**Solution**: 
+**Solution**:
+
 1. Ensure your `amplify.yml` uses the `applications` key structure:
    ```yaml
    version: 1
@@ -191,6 +196,7 @@ Additional variables are configured in the backend deployment.
 **Cause**: Using an older version of the Amplify Console.
 
 **Solution**: Manually set the environment variable:
+
 1. Go to **App settings** → **Environment variables**
 2. Add variable:
    - Key: `AMPLIFY_MONOREPO_APP_ROOT`
@@ -212,7 +218,8 @@ Additional variables are configured in the backend deployment.
 
 **Cause**: Monorepo app root not configured correctly.
 
-**Solution**: 
+**Solution**:
+
 1. Verify `AMPLIFY_MONOREPO_APP_ROOT=use-cases/digital-operations`
 2. Check that `amplify/` folder exists at `use-cases/digital-operations/amplify/`
 3. Ensure the `appRoot` in `amplify.yml` matches the environment variable
@@ -222,6 +229,7 @@ Additional variables are configured in the backend deployment.
 **Cause**: Dependencies not installed or wrong Node.js version.
 
 **Solution**: The `amplify.yml` installs Node.js 20 using `n`. Check build logs to verify:
+
 ```
 Frontend - Node.js version: v20.x.x
 ```
@@ -230,7 +238,8 @@ Frontend - Node.js version: v20.x.x
 
 **Cause**: Docker images failed to build or push.
 
-**Solution**: 
+**Solution**:
+
 1. Check backend build logs for Docker errors
 2. Verify QEMU emulation setup succeeded
 3. Ensure Docker buildx is configured correctly
@@ -241,7 +250,7 @@ Frontend - Node.js version: v20.x.x
 This project deploys:
 
 1. **Frontend**: Next.js application hosted on Amplify's CDN
-2. **Backend**: 
+2. **Backend**:
    - AWS AgentCore Runtime with two Docker containers:
      - Agent Server (custom agent tools)
      - MCP Server (Model Context Protocol server)
@@ -260,6 +269,7 @@ The Docker containers are built for `linux/arm64` architecture to match AWS Agen
 ## Support
 
 For issues related to:
+
 - **Amplify deployment**: Check AWS Amplify Console logs
 - **Docker builds**: Review the backend build phase logs
 - **Application issues**: Check CloudWatch logs for your deployed resources

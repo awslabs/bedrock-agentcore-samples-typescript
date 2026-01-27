@@ -1,7 +1,7 @@
-import { fetchAuthSession } from 'aws-amplify/auth';
-import { loadOutputs } from '@/../utils/amplifyUtils';
+import { fetchAuthSession } from 'aws-amplify/auth'
+import { loadOutputs } from '@/../utils/amplifyUtils'
 
-const outputs = loadOutputs();
+const outputs = loadOutputs()
 
 /**
  * Get the AgentCore Runtime endpoint URL for the agent
@@ -9,22 +9,22 @@ const outputs = loadOutputs();
  * @returns The full AgentCore endpoint URL
  */
 export function getAgentCoreUrl(agentArnKey: string = 'agentServerAgentArn'): string {
-  const agentArn = outputs.custom[agentArnKey];
+  const agentArn = outputs.custom[agentArnKey]
 
-//   console.log({agentArn})
-  
+  //   console.log({agentArn})
+
   if (!agentArn) {
-    throw new Error(`Agent ARN not found in outputs.custom.${agentArnKey}`);
+    throw new Error(`Agent ARN not found in outputs.custom.${agentArnKey}`)
   }
-  
+
   // URL encode the ARN (replace : with %3A and / with %2F)
-  const encodedArn = agentArn.replace(/:/g, '%3A').replace(/\//g, '%2F');
-  
+  const encodedArn = agentArn.replace(/:/g, '%3A').replace(/\//g, '%2F')
+
   // Construct the AgentCore endpoint URL
-  const url = `https://bedrock-agentcore.${outputs.auth.aws_region}.amazonaws.com/runtimes/${encodedArn}/invocations?qualifier=DEFAULT`;
-  
-//   console.log({agentCoreAgentUrl: url})
-  return url;
+  const url = `https://bedrock-agentcore.${outputs.auth.aws_region}.amazonaws.com/runtimes/${encodedArn}/invocations?qualifier=DEFAULT`
+
+  //   console.log({agentCoreAgentUrl: url})
+  return url
 }
 
 /**
@@ -33,16 +33,16 @@ export function getAgentCoreUrl(agentArnKey: string = 'agentServerAgentArn'): st
  * @returns Headers object with Authorization and Content-Type
  */
 export async function getAgentCoreHeaders(): Promise<Record<string, string>> {
-  const { tokens } = await fetchAuthSession();
-  
+  const { tokens } = await fetchAuthSession()
+
   if (!tokens?.accessToken) {
-    throw new Error('No access token available. User may not be authenticated.');
+    throw new Error('No access token available. User may not be authenticated.')
   }
-  
+
   return {
-    'Authorization': `Bearer ${tokens.accessToken.toString()}`,
+    Authorization: `Bearer ${tokens.accessToken.toString()}`,
     'Content-Type': 'application/json',
-  };
+  }
 }
 
 /**
@@ -51,5 +51,5 @@ export async function getAgentCoreHeaders(): Promise<Record<string, string>> {
  * @returns Boolean indicating if the agent ARN is configured
  */
 export function isAgentConfigured(agentArnKey: string = 'agentServerAgentArn'): boolean {
-  return Boolean(outputs.custom?.[agentArnKey]);
+  return Boolean(outputs.custom?.[agentArnKey])
 }

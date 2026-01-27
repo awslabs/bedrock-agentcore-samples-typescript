@@ -23,6 +23,7 @@ All expensive initialization operations are now performed once at server startup
 #### 1. New Initialization Module (`src/init.ts`)
 
 Created a centralized initialization module that:
+
 - Fetches AWS credentials once from the container's IAM role using `fromNodeProviderChain()`
 - Sets credentials as environment variables (available for entire process lifetime)
 - Pre-transforms all tools into AI SDK format
@@ -31,6 +32,7 @@ Created a centralized initialization module that:
 #### 2. Server Startup (`src/index.ts`)
 
 Modified to:
+
 - Call `initializeAgent()` before starting the HTTP server
 - Store initialized components in module-level variable
 - Export `getInitializedComponents()` for use in request handlers
@@ -39,6 +41,7 @@ Modified to:
 #### 3. Request Handler (`src/server.ts`)
 
 Simplified to:
+
 - Retrieve pre-initialized components via `getInitializedComponents()`
 - Create model instance using cached Bedrock client (only operation that must be per-request)
 - Use pre-transformed tools directly
@@ -47,6 +50,7 @@ Simplified to:
 #### 4. Amplify Client (`src/tools/amplifyUtils.ts`)
 
 Updated to:
+
 - Use environment variables set at startup
 - Remove per-request credential fetching
 - Validate that credentials exist (with helpful error message if not)
@@ -54,16 +58,19 @@ Updated to:
 #### 5. Tool Handlers (`src/tools/queryTools.ts`)
 
 Cleaned up to:
+
 - Remove `setAmplifyEnvVars()` calls
 - Use credentials from environment variables directly
 
 ## Performance Impact
 
 ### Before Optimization
+
 - **Cold start**: ~500-800ms
 - **Warm requests**: ~500-800ms (same, no caching)
 
 ### After Optimization
+
 - **Cold start**: ~500-800ms (same, initialization now happens at startup)
 - **Warm requests**: ~50-350ms (170-450ms faster!)
 
@@ -86,11 +93,13 @@ fromNodeProviderChain()
 ```
 
 This automatically discovers credentials from:
+
 1. Environment variables (if already set)
 2. Container metadata endpoint (ECS/Fargate task role)
 3. EC2 instance metadata (if on EC2)
 
 Credentials are:
+
 - Fetched once at startup
 - Set as process environment variables
 - Automatically refreshed by AWS SDK before expiry
@@ -99,6 +108,7 @@ Credentials are:
 ## What Remains Per-Request
 
 Only operations that truly vary per-request:
+
 1. **Model instance creation**: The `modelId` comes from request body
 2. **Message processing**: Each request has unique message history
 3. **Streaming response**: Each response is unique
@@ -110,6 +120,7 @@ Everything else is pre-initialized and reused.
 To verify the optimization:
 
 1. **Check startup logs**: Should see initialization messages
+
    ```
    === Initializing Agent Components ===
    Initializing AWS credentials from container IAM role...
@@ -128,22 +139,26 @@ To verify the optimization:
 ## Troubleshooting
 
 ### Error: "Agent components not initialized"
+
 - Server may still be starting up
 - Check server logs for initialization errors
 - Verify IAM role has necessary permissions
 
 ### Error: "Missing required environment variables"
+
 - Credentials were not set at startup
 - Check that `initializeAgent()` completed successfully
 - Verify container has IAM role attached
 
 ### Tools not working
+
 - Verify Amplify environment variables are set (AMPLIFY_DATA_GRAPHQL_ENDPOINT, AWS_REGION)
 - Check that tools were pre-transformed successfully in startup logs
 
 ## Future Enhancements
 
 Potential additional optimizations:
+
 1. Connection pooling for GraphQL requests
 2. Caching frequently accessed data
 3. Request batching for multiple tool calls

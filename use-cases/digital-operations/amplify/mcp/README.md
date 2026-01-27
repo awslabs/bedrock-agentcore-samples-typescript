@@ -96,6 +96,7 @@ npx ampx pipeline-deploy
 ```
 
 The CDK will automatically:
+
 1. Build the Docker image
 2. Push it to ECR
 3. Output the image URI in CloudFormation outputs
@@ -103,6 +104,7 @@ The CDK will automatically:
 ### Access the Image URI
 
 After deployment, you can find the image URI in:
+
 - CloudFormation outputs: `McpServerImageUri`
 - The construct property: `mcpServer.imageUri`
 
@@ -117,9 +119,9 @@ To use this MCP server with Amazon Bedrock AgentCore Runtime, you'll need to:
 Example (pseudo-code):
 
 ```typescript
-import { BedrockAgentCoreClient, InvokeAgentRuntimeCommand } from '@aws-sdk/client-bedrock-agentcore';
+import { BedrockAgentCoreClient, InvokeAgentRuntimeCommand } from '@aws-sdk/client-bedrock-agentcore'
 
-const client = new BedrockAgentCoreClient({ region: 'us-east-1' });
+const client = new BedrockAgentCoreClient({ region: 'us-east-1' })
 
 const response = await client.send(
   new InvokeAgentRuntimeCommand({
@@ -127,7 +129,7 @@ const response = await client.send(
     // AgentCore will use the container image and route to /mcp endpoint
     // Session ID is handled automatically by AgentCore
   })
-);
+)
 ```
 
 ## Adding New Tools
@@ -158,11 +160,11 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       },
     },
   ],
-}));
+}))
 
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   if (request.params.name === 'my_new_tool') {
-    const param1 = (request.params.arguments as { param1: string }).param1;
+    const param1 = (request.params.arguments as { param1: string }).param1
     // Your tool logic here
     return {
       content: [
@@ -171,9 +173,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           text: `Result from my_new_tool with ${param1}`,
         },
       ],
-    };
+    }
   }
-});
+})
 ```
 
 ## Environment Variables
@@ -186,7 +188,7 @@ const mcpServer = new McpServerConstruct(backend.stack, 'McpServer', {
     MY_API_KEY: 'your-api-key',
     CUSTOM_CONFIG: 'value',
   },
-});
+})
 ```
 
 Then update the Dockerfile to use these:

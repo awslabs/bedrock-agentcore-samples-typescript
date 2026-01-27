@@ -9,13 +9,8 @@
     "strict": true,
     "skipLibCheck": true,
     "paths": {
-      "$amplify/*": [
-        "../.amplify/generated/*"
-      ]
+      "$amplify/*": ["../.amplify/generated/*"]
     }
   },
-  "exclude": [
-    "mcp/server",
-    "agent/server"
-  ]
+  "exclude": ["mcp/server", "agent/server"]
 }

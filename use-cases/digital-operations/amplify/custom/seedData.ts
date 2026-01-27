@@ -1,19 +1,16 @@
-import { Construct } from 'constructs';
-import cdk, {
-    aws_iam as iam,
-    custom_resources,
-} from 'aws-cdk-lib';
+import { Construct } from 'constructs'
+import cdk, { aws_iam as iam, custom_resources } from 'aws-cdk-lib'
 
 export interface SeedDataProps {
-    settingsTable: cdk.aws_dynamodb.ITable;
+  settingsTable: cdk.aws_dynamodb.ITable
 }
 
 export class SeedDataConstruct extends Construct {
-    constructor(scope: Construct, id: string, props: SeedDataProps) {
-        super(scope, id);
+  constructor(scope: Construct, id: string, props: SeedDataProps) {
+    super(scope, id)
 
-        // System prompt content to seed
-        const systemPromptContent = `You are an advanced AI digital operations system which creates demos of how generative AI can improved digital operations workloads.
+    // System prompt content to seed
+    const systemPromptContent = `You are an advanced AI digital operations system which creates demos of how generative AI can improved digital operations workloads.
 Call tools in parallel when possible.
 
 When responding to the user:
@@ -35,50 +32,50 @@ Mapping guidance:
 - After creating a map layer, render the map '<iframe src="/map">' in your response.
 
 AFTER RESPONDING: Call the generate_suggestions tool to provide 3-4 helpful follow-up questions the user might want to ask.
-`;
+`
 
-        // Create a custom resource to seed the Settings table with the system prompt
-        new custom_resources.AwsCustomResource(scope, 'SystemPromptSeedData', {
-            onCreate: {
-                service: 'DynamoDB',
-                action: 'putItem',
-                parameters: {
-                    TableName: props.settingsTable.tableName,
-                    Item: {
-                        name: { S: 'system_prompt' },
-                        value: { S: systemPromptContent },
-                        id: { S: 'system_prompt_setting' },
-                        __typename: { S: 'Settings' },
-                        createdAt: { S: '2024-01-01T00:00:00.000Z' },
-                        updatedAt: { S: '2024-01-01T00:00:00.000Z' },
-                        owner: { S: 'system' },
-                    }
-                },
-                physicalResourceId: custom_resources.PhysicalResourceId.of('SystemPromptSeedData')
-            },
-            onUpdate: {
-                service: 'DynamoDB',
-                action: 'putItem',
-                parameters: {
-                    TableName: props.settingsTable.tableName,
-                    Item: {
-                        name: { S: 'system_prompt' },
-                        value: { S: systemPromptContent },
-                        id: { S: 'system_prompt_setting' },
-                        __typename: { S: 'Settings' },
-                        createdAt: { S: '2024-01-01T00:00:00.000Z' },
-                        updatedAt: { S: '2024-01-01T00:00:00.000Z' },
-                        owner: { S: 'system' },
-                    }
-                },
-                physicalResourceId: custom_resources.PhysicalResourceId.of('SystemPromptSeedData')
-            },
-            policy: custom_resources.AwsCustomResourcePolicy.fromStatements([
-                new iam.PolicyStatement({
-                    actions: ['dynamodb:PutItem'],
-                    resources: [props.settingsTable.tableArn],
-                }),
-            ]),
-        });
-    }
+    // Create a custom resource to seed the Settings table with the system prompt
+    new custom_resources.AwsCustomResource(scope, 'SystemPromptSeedData', {
+      onCreate: {
+        service: 'DynamoDB',
+        action: 'putItem',
+        parameters: {
+          TableName: props.settingsTable.tableName,
+          Item: {
+            name: { S: 'system_prompt' },
+            value: { S: systemPromptContent },
+            id: { S: 'system_prompt_setting' },
+            __typename: { S: 'Settings' },
+            createdAt: { S: '2024-01-01T00:00:00.000Z' },
+            updatedAt: { S: '2024-01-01T00:00:00.000Z' },
+            owner: { S: 'system' },
+          },
+        },
+        physicalResourceId: custom_resources.PhysicalResourceId.of('SystemPromptSeedData'),
+      },
+      onUpdate: {
+        service: 'DynamoDB',
+        action: 'putItem',
+        parameters: {
+          TableName: props.settingsTable.tableName,
+          Item: {
+            name: { S: 'system_prompt' },
+            value: { S: systemPromptContent },
+            id: { S: 'system_prompt_setting' },
+            __typename: { S: 'Settings' },
+            createdAt: { S: '2024-01-01T00:00:00.000Z' },
+            updatedAt: { S: '2024-01-01T00:00:00.000Z' },
+            owner: { S: 'system' },
+          },
+        },
+        physicalResourceId: custom_resources.PhysicalResourceId.of('SystemPromptSeedData'),
+      },
+      policy: custom_resources.AwsCustomResourcePolicy.fromStatements([
+        new iam.PolicyStatement({
+          actions: ['dynamodb:PutItem'],
+          resources: [props.settingsTable.tableArn],
+        }),
+      ]),
+    })
+  }
 }

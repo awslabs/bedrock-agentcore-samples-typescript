@@ -60,24 +60,28 @@ Browser renders interactive charts
 ### Plotly.js (Recommended)
 
 **Why Plotly?**
+
 - Rich interactive charts (line, bar, scatter, pie, gauge, etc.)
 - Responsive by default
 - No external dependencies beyond the CDN script
 - Excellent for scientific and business visualizations
 
 **CDN Link:**
+
 ```html
-<script src='https://cdn.plot.ly/plotly-2.27.0.min.js'></script>
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
 ```
 
 **Example Usage:**
+
 ```javascript
-Plotly.newPlot('chart', [trace1, trace2], layout, {responsive: true});
+Plotly.newPlot('chart', [trace1, trace2], layout, { responsive: true })
 ```
 
 ### Other Libraries
 
 The system supports any JavaScript visualization library that can run in an iframe:
+
 - Chart.js
 - D3.js
 - ECharts
@@ -91,7 +95,8 @@ The system supports any JavaScript visualization library that can run in an ifra
 ### Basic Template
 
 ```html
-<iframe srcdoc="<!DOCTYPE html>
+<iframe
+  srcdoc="<!DOCTYPE html>
 <html>
 <head>
 <script src='https://cdn.plot.ly/plotly-2.27.0.min.js'></script>
@@ -120,7 +125,9 @@ const layout = {
 Plotly.newPlot('chart', data, layout, {responsive: true});
 </script>
 </body>
-</html>" style="width:100%; height:450px; border:none;"></iframe>
+</html>"
+  style="width:100%; height:450px; border:none;"
+></iframe>
 ```
 
 ### Important Notes
@@ -133,7 +140,8 @@ Plotly.newPlot('chart', data, layout, {responsive: true});
 ### Multi-Chart Dashboard Example
 
 ```html
-<iframe srcdoc="<!DOCTYPE html>
+<iframe
+  srcdoc="<!DOCTYPE html>
 <html>
 <head>
 <script src='https://cdn.plot.ly/plotly-2.27.0.min.js'></script>
@@ -164,7 +172,9 @@ Plotly.newPlot('chart2', [{
 }], {title: 'Chart 2'}, {responsive: true});
 </script>
 </body>
-</html>" style="width:100%; border:none;"></iframe>
+</html>"
+  style="width:100%; border:none;"
+></iframe>
 ```
 
 ---
@@ -176,51 +186,57 @@ Plotly.newPlot('chart2', [{
 When you create an iframe with srcdoc content, the `preprocessContent()` function automatically:
 
 #### 1. **Detects Complete vs Incomplete Iframes**
+
 - Complete: Has closing `</iframe>` tag
 - Incomplete: Missing closing tag (during streaming)
 
 #### 2. **For Complete Iframes:**
 
 **a. Script Processing**
+
 - Removes JavaScript comments (single-line `//` and multi-line `/* */`)
 - Wraps inline scripts in IIFEs to prevent variable conflicts
 - Preserves external script sources
 
 **Before:**
+
 ```javascript
-<script>
-const data = [1, 2, 3];
-Plotly.newPlot('chart', data);
-</script>
+<script>const data = [1, 2, 3]; Plotly.newPlot('chart', data);</script>
 ```
 
 **After:**
+
 ```javascript
 <script>(function() { const data = [1, 2, 3]; Plotly.newPlot('chart', data); })();</script>
 ```
 
 **b. Auto-Resize Injection**
+
 - Injects a script that measures content height
 - Automatically adjusts iframe height to fit content
 - Prevents scrollbars and layout issues
 - Uses ResizeObserver for dynamic content
 
 **c. Horizontal Scroll Support**
+
 - Adds minimum width constraint (300px)
 - Enables horizontal scrolling for wide content
 - Prevents content from being cut off
 
 **d. Whitespace Compression**
+
 - Removes all newlines (`\n`, `\r`)
 - Compresses multiple spaces to single space
 - Reduces payload size significantly
 
 **e. Security Hardening**
+
 - Adds `sandbox="allow-scripts allow-same-origin"` attribute
 - Removes height attributes from iframe tag
 - Validates HTML structure
 
 #### 3. **For Incomplete Iframes:**
+
 - Replaces with loading indicator
 - Shows animated spinner
 - Prevents broken HTML from displaying
@@ -228,8 +244,10 @@ Plotly.newPlot('chart', data);
 ### Processing Example
 
 **Input (Original):**
+
 ```html
-<iframe srcdoc="<!DOCTYPE html>
+<iframe
+  srcdoc="<!DOCTYPE html>
 <html>
 <head>
 <script src='https://cdn.plot.ly/plotly-2.27.0.min.js'></script>
@@ -242,15 +260,23 @@ Plotly.newPlot('chart', data);
 Plotly.newPlot('chart', [{x: [1,2,3], y: [4,5,6]}]);
 </script>
 </body>
-</html>" style="width:100%; height:400px; border:none;"></iframe>
+</html>"
+  style="width:100%; height:400px; border:none;"
+></iframe>
 ```
 
 **Output (Processed):**
+
 ```html
-<iframe srcdoc="<!DOCTYPE html><html><head><script src='https://cdn.plot.ly/plotly-2.27.0.min.js'></script><style>body { margin: 0; }</style><script>(function(){var s=document.createElement(&quot;style&quot;);s.textContent=&quot;body{overflow-x:auto;margin:0;}body&gt;*{min-width:300px;}&quot;;document.head.appendChild(s);})();</script></head><body><div id='chart'></div><script>(function() { Plotly.newPlot('chart', [{x: [1,2,3], y: [4,5,6]}]); })();</script><script>(function(){document.documentElement.style.height=&quot;auto&quot;;...auto-resize code...})();</script></body></html>" style="width:100%; border:none;" sandbox="allow-scripts allow-same-origin"></iframe>
+<iframe
+  srcdoc="<!DOCTYPE html><html><head><script src='https://cdn.plot.ly/plotly-2.27.0.min.js'></script><style>body { margin: 0; }</style><script>(function(){var s=document.createElement(&quot;style&quot;);s.textContent=&quot;body{overflow-x:auto;margin:0;}body&gt;*{min-width:300px;}&quot;;document.head.appendChild(s);})();</script></head><body><div id='chart'></div><script>(function() { Plotly.newPlot('chart', [{x: [1,2,3], y: [4,5,6]}]); })();</script><script>(function(){document.documentElement.style.height=&quot;auto&quot;;...auto-resize code...})();</script></body></html>"
+  style="width:100%; border:none;"
+  sandbox="allow-scripts allow-same-origin"
+></iframe>
 ```
 
 **Changes Applied:**
+
 - ✅ Newlines removed
 - ✅ Whitespace compressed
 - ✅ Height attribute removed
@@ -268,11 +294,13 @@ Plotly.newPlot('chart', [{x: [1,2,3], y: [4,5,6]}]);
 #### 1. Chart Not Displaying
 
 **Symptoms:**
+
 - Blank iframe
 - Console errors about undefined variables
 - "Loading..." indicator stuck
 
 **Diagnosis:**
+
 ```bash
 # Check browser console for errors
 # Look for:
@@ -282,6 +310,7 @@ Plotly.newPlot('chart', [{x: [1,2,3], y: [4,5,6]}]);
 ```
 
 **Solutions:**
+
 - Verify CDN script URL is correct and accessible
 - Check that chart container div has an ID
 - Ensure Plotly.newPlot is called after DOM is ready
@@ -290,17 +319,20 @@ Plotly.newPlot('chart', [{x: [1,2,3], y: [4,5,6]}]);
 #### 2. Iframe Height Issues
 
 **Symptoms:**
+
 - Content cut off
 - Excessive white space
 - Scrollbars appearing
 
 **Diagnosis:**
+
 ```bash
 # Check processed HTML
 npx tsx scripts/testHtmlPreprocessing.ts
 ```
 
 **Solutions:**
+
 - Don't specify height in iframe tag (it's removed automatically)
 - Let auto-resize handle height
 - Check that content has measurable height
@@ -309,15 +341,18 @@ npx tsx scripts/testHtmlPreprocessing.ts
 #### 3. Variable Conflicts
 
 **Symptoms:**
+
 - Charts overwriting each other
 - Unexpected behavior with multiple charts
 - Console errors about redeclared variables
 
 **Diagnosis:**
+
 - Check if variables are declared with `const`/`let` (good) or `var` (problematic)
 - Look for global variable pollution
 
 **Solutions:**
+
 - The IIFE wrapping should prevent this automatically
 - If issues persist, use unique variable names
 - Verify preprocessing is working correctly
@@ -325,15 +360,18 @@ npx tsx scripts/testHtmlPreprocessing.ts
 #### 4. Incomplete Iframe During Streaming
 
 **Symptoms:**
+
 - Loading indicator appears
 - Chart doesn't render
 - Content seems truncated
 
 **Diagnosis:**
+
 - This is expected during streaming
 - Check if closing `</iframe>` tag is present
 
 **Solutions:**
+
 - Wait for streaming to complete
 - The loading indicator will be replaced automatically
 - If stuck, check network tab for streaming issues
@@ -341,14 +379,17 @@ npx tsx scripts/testHtmlPreprocessing.ts
 #### 5. Sandbox Security Errors
 
 **Symptoms:**
+
 - Console errors about blocked scripts
 - Features not working (localStorage, etc.)
 
 **Diagnosis:**
+
 - Check sandbox attribute value
 - Look for security-related console errors
 
 **Solutions:**
+
 - The default `sandbox="allow-scripts allow-same-origin"` should work for most cases
 - If you need additional permissions, modify the preprocessing logic
 - Be cautious about security implications
@@ -371,6 +412,7 @@ npx tsx scripts/testHtmlPreprocessing.ts
 #### Test Coverage
 
 The test validates:
+
 1. ✅ Iframe count preservation
 2. ✅ Complete iframe processing
 3. ✅ Incomplete iframe replacement
@@ -444,16 +486,16 @@ Plotly.newPlot('chart', [{
 #### 2. Test Preprocessing
 
 ```typescript
-import { preprocessContent } from './src/lib/htmlPreprocessing';
-import * as fs from 'fs';
+import { preprocessContent } from './src/lib/htmlPreprocessing'
+import * as fs from 'fs'
 
-const content = fs.readFileSync('tmp/test_chart.md', 'utf-8');
-const processed = preprocessContent(content);
+const content = fs.readFileSync('tmp/test_chart.md', 'utf-8')
+const processed = preprocessContent(content)
 
-console.log('Original length:', content.length);
-console.log('Processed length:', processed.length);
-console.log('Has sandbox:', processed.includes('sandbox='));
-console.log('Has auto-resize:', processed.includes('frameElement'));
+console.log('Original length:', content.length)
+console.log('Processed length:', processed.length)
+console.log('Has sandbox:', processed.includes('sandbox='))
+console.log('Has auto-resize:', processed.includes('frameElement'))
 ```
 
 #### 3. Visual Testing
@@ -484,6 +526,7 @@ When adding new chart types or libraries:
 ### 1. Chart Design
 
 ✅ **DO:**
+
 - Use responsive: true for Plotly charts
 - Set explicit width/height on chart containers (not iframe)
 - Use relative units (%, vh, vw) for flexibility
@@ -491,6 +534,7 @@ When adding new chart types or libraries:
 - Include loading states for async data
 
 ❌ **DON'T:**
+
 - Set fixed pixel widths that don't scale
 - Use height attribute on iframe tag
 - Rely on global variables
@@ -500,6 +544,7 @@ When adding new chart types or libraries:
 ### 2. Performance
 
 ✅ **DO:**
+
 - Minimize data points for large datasets
 - Use data aggregation/sampling for performance
 - Lazy load charts when possible
@@ -507,6 +552,7 @@ When adding new chart types or libraries:
 - Use CDN for libraries
 
 ❌ **DON'T:**
+
 - Render thousands of data points without optimization
 - Include large inline data (use external sources)
 - Create too many charts on one page
@@ -515,6 +561,7 @@ When adding new chart types or libraries:
 ### 3. Code Organization
 
 ✅ **DO:**
+
 - Keep chart code modular and reusable
 - Use consistent naming conventions
 - Comment complex calculations
@@ -522,6 +569,7 @@ When adding new chart types or libraries:
 - Use TypeScript types when possible
 
 ❌ **DON'T:**
+
 - Mix data processing with rendering
 - Use magic numbers without explanation
 - Create deeply nested structures
@@ -530,6 +578,7 @@ When adding new chart types or libraries:
 ### 4. Security
 
 ✅ **DO:**
+
 - Trust the sandbox attribute
 - Validate data before rendering
 - Use HTTPS for CDN resources
@@ -537,6 +586,7 @@ When adding new chart types or libraries:
 - Test for XSS vulnerabilities
 
 ❌ **DON'T:**
+
 - Disable sandbox without good reason
 - Include user input without sanitization
 - Use eval() or similar dangerous functions
@@ -551,12 +601,13 @@ When adding new chart types or libraries:
 **Cause:** Auto-resize script not working properly
 
 **Solution:**
+
 ```javascript
 // Ensure chart has measurable dimensions
-<div id='chart' style='width:100%; height:400px;'></div>
+;<div id="chart" style="width:100%; height:400px;"></div>
 
 // Use responsive mode
-Plotly.newPlot('chart', data, layout, {responsive: true});
+Plotly.newPlot('chart', data, layout, { responsive: true })
 ```
 
 ### Issue: Multiple Charts Interfere With Each Other
@@ -565,6 +616,7 @@ Plotly.newPlot('chart', data, layout, {responsive: true});
 
 **Solution:**
 The IIFE wrapping should prevent this, but if issues persist:
+
 ```javascript
 // Use unique IDs for each chart
 <div id='chart1'></div>
@@ -587,18 +639,19 @@ This is expected behavior. The loading indicator will show until the complete if
 **Cause:** CDN script not loaded before chart code runs
 
 **Solution:**
+
 ```html
 <!-- Ensure script is in <head> -->
 <head>
-<script src='https://cdn.plot.ly/plotly-2.27.0.min.js'></script>
+  <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
 </head>
 
 <!-- Chart code in <body> runs after -->
 <body>
-<script>
-// This runs after Plotly is loaded
-Plotly.newPlot(...);
-</script>
+  <script>
+    // This runs after Plotly is loaded
+    Plotly.newPlot(...);
+  </script>
 </body>
 ```
 
@@ -607,6 +660,7 @@ Plotly.newPlot(...);
 **Cause:** Content wider than container or height mismatch
 
 **Solution:**
+
 ```css
 /* In iframe srcdoc styles */
 body {
@@ -626,6 +680,7 @@ body {
 **Cause:** CDN version mismatch or caching issues
 
 **Solution:**
+
 - Use specific version in CDN URL (not "latest")
 - Clear browser cache
 - Check network tab for 404s or CORS errors
@@ -643,8 +698,8 @@ If you need to modify the preprocessing behavior:
 
 ```typescript
 // Example: Add custom attribute
-const attributesAfter = cleanAttributes(afterSrcdoc);
-attributesAfter += ' data-chart-version="1.0"';
+const attributesAfter = cleanAttributes(afterSrcdoc)
+attributesAfter += ' data-chart-version="1.0"'
 ```
 
 ### Debugging Preprocessed Content
@@ -653,12 +708,12 @@ attributesAfter += ' data-chart-version="1.0"';
 // Add logging to see processed output
 export function preprocessContent(content: string): string {
   // ... processing ...
-  
+
   if (process.env.NODE_ENV === 'development') {
-    console.log('Processed iframe:', result);
+    console.log('Processed iframe:', result)
   }
-  
-  return result;
+
+  return result
 }
 ```
 
@@ -666,10 +721,10 @@ export function preprocessContent(content: string): string {
 
 ```typescript
 // Track preprocessing time
-const startTime = performance.now();
-const processed = preprocessContent(content);
-const endTime = performance.now();
-console.log(`Preprocessing took ${endTime - startTime}ms`);
+const startTime = performance.now()
+const processed = preprocessContent(content)
+const endTime = performance.now()
+console.log(`Preprocessing took ${endTime - startTime}ms`)
 ```
 
 ---
@@ -677,11 +732,13 @@ console.log(`Preprocessing took ${endTime - startTime}ms`);
 ## Resources
 
 ### Documentation
+
 - [Plotly.js Documentation](https://plotly.com/javascript/)
 - [MDN: iframe element](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/iframe)
 - [MDN: Content Security Policy](https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP)
 
 ### Internal Files
+
 - `src/lib/htmlPreprocessing.ts` - Preprocessing implementation
 - `src/components/ai-elements/response.tsx` - Response component
 - `scripts/testHtmlPreprocessing.ts` - Test suite
@@ -689,6 +746,7 @@ console.log(`Preprocessing took ${endTime - startTime}ms`);
 - `tmp/sample_message.md` - Example visualizations
 
 ### Testing
+
 - Run tests: `npx tsx scripts/testHtmlPreprocessing.ts`
 - Sample data: `tmp/sample_message.md`
 - Test results: `tmp/sample_message_processed.md`
@@ -698,6 +756,7 @@ console.log(`Preprocessing took ${endTime - startTime}ms`);
 ## Support
 
 For issues or questions:
+
 1. Check this guide first
 2. Run the test suite to verify preprocessing
 3. Check browser console for errors
@@ -712,12 +771,14 @@ For issues or questions:
 ### Recent Updates
 
 **2024-01-23: Fixed Critical Preprocessing Bug**
+
 - Fixed iframe detection logic that was treating all iframes as incomplete
 - Improved nested iframe handling
 - Added comprehensive test suite
 - See `scripts/FIX_SUMMARY.md` for details
 
 **Features:**
+
 - Auto-resize functionality for dynamic height
 - IIFE wrapping for script isolation
 - Sandbox security attributes

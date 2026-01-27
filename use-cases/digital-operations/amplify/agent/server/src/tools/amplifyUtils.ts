@@ -1,15 +1,15 @@
-import { Amplify } from "aws-amplify";
-import { generateClient } from "aws-amplify/data";
+import { Amplify } from 'aws-amplify'
+import { generateClient } from 'aws-amplify/data'
 
 // Function to safely load outputs
 export const loadOutputs = () => {
   try {
-    return require('../amplify_outputs.json');
+    return require('../amplify_outputs.json')
   } catch (error) {
-    console.warn('amplify_outputs.json not found - this is expected during initial build');
-    return null;
+    console.warn('amplify_outputs.json not found - this is expected during initial build')
+    return null
   }
-};
+}
 
 export const getConfiguredAmplifyClient = () => {
   // Validate required environment variables
@@ -19,16 +19,16 @@ export const getConfiguredAmplifyClient = () => {
     AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID,
     AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY,
     AWS_SESSION_TOKEN: process.env.AWS_SESSION_TOKEN,
-  };
+  }
 
   const missingVars = Object.entries(requiredEnvVars)
     .filter(([_, value]) => !value)
-    .map(([key]) => key);
+    .map(([key]) => key)
 
   if (missingVars.length > 0) {
     throw new Error(
       `Missing required environment variables: ${missingVars.join(', ')}. Ensure credentials are initialized at startup.`
-    );
+    )
   }
 
   Amplify.configure(
@@ -37,9 +37,9 @@ export const getConfiguredAmplifyClient = () => {
         GraphQL: {
           endpoint: process.env.AMPLIFY_DATA_GRAPHQL_ENDPOINT!,
           region: process.env.AWS_REGION!,
-          defaultAuthMode: 'identityPool'
-        }
-      }
+          defaultAuthMode: 'identityPool',
+        },
+      },
     },
     {
       Auth: {
@@ -57,9 +57,9 @@ export const getConfiguredAmplifyClient = () => {
         },
       },
     }
-  );
+  )
 
-  const amplifyClient = generateClient();
+  const amplifyClient = generateClient()
 
-  return amplifyClient;
+  return amplifyClient
 }

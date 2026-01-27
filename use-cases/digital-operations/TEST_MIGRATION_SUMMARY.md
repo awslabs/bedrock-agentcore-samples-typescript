@@ -9,10 +9,12 @@ Successfully migrated all test scripts from standalone TypeScript files to a mod
 ### 1. Testing Framework Setup
 
 **Installed Dependencies:**
+
 - `vitest` - Modern, fast test framework with TypeScript support
 - `@vitest/ui` - Visual test runner interface
 
 **Configuration:**
+
 - Created `vitest.config.ts` with proper TypeScript and path alias support
 - Added test scripts to `package.json`:
   - `npm test` - Watch mode
@@ -23,6 +25,7 @@ Successfully migrated all test scripts from standalone TypeScript files to a mod
 ### 2. Test Organization
 
 **New Structure:**
+
 ```
 __tests__/
 ├── fixtures/                          # Test data files
@@ -37,12 +40,14 @@ __tests__/
 ### 3. Migrated Tests
 
 **Removed Old Scripts:**
+
 - `scripts/testHtmlPreprocessing.ts` (500+ lines)
 - `scripts/testComplexMapIframe.ts`
 - `scripts/testMapIframeInjection.ts`
 - `scripts/testSelfClosingIframe.ts`
 
 **Created New Tests:**
+
 - `__tests__/lib/htmlPreprocessing.test.ts` - 15 unit tests
 - `__tests__/lib/htmlPreprocessing.integration.test.ts` - 10 integration tests
 
@@ -51,16 +56,19 @@ __tests__/
 ### 4. Test Fixtures
 
 **Moved to Proper Location:**
+
 - `tmp/sample_message.md` → `__tests__/fixtures/sample_message.md`
 - `tmp/test_self_closing_iframe.md` → `__tests__/fixtures/test_self_closing_iframe.md`
 
 **Removed Temporary Files:**
+
 - `tmp/sample_message_processed.md`
 - `tmp/test_self_closing_iframe_processed.md`
 
 ### 5. Test Coverage
 
 **Unit Tests Cover:**
+
 - Iframe srcdoc processing
 - Auto-resize script injection
 - IIFE wrapping for inline scripts
@@ -72,6 +80,7 @@ __tests__/
 - Complex multi-iframe scenarios
 
 **Integration Tests Cover:**
+
 - End-to-end processing of complex messages
 - Real-world fixture file processing
 - Multiple iframe types in single content
@@ -80,6 +89,7 @@ __tests__/
 ## Benefits
 
 ### Before (Old Approach)
+
 - ❌ Standalone scripts with custom test runners
 - ❌ Manual execution required for each test file
 - ❌ No test framework features (watch mode, coverage, etc.)
@@ -89,6 +99,7 @@ __tests__/
 - ❌ Test data scattered in tmp directory
 
 ### After (New Approach)
+
 - ✅ Modern test framework (Vitest)
 - ✅ Single command to run all tests
 - ✅ Watch mode for development
@@ -103,6 +114,7 @@ __tests__/
 ## Test Results
 
 All 25 tests passing:
+
 ```
 Test Files  2 passed (2)
      Tests  25 passed (25)
@@ -110,6 +122,7 @@ Test Files  2 passed (2)
 ```
 
 ### Test Breakdown:
+
 - **Unit Tests**: 15/15 passing
   - Iframe srcdoc processing: 6 tests
   - Incomplete iframe handling: 1 test
@@ -145,6 +158,7 @@ npm run test:coverage
 ## Next Steps
 
 The test infrastructure is now ready for:
+
 1. Adding more test files as needed
 2. Integration with CI/CD pipelines
 3. Code coverage tracking

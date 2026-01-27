@@ -22,14 +22,18 @@ This directory contains utility scripts for the AI Chatbot application.
 **Important:** Test scripts have been migrated to a modern testing framework (Vitest).
 
 ### Old Test Scripts (Removed)
+
 The following standalone test scripts have been removed and refactored:
+
 - ~~testHtmlPreprocessing.ts~~
 - ~~testComplexMapIframe.ts~~
 - ~~testMapIframeInjection.ts~~
 - ~~testSelfClosingIframe.ts~~
 
 ### New Test Location
+
 All tests are now in the `__tests__` directory with:
+
 - Modern test framework (Vitest)
 - Better organization and structure
 - Unit and integration tests
@@ -44,7 +48,7 @@ npm run test:ui       # UI mode (visual test runner)
 npm run test:coverage # With coverage report
 ```
 
-See [__tests__/README.md](../__tests__/README.md) for detailed testing documentation.
+See [**tests**/README.md](../__tests__/README.md) for detailed testing documentation.
 
 ## Documentation
 

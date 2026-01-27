@@ -7,6 +7,7 @@ This guide explains how the GenAI agent integrates with the query-based map laye
 The map system allows the AI agent to create dynamic, data-driven map layers by writing SQL queries against AWS Athena. Each chat session can have multiple map layers that automatically execute queries and render GeoJSON data on the map.
 
 **Key Features:**
+
 - **Query-Based**: Layers are defined by SQL queries, not static GeoJSON
 - **Real-Time Updates**: Frontend subscribes to layer changes and executes queries automatically
 - **Data-Driven Styling**: Color scales, radius scales, and tooltips based on query result properties
@@ -33,7 +34,7 @@ MapLayer {
   name: string
   type: 'point' | 'line' | 'polygon' | 'heatmap' | 'geojson'
   visible: boolean
-  
+
   // Query-based fields
   athenaQuery: string              // SQL query to generate data
   athenaDatabase: string           // Database name (e.g., "upstream")
@@ -41,11 +42,11 @@ MapLayer {
   queryRefreshInterval: number     // Minutes between auto-refresh (0 = manual)
   lastQueryExecutedAt: datetime    // Last execution timestamp
   queryError: string               // Any query errors
-  
+
   // Styling
   style: JSON                      // Style configuration with data-driven options
   order: number                    // Z-index for layer ordering
-  
+
   // Metadata
   description: string
   source: string                   // e.g., "ai-created", "athena-query"
@@ -66,17 +67,17 @@ The AI has access to four map layer tools:
 ### Basic Usage
 
 ```tsx
-import { MapViewer } from '@/components/MapViewer';
+import { MapViewer } from '@/components/MapViewer'
 
 function MissionControlPage() {
-  const chatSessionId = 'your-session-id';
-  
+  const chatSessionId = 'your-session-id'
+
   return (
     <div>
       <h1>Mission Control</h1>
       <MapViewer chatSessionId={chatSessionId} />
     </div>
-  );
+  )
 }
 ```
 
@@ -89,7 +90,7 @@ function MissionControlPage() {
   initialViewState={{
     longitude: -108.2,
     latitude: 36.8,
-    zoom: 10
+    zoom: 10,
   }}
 />
 ```
@@ -109,15 +110,16 @@ function MissionControlPage() {
 **User:** "Show me all wells in T30N R6W colored by production decline"
 
 **AI creates layer with:**
+
 ```javascript
 {
   name: "Wells in T30N R6W",
   type: "point",
   athenaQuery: `
     WITH recent_production AS (
-      SELECT 
+      SELECT
         REPLACE(mp.api, '-', '') as api_clean,
-        AVG(CASE WHEN mp.date >= DATE '2024-12-01' 
+        AVG(CASE WHEN mp.date >= DATE '2024-12-01'
             THEN CAST(mp.dailygasrate AS DOUBLE) END) as last_month_avg,
         AVG(CASE WHEN mp.date >= DATE '2024-01-01'
             THEN CAST(mp.dailygasrate AS DOUBLE) END) as twelve_month_avg
@@ -125,7 +127,7 @@ function MissionControlPage() {
       WHERE mp.dailygasrate IS NOT NULL
       GROUP BY REPLACE(mp.api, '-', '')
     )
-    SELECT 
+    SELECT
       wh.id,
       wh.name,
       wh.latitude,
@@ -142,7 +144,7 @@ function MissionControlPage() {
     geometryType: "Point",
     longitudeField: "longitude",
     latitudeField: "latitude",
-    propertyFields: ["id", "name", "last_month_production", 
+    propertyFields: ["id", "name", "last_month_production",
                      "avg_12month_production", "production_decline"]
   },
   style: {
@@ -179,8 +181,9 @@ function MissionControlPage() {
 ```
 
 **Result:** Map displays wells as colored circles where:
+
 - Red = production declining
-- Gray = stable production  
+- Gray = stable production
 - Green = production increasing
 - Hover shows well name and production metrics
 
@@ -189,12 +192,13 @@ function MissionControlPage() {
 **User:** "Draw the pipeline network connecting these wells"
 
 **AI creates layer with:**
+
 ```javascript
 {
   name: "Pipeline Network",
   type: "line",
   athenaQuery: `
-    SELECT 
+    SELECT
       p.id,
       p.name,
       p.diameter,
@@ -229,12 +233,13 @@ function MissionControlPage() {
 **User:** "Highlight the lease boundaries in this area"
 
 **AI creates layer with:**
+
 ```javascript
 {
   name: "Lease Boundaries",
   type: "polygon",
   athenaQuery: `
-    SELECT 
+    SELECT
       l.id,
       l.lease_name,
       l.acres,
@@ -270,12 +275,13 @@ function MissionControlPage() {
 **User:** "Show production density heatmap"
 
 **AI creates layer with:**
+
 ```javascript
 {
   name: "Production Density",
   type: "heatmap",
   athenaQuery: `
-    SELECT 
+    SELECT
       w.latitude,
       w.longitude,
       SUM(p.daily_oil_rate) as total_production
@@ -315,6 +321,7 @@ The `geoJsonMapping` field tells the system how to convert SQL query results int
 ```
 
 **Query Example:**
+
 ```sql
 SELECT id, name, status, production, latitude, longitude
 FROM wells
@@ -332,10 +339,11 @@ WHERE status = 'Active'
 ```
 
 **Query Example:**
+
 ```sql
-SELECT 
-  id, 
-  name, 
+SELECT
+  id,
+  name,
   diameter,
   ARRAY[
     ARRAY[longitude1, latitude1],
@@ -356,8 +364,9 @@ FROM pipelines
 ```
 
 **Query Example:**
+
 ```sql
-SELECT 
+SELECT
   id,
   lease_name,
   acres,
@@ -525,35 +534,36 @@ The MapViewer component uses GraphQL subscriptions to automatically update when 
 ```typescript
 // Subscribe to layer creation
 client.models.MapLayer.onCreate({
-  filter: { chatSessionId: { eq: chatSessionId } }
+  filter: { chatSessionId: { eq: chatSessionId } },
 }).subscribe({
   next: (newLayer) => {
     // Add layer to state
     // Execute query automatically
-  }
-});
+  },
+})
 
 // Subscribe to layer updates
 client.models.MapLayer.onUpdate({
-  filter: { chatSessionId: { eq: chatSessionId } }
+  filter: { chatSessionId: { eq: chatSessionId } },
 }).subscribe({
   next: (updatedLayer) => {
     // Update layer in state
     // Re-execute query if query fields changed
-  }
-});
+  },
+})
 
 // Subscribe to layer deletion
 client.models.MapLayer.onDelete({
-  filter: { chatSessionId: { eq: chatSessionId } }
+  filter: { chatSessionId: { eq: chatSessionId } },
 }).subscribe({
   next: (deletedLayer) => {
     // Remove layer from state and map
-  }
-});
+  },
+})
 ```
 
 **Query Re-execution Logic:**
+
 - Query is executed when layer is first created
 - Query is re-executed if `athenaQuery`, `athenaDatabase`, or `geoJsonMapping` changes
 - Query is NOT re-executed for style-only changes (better performance)
@@ -568,6 +578,7 @@ client.models.MapLayer.onDelete({
    - Create a point layer with color scale
 
 3. **AI calls create-map-layer**:
+
    ```javascript
    await create_map_layer({
      name: "Declining Wells",
@@ -597,20 +608,21 @@ client.models.MapLayer.onDelete({
 8. **User asks follow-up**: "Make the declining wells larger"
 
 9. **AI calls update-map-layer**:
+
    ```javascript
    await update_map_layer({
-     id: "layer-id",
+     id: 'layer-id',
      style: {
        ...existingStyle,
        radiusScale: {
-         property: "production_decline",
+         property: 'production_decline',
          min: -100,
          max: 0,
          minRadius: 4,
-         maxRadius: 16
-       }
-     }
-   });
+         maxRadius: 16,
+       },
+     },
+   })
    ```
 
 10. **Frontend receives update**:
@@ -628,6 +640,7 @@ client.models.MapLayer.onDelete({
 - **Index columns**: Ensure queried columns are indexed in Athena
 
 **Good:**
+
 ```sql
 SELECT id, name, latitude, longitude, production
 FROM wells
@@ -637,6 +650,7 @@ LIMIT 500
 ```
 
 **Bad:**
+
 ```sql
 SELECT * FROM wells  -- No filters, returns everything
 ```
@@ -675,6 +689,7 @@ SELECT * FROM wells  -- No filters, returns everything
 **Symptoms:** Layers created but nothing appears on map
 
 **Solutions:**
+
 1. Check browser console for errors
 2. Verify `chatSessionId` matches between AI and MapViewer
 3. Ensure layer `visible` is true
@@ -686,6 +701,7 @@ SELECT * FROM wells  -- No filters, returns everything
 **Symptoms:** Layer creation returns error
 
 **Solutions:**
+
 1. Test query directly in Athena console
 2. Verify database name is correct
 3. Check column names in `geoJsonMapping` match query results
@@ -697,6 +713,7 @@ SELECT * FROM wells  -- No filters, returns everything
 **Symptoms:** Changes don't appear on map
 
 **Solutions:**
+
 1. Check subscription is active (browser console)
 2. Verify network connectivity
 3. Confirm mutations are successful
@@ -708,6 +725,7 @@ SELECT * FROM wells  -- No filters, returns everything
 **Symptoms:** Map is slow or unresponsive
 
 **Solutions:**
+
 1. Reduce feature count (add LIMIT to query)
 2. Simplify polygon geometries
 3. Use heatmap instead of many points
@@ -719,6 +737,7 @@ SELECT * FROM wells  -- No filters, returns everything
 **Symptoms:** Features all same color or wrong colors
 
 **Solutions:**
+
 1. Verify `colorScale.property` exists in query results
 2. Check property values are numeric (for linear/step scales)
 3. Ensure stops array is properly formatted: `[[value, color], ...]`
@@ -739,6 +758,7 @@ Set `queryRefreshInterval` to automatically re-execute queries:
 ```
 
 Use cases:
+
 - Real-time production monitoring
 - Live equipment status
 - Dynamic alert visualization
@@ -750,32 +770,33 @@ Create multiple layers for different data types:
 ```javascript
 // Layer 1: Wells
 await create_map_layer({
-  name: "Active Wells",
-  type: "point",
+  name: 'Active Wells',
+  type: 'point',
   order: 1,
   // ...
-});
+})
 
 // Layer 2: Pipelines
 await create_map_layer({
-  name: "Pipeline Network",
-  type: "line",
+  name: 'Pipeline Network',
+  type: 'line',
   order: 2,
   // ...
-});
+})
 
 // Layer 3: Lease Boundaries
 await create_map_layer({
-  name: "Leases",
-  type: "polygon",
-  order: 0,  // Render below other layers
+  name: 'Leases',
+  type: 'polygon',
+  order: 0, // Render below other layers
   // ...
-});
+})
 ```
 
 ### Layer Visibility Control
 
 Users can toggle layer visibility in the map legend:
+
 - Click layer name to show/hide
 - Status indicators show query execution state
 - Fullscreen mode available

@@ -15,6 +15,7 @@ The function executes Athena queries and returns results through AWS AppSync sub
 ## IAM Permissions
 
 The Lambda function has the following permissions:
+
 - **Athena**: Start, get, and stop query executions
 - **S3**: Read/write access to Athena query results bucket
 - **Glue**: Read access to data catalog (databases, tables, partitions)
@@ -27,10 +28,7 @@ The Agent server also has Athena permissions to execute queries via GraphQL.
 
 ```graphql
 mutation ExecuteQuery {
-  executeAthenaQuery(
-    queryString: "SELECT * FROM my_database.my_table LIMIT 10"
-    database: "my_database"
-  ) {
+  executeAthenaQuery(queryString: "SELECT * FROM my_database.my_table LIMIT 10", database: "my_database") {
     queryExecutionId
     status
     data
@@ -81,35 +79,30 @@ When a query returns more than 1000 rows, the response will include a `nextToken
 ```graphql
 # First page - returns up to 1000 rows
 mutation ExecuteQuery {
-  executeAthenaQuery(
-    queryString: "SELECT * FROM large_table"
-    database: "my_database"
-  ) {
+  executeAthenaQuery(queryString: "SELECT * FROM large_table", database: "my_database") {
     queryExecutionId
     status
     data
     columns
     rowCount
-    nextToken  # Present if more results available
+    nextToken # Present if more results available
   }
 }
 
 # Get next page using the token
 mutation GetNextPage {
-  executeAthenaQuery(
-    queryExecutionId: "your-query-execution-id"
-    nextToken: "token-from-previous-response"
-  ) {
+  executeAthenaQuery(queryExecutionId: "your-query-execution-id", nextToken: "token-from-previous-response") {
     queryExecutionId
     status
     data
     rowCount
-    nextToken  # Present if even more results available
+    nextToken # Present if even more results available
   }
 }
 ```
 
 **Note**: When using `nextToken` for pagination:
+
 - The `columns` field will be `null` (columns are only returned on the first page)
 - Each page returns up to 1000 rows
 - Keep calling with the new `nextToken` until it's no longer returned
@@ -125,36 +118,36 @@ mutation GetNextPage {
 ## TypeScript Client Example
 
 ```typescript
-import { generateClient } from 'aws-amplify/data';
-import type { Schema } from '@/amplify/data/resource';
+import { generateClient } from 'aws-amplify/data'
+import type { Schema } from '@/amplify/data/resource'
 
-const client = generateClient<Schema>();
+const client = generateClient<Schema>()
 
 // Subscribe to query results
 const subscription = client.subscriptions.onAthenaQueryResult().subscribe({
   next: (result) => {
-    console.log('Query status:', result.status);
+    console.log('Query status:', result.status)
     if (result.status === 'SUCCEEDED') {
-      console.log('Results:', result.data);
-      console.log('Columns:', result.columns);
-      console.log('Row count:', result.rowCount);
+      console.log('Results:', result.data)
+      console.log('Columns:', result.columns)
+      console.log('Row count:', result.rowCount)
     } else if (result.status === 'FAILED') {
-      console.error('Query failed:', result.error);
+      console.error('Query failed:', result.error)
     }
   },
   error: (error) => console.error('Subscription error:', error),
-});
+})
 
 // Execute query
 const { data, errors } = await client.mutations.executeAthenaQuery({
   queryString: 'SELECT * FROM my_database.my_table LIMIT 10',
   database: 'my_database',
-});
+})
 
-console.log('Query started:', data?.queryExecutionId);
+console.log('Query started:', data?.queryExecutionId)
 
 // Later, unsubscribe
-subscription.unsubscribe();
+subscription.unsubscribe()
 ```
 
 ## AI Agent Usage
@@ -167,9 +160,10 @@ The AI agent can use this API to:
 4. Present data to users in conversational format
 
 Example agent flow:
+
 ```
 User: "Show me the top 10 customers by revenue"
-Agent: Generates SQL -> "SELECT customer_name, SUM(revenue) as total_revenue 
+Agent: Generates SQL -> "SELECT customer_name, SUM(revenue) as total_revenue
         FROM sales GROUP BY customer_name ORDER BY total_revenue DESC LIMIT 10"
 Agent: Calls executeAthenaQuery mutation
 Agent: Subscribes to results
@@ -236,6 +230,7 @@ mutation ExecuteQuery {
 ## Performance Optimization
 
 For large result sets:
+
 1. Use `LIMIT` clauses in SQL queries
 2. Implement pagination by using query result tokens
 3. Consider using Athena workgroups with result limits
@@ -244,6 +239,7 @@ For large result sets:
 ## Future Enhancements
 
 Potential improvements:
+
 - Pagination support for large result sets
 - Query cancellation via GraphQL
 - Query cost estimation before execution

@@ -97,6 +97,7 @@ ChatStreamChunk: a.customType({
 ### 2. Lambda Function (`amplify/functions/chat-stream/`)
 
 #### File Structure
+
 ```
 amplify/functions/chat-stream/
 ├── resource.ts          # Function definition
@@ -106,8 +107,9 @@ amplify/functions/chat-stream/
 ```
 
 #### resource.ts
+
 ```typescript
-import { defineFunction } from '@aws-amplify/backend';
+import { defineFunction } from '@aws-amplify/backend'
 
 export const chatStreamFunction = defineFunction({
   name: 'chat-stream',
@@ -117,20 +119,21 @@ export const chatStreamFunction = defineFunction({
   environment: {
     APPSYNC_ENDPOINT: process.env.APPSYNC_ENDPOINT,
   },
-});
+})
 ```
 
 #### handler.ts
+
 ```typescript
-import { v4 as uuid } from 'uuid';
-import { processStream } from './stream-processor';
+import { v4 as uuid } from 'uuid'
+import { processStream } from './stream-processor'
 
 export const handler = async (event: any) => {
-  const { chatSessionId, messages, modelId, systemPrompt } = event.arguments;
-  const streamId = uuid();
-  
-  console.log(`Starting chat stream ${streamId} for session ${chatSessionId}`);
-  
+  const { chatSessionId, messages, modelId, systemPrompt } = event.arguments
+  const streamId = uuid()
+
+  console.log(`Starting chat stream ${streamId} for session ${chatSessionId}`)
+
   // Start async processing (don't await)
   processStream({
     streamId,
@@ -138,45 +141,46 @@ export const handler = async (event: any) => {
     messages,
     modelId,
     systemPrompt,
-  }).catch(error => {
-    console.error(`Stream ${streamId} error:`, error);
+  }).catch((error) => {
+    console.error(`Stream ${streamId} error:`, error)
     // Error will be published to subscription in processStream
-  });
-  
+  })
+
   // Return immediately
-  return { streamId };
-};
+  return { streamId }
+}
 ```
 
 #### stream-processor.ts
-```typescript
-import { streamText, convertToModelMessages } from 'ai';
-import { createAmazonBedrock } from '@ai-sdk/amazon-bedrock';
-import { getMcpClientAndTools } from '@/lib/mcpCache';
-import { publishChunk } from './appsync-publisher';
 
-const SYSTEM_PROMPT = `...`; // Your existing system prompt
+```typescript
+import { streamText, convertToModelMessages } from 'ai'
+import { createAmazonBedrock } from '@ai-sdk/amazon-bedrock'
+import { getMcpClientAndTools } from '@/lib/mcpCache'
+import { publishChunk } from './appsync-publisher'
+
+const SYSTEM_PROMPT = `...` // Your existing system prompt
 
 export async function processStream(options: {
-  streamId: string;
-  chatSessionId: string;
-  messages: any[];
-  modelId: string;
-  systemPrompt?: string;
+  streamId: string
+  chatSessionId: string
+  messages: any[]
+  modelId: string
+  systemPrompt?: string
 }) {
-  const { streamId, chatSessionId, messages, modelId, systemPrompt } = options;
-  
+  const { streamId, chatSessionId, messages, modelId, systemPrompt } = options
+
   try {
     // Initialize Bedrock
     const bedrock = createAmazonBedrock({
       region: process.env.AWS_REGION,
-    });
-    
-    const model = bedrock(modelId);
-    
+    })
+
+    const model = bedrock(modelId)
+
     // Get MCP tools
-    const { mcpTools } = await getMcpClientAndTools(/* tokens */);
-    
+    const { mcpTools } = await getMcpClientAndTools(/* tokens */)
+
     // Stream text with AI SDK
     const result = streamText({
       model,
@@ -184,8 +188,8 @@ export async function processStream(options: {
       system: systemPrompt || SYSTEM_PROMPT,
       tools: mcpTools,
       maxSteps: 5, // Reduced from 20 for faster responses
-    });
-    
+    })
+
     // Process stream and publish chunks
     for await (const part of result.fullStream) {
       switch (part.type) {
@@ -194,9 +198,9 @@ export async function processStream(options: {
             chunkType: 'text-delta',
             textDelta: part.textDelta,
             timestamp: new Date().toISOString(),
-          });
-          break;
-          
+          })
+          break
+
         case 'tool-call':
           await publishChunk(streamId, {
             chunkType: 'tool-call',
@@ -204,9 +208,9 @@ export async function processStream(options: {
             toolName: part.toolName,
             toolArgs: part.args,
             timestamp: new Date().toISOString(),
-          });
-          break;
-          
+          })
+          break
+
         case 'tool-result':
           await publishChunk(streamId, {
             chunkType: 'tool-result',
@@ -214,39 +218,40 @@ export async function processStream(options: {
             toolName: part.toolName,
             toolResult: part.result,
             timestamp: new Date().toISOString(),
-          });
-          break;
-          
+          })
+          break
+
         case 'finish':
           await publishChunk(streamId, {
             chunkType: 'finish',
             finishReason: part.finishReason,
             usage: part.usage,
             timestamp: new Date().toISOString(),
-          });
-          break;
+          })
+          break
       }
     }
-    
-    console.log(`Stream ${streamId} completed successfully`);
+
+    console.log(`Stream ${streamId} completed successfully`)
   } catch (error) {
-    console.error(`Stream ${streamId} failed:`, error);
-    
+    console.error(`Stream ${streamId} failed:`, error)
+
     // Publish error to subscription
     await publishChunk(streamId, {
       chunkType: 'error',
       error: error.message,
       timestamp: new Date().toISOString(),
-    });
+    })
   }
 }
 ```
 
 #### appsync-publisher.ts
-```typescript
-import { AppSyncClient, EvaluateCodeCommand } from '@aws-sdk/client-appsync';
 
-const client = new AppSyncClient({ region: process.env.AWS_REGION });
+```typescript
+import { AppSyncClient, EvaluateCodeCommand } from '@aws-sdk/client-appsync'
+
+const client = new AppSyncClient({ region: process.env.AWS_REGION })
 
 export async function publishChunk(streamId: string, chunk: any) {
   const mutation = `
@@ -255,136 +260,132 @@ export async function publishChunk(streamId: string, chunk: any) {
         streamId
       }
     }
-  `;
-  
-  await client.send(new EvaluateCodeCommand({
-    runtime: {
-      name: 'APPSYNC_JS',
-      runtimeVersion: '1.0.0',
-    },
-    code: mutation,
-    context: JSON.stringify({
-      arguments: {
-        input: {
-          streamId,
-          ...chunk,
-        },
+  `
+
+  await client.send(
+    new EvaluateCodeCommand({
+      runtime: {
+        name: 'APPSYNC_JS',
+        runtimeVersion: '1.0.0',
       },
-    }),
-  }));
+      code: mutation,
+      context: JSON.stringify({
+        arguments: {
+          input: {
+            streamId,
+            ...chunk,
+          },
+        },
+      }),
+    })
+  )
 }
 ```
 
 ### 3. Custom Transport (`src/lib/graphql-chat-transport.ts`)
 
 ```typescript
-import { generateClient } from 'aws-amplify/data';
-import type { Schema } from '@/amplify/data/resource';
+import { generateClient } from 'aws-amplify/data'
+import type { Schema } from '@/amplify/data/resource'
 
 export class GraphQLChatTransport {
-  private client = generateClient<Schema>();
+  private client = generateClient<Schema>()
 
-  async sendMessages({ 
-    id, 
-    messages, 
-    body 
-  }: {
-    id: string;
-    messages: any[];
-    body: any;
-  }): Promise<Response> {
+  async sendMessages({ id, messages, body }: { id: string; messages: any[]; body: any }): Promise<Response> {
     // Start the stream
     const { data } = await this.client.mutations.startChatStream({
       chatSessionId: id,
       messages: JSON.stringify(messages),
       modelId: body.modelId,
       systemPrompt: body.systemPrompt,
-    });
-    
-    const streamId = data.streamId;
-    
+    })
+
+    const streamId = data.streamId
+
     // Create ReadableStream from GraphQL subscription
     const stream = new ReadableStream({
       start: async (controller) => {
-        const subscription = this.client.subscriptions.onChatChunk({
-          streamId,
-        }).subscribe({
-          next: ({ data }) => {
-            // Convert GraphQL chunk to AI SDK stream format
-            const encoded = this.encodeChunk(data);
-            controller.enqueue(encoded);
-            
-            if (data.chunkType === 'finish' || data.chunkType === 'error') {
-              controller.close();
-              subscription.unsubscribe();
-            }
-          },
-          error: (error) => {
-            console.error('Subscription error:', error);
-            controller.error(error);
-            subscription.unsubscribe();
-          },
-        });
+        const subscription = this.client.subscriptions
+          .onChatChunk({
+            streamId,
+          })
+          .subscribe({
+            next: ({ data }) => {
+              // Convert GraphQL chunk to AI SDK stream format
+              const encoded = this.encodeChunk(data)
+              controller.enqueue(encoded)
+
+              if (data.chunkType === 'finish' || data.chunkType === 'error') {
+                controller.close()
+                subscription.unsubscribe()
+              }
+            },
+            error: (error) => {
+              console.error('Subscription error:', error)
+              controller.error(error)
+              subscription.unsubscribe()
+            },
+          })
       },
-    });
-    
+    })
+
     return new Response(stream, {
       headers: {
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive',
+        Connection: 'keep-alive',
       },
-    });
+    })
   }
-  
+
   private encodeChunk(chunk: any): Uint8Array {
-    const encoder = new TextEncoder();
-    
+    const encoder = new TextEncoder()
+
     // AI SDK stream protocol format
     // See: https://sdk.vercel.ai/docs/ai-sdk-ui/stream-protocol
-    let streamPart: any;
-    
+    let streamPart: any
+
     switch (chunk.chunkType) {
       case 'text-delta':
-        streamPart = { type: 'text-delta', textDelta: chunk.textDelta };
-        break;
-        
+        streamPart = { type: 'text-delta', textDelta: chunk.textDelta }
+        break
+
       case 'tool-call':
         streamPart = {
           type: 'tool-call',
           toolCallId: chunk.toolCallId,
           toolName: chunk.toolName,
           args: chunk.toolArgs,
-        };
-        break;
-        
+        }
+        break
+
       case 'tool-result':
         streamPart = {
           type: 'tool-result',
           toolCallId: chunk.toolCallId,
           toolName: chunk.toolName,
           result: chunk.toolResult,
-        };
-        break;
-        
+        }
+        break
+
       case 'finish':
         streamPart = {
           type: 'finish',
           finishReason: chunk.finishReason,
           usage: chunk.usage,
-        };
-        break;
-        
+        }
+        break
+
       case 'error':
         streamPart = {
           type: 'error',
           error: chunk.error,
-        };
-        break;
+        }
+        break
     }
-    
+
     // AI SDK format: "0:{json}\n"
-    return encoder.encode(`0:${JSON.stringify(streamPart)}\n`);
+    return encoder.encode(`0:${JSON.stringify(streamPart)}\n`)
   }
 }
 ```
@@ -392,26 +393,24 @@ export class GraphQLChatTransport {
 ### 4. Client Integration (`src/components/ChatBox.tsx`)
 
 ```typescript
-import { useChat } from '@ai-sdk/react';
-import { GraphQLChatTransport } from '@/lib/graphql-chat-transport';
+import { useChat } from '@ai-sdk/react'
+import { GraphQLChatTransport } from '@/lib/graphql-chat-transport'
 
 export const ChatBox = ({ chatSessionId }: ChatBoxProps) => {
-  const [model, setModel] = useState<string>(models[0].id);
-  
+  const [model, setModel] = useState<string>(models[0].id)
+
   const { messages, setMessages, sendMessage, status, error } = useChat({
     id: chatSessionId,
     transport: new GraphQLChatTransport(),
     onFinish: async ({ messages }) => {
       if (chatSessionId) {
-        const newMessages = messages.filter(
-          msg => !savedMessages.current.some(savedMsg => savedMsg.id === msg.id)
-        );
-        await saveChat({ chatSessionId, messages: newMessages });
-        savedMessages.current = messages;
+        const newMessages = messages.filter((msg) => !savedMessages.current.some((savedMsg) => savedMsg.id === msg.id))
+        await saveChat({ chatSessionId, messages: newMessages })
+        savedMessages.current = messages
       }
     },
-  });
-  
+  })
+
   const handleSubmit = (message: PromptInputMessage) => {
     sendMessage(
       {
@@ -423,35 +422,39 @@ export const ChatBox = ({ chatSessionId }: ChatBoxProps) => {
           modelId: model,
           chatSessionId,
         },
-      },
-    );
-  };
-  
+      }
+    )
+  }
+
   // Rest of component stays the same...
-};
+}
 ```
 
 ## Implementation Steps
 
 ### Phase 1: Schema & Infrastructure
+
 1. ✅ Update `amplify/data/resource.ts` with new types, mutation, and subscription
 2. ✅ Create `amplify/functions/chat-stream/` directory structure
 3. ✅ Implement Lambda function with stream processing
 4. ✅ Deploy and test GraphQL API independently
 
 ### Phase 2: Transport Layer
+
 5. ✅ Create `src/lib/graphql-chat-transport.ts`
 6. ✅ Implement `ChatTransport` interface
 7. ✅ Add stream format conversion logic
 8. ✅ Test transport with mock data
 
 ### Phase 3: Integration
+
 9. ✅ Update `ChatBox.tsx` to use new transport
 10. ✅ Test end-to-end flow
 11. ✅ Verify all useChat features work (tool calls, etc.)
 12. ✅ Remove old API route (`src/app/api/chat/route.ts`)
 
 ### Phase 4: Testing & Optimization
+
 13. ✅ Test on AWS Amplify (deploy)
 14. ✅ Verify no timeout issues
 15. ✅ Monitor performance and optimize
@@ -482,11 +485,13 @@ export const ChatBox = ({ chatSessionId }: ChatBoxProps) => {
 ## Migration Notes
 
 ### Breaking Changes
+
 - Old API route (`/api/chat`) will be deprecated
 - Transport layer is completely replaced
 - No changes needed to UI components (thanks to transport abstraction)
 
 ### Backward Compatibility
+
 - Can run both systems in parallel during transition
 - Old chats can be migrated or continue using old system
 - Feature flag to switch between transports

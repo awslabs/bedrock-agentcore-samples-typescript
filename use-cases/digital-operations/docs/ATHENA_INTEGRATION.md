@@ -5,6 +5,7 @@ This document describes the Amazon Athena integration that allows AI agents to d
 ## Overview
 
 The integration provides a Lambda-backed GraphQL API that:
+
 - Executes Athena SQL queries submitted by AI agents
 - Returns results via AppSync subscriptions to avoid 30-second timeout limits
 - Supports any Athena database/table accessible via IAM permissions
@@ -27,19 +28,23 @@ AppSync Subscription (onAthenaQueryResult) → AI Agent
 ## Components
 
 ### 1. Lambda Function (`amplify/functions/athena-query/`)
+
 - **handler.ts**: Executes Athena queries and retrieves results
 - **resource.ts**: Lambda configuration (15-minute timeout, 1GB memory)
 
 ### 2. GraphQL Schema (`amplify/data/resource.ts`)
+
 - **AthenaQueryStatus**: Enum for query states
 - **AthenaQueryResult**: Result type with status, data, columns, error
 - **executeAthenaQuery**: Mutation to start/check queries
 - **onAthenaQueryResult**: Subscription for real-time results
 
 ### 3. Subscription Handler (`amplify/data/subscriptions/athena-query.js`)
+
 - Passthrough resolver for subscription events
 
 ### 4. IAM Permissions (`amplify/backend.ts`)
+
 - Lambda: Athena, S3, Glue permissions
 - Agent Server: Athena query permissions
 - Authenticated Users: (add if needed)
@@ -56,11 +61,13 @@ AppSync Subscription (onAthenaQueryResult) → AI Agent
 ### Installation Steps
 
 1. **Deploy Amplify backend**:
+
 ```bash
 npm run sandbox
 ```
 
 2. **Verify deployment**:
+
 - Check Lambda function in AWS Console
 - Verify IAM roles have Athena permissions
 - Test query execution in AppSync Console
@@ -70,11 +77,13 @@ npm run sandbox
 #### S3 Output Location
 
 The Lambda function uses a default S3 location for query results:
+
 ```
 s3://aws-athena-query-results-{account-id}-{region}/
 ```
 
 To customize, set environment variable in `amplify/functions/athena-query/resource.ts`:
+
 ```typescript
 export const athenaQuery = defineFunction({
   name: 'athena-query',
@@ -84,39 +93,35 @@ export const athenaQuery = defineFunction({
   environment: {
     ATHENA_OUTPUT_LOCATION: 's3://your-custom-bucket/athena-results/',
   },
-});
+})
 ```
 
 #### Additional S3 Bucket Permissions
 
 If using a custom S3 bucket, add permissions in `amplify/backend.ts`:
+
 ```typescript
 backend.athenaQuery.resources.lambda.addToRolePolicy(
   new iam.PolicyStatement({
     effect: iam.Effect.ALLOW,
     actions: ['s3:GetObject', 's3:PutObject', 's3:ListBucket'],
-    resources: [
-      'arn:aws:s3:::your-custom-bucket',
-      'arn:aws:s3:::your-custom-bucket/*',
-    ],
+    resources: ['arn:aws:s3:::your-custom-bucket', 'arn:aws:s3:::your-custom-bucket/*'],
   })
-);
+)
 ```
 
 #### Additional Data Source Permissions
 
 If your Athena queries access S3 data sources, grant Lambda access:
+
 ```typescript
 backend.athenaQuery.resources.lambda.addToRolePolicy(
   new iam.PolicyStatement({
     effect: iam.Effect.ALLOW,
     actions: ['s3:GetObject', 's3:ListBucket'],
-    resources: [
-      'arn:aws:s3:::your-data-bucket',
-      'arn:aws:s3:::your-data-bucket/*',
-    ],
+    resources: ['arn:aws:s3:::your-data-bucket', 'arn:aws:s3:::your-data-bucket/*'],
   })
-);
+)
 ```
 
 ## Usage Examples
@@ -124,61 +129,60 @@ backend.athenaQuery.resources.lambda.addToRolePolicy(
 ### Frontend TypeScript
 
 ```typescript
-import { generateClient } from 'aws-amplify/data';
-import type { Schema } from '@/amplify/data/resource';
+import { generateClient } from 'aws-amplify/data'
+import type { Schema } from '@/amplify/data/resource'
 
-const client = generateClient<Schema>();
+const client = generateClient<Schema>()
 
 async function executeAthenaQuery(sqlQuery: string, database: string) {
   // First, start the query to get queryExecutionId
   const { data, errors } = await client.mutations.executeAthenaQuery({
     queryString: sqlQuery,
     database: database,
-  });
+  })
 
   if (errors) {
-    console.error('Mutation errors:', errors);
-    return;
+    console.error('Mutation errors:', errors)
+    return
   }
 
-  const queryId = data?.queryExecutionId;
+  const queryId = data?.queryExecutionId
   if (!queryId) {
-    console.error('No query ID returned');
-    return;
+    console.error('No query ID returned')
+    return
   }
 
-  console.log('Query started:', queryId);
+  console.log('Query started:', queryId)
 
   // Now subscribe to results for THIS SPECIFIC query
   // This ensures you only receive results for your query, not other users' queries
-  const subscription = client.subscriptions.onAthenaQueryResult({
-    queryExecutionId: queryId  // Filter: only receive updates for this query
-  }).subscribe({
-    next: (result) => {
-      if (result.status === 'SUCCEEDED') {
-        console.log('Query completed!');
-        console.log('Columns:', result.columns);
-        console.log('Data:', result.data);
-        console.log('Rows:', result.rowCount);
-        subscription.unsubscribe();
-      } else if (result.status === 'FAILED') {
-        console.error('Query failed:', result.error);
-        subscription.unsubscribe();
-      } else {
-        console.log('Query status:', result.status);
-      }
-    },
-    error: (error) => {
-      console.error('Subscription error:', error);
-    }
-  });
+  const subscription = client.subscriptions
+    .onAthenaQueryResult({
+      queryExecutionId: queryId, // Filter: only receive updates for this query
+    })
+    .subscribe({
+      next: (result) => {
+        if (result.status === 'SUCCEEDED') {
+          console.log('Query completed!')
+          console.log('Columns:', result.columns)
+          console.log('Data:', result.data)
+          console.log('Rows:', result.rowCount)
+          subscription.unsubscribe()
+        } else if (result.status === 'FAILED') {
+          console.error('Query failed:', result.error)
+          subscription.unsubscribe()
+        } else {
+          console.log('Query status:', result.status)
+        }
+      },
+      error: (error) => {
+        console.error('Subscription error:', error)
+      },
+    })
 }
 
 // Usage
-executeAthenaQuery(
-  'SELECT * FROM my_table LIMIT 10',
-  'my_database'
-);
+executeAthenaQuery('SELECT * FROM my_table LIMIT 10', 'my_database')
 ```
 
 **Important**: The subscription now requires `queryExecutionId` as an argument. This ensures each user only receives results for their own queries, preventing cross-user data leakage in multi-user environments.
@@ -191,14 +195,14 @@ The AI agent can use this API to convert natural language to SQL and execute que
 // In your agent tools/functions
 async function queryStructuredData(userQuestion: string) {
   // 1. Agent converts question to SQL
-  const sqlQuery = await generateSQLFromQuestion(userQuestion);
-  
+  const sqlQuery = await generateSQLFromQuestion(userQuestion)
+
   // 2. Execute via GraphQL
   const { data } = await client.mutations.executeAthenaQuery({
     queryString: sqlQuery,
     database: 'analytics',
-  });
-  
+  })
+
   // 3. Results arrive via subscription
   // 4. Agent formats and presents results
 }
@@ -237,10 +241,7 @@ subscription {
 
 # Pagination - get next page of results
 mutation {
-  executeAthenaQuery(
-    queryExecutionId: "existing-query-id"
-    nextToken: "token-from-previous-response"
-  ) {
+  executeAthenaQuery(queryExecutionId: "existing-query-id", nextToken: "token-from-previous-response") {
     queryExecutionId
     status
     data
@@ -275,41 +276,41 @@ The integration supports automatic pagination for queries that return more than 
 
 ```typescript
 async function fetchAllResults(queryExecutionId: string) {
-  let allData: any[] = [];
-  let columns: string[] = [];
-  let nextToken: string | undefined;
-  
+  let allData: any[] = []
+  let columns: string[] = []
+  let nextToken: string | undefined
+
   // Get first page
   const firstPage = await client.mutations.executeAthenaQuery({
     queryExecutionId: queryExecutionId,
-  });
-  
+  })
+
   if (firstPage.data?.status === 'SUCCEEDED') {
-    columns = firstPage.data.columns || [];
-    allData = firstPage.data.data || [];
-    nextToken = firstPage.data.nextToken;
-    
-    console.log(`First page: ${allData.length} rows`);
+    columns = firstPage.data.columns || []
+    allData = firstPage.data.data || []
+    nextToken = firstPage.data.nextToken
+
+    console.log(`First page: ${allData.length} rows`)
   }
-  
+
   // Fetch remaining pages
   while (nextToken) {
     const nextPage = await client.mutations.executeAthenaQuery({
       queryExecutionId: queryExecutionId,
       nextToken: nextToken,
-    });
-    
+    })
+
     if (nextPage.data?.status === 'SUCCEEDED') {
-      allData = allData.concat(nextPage.data.data || []);
-      nextToken = nextPage.data.nextToken;
-      
-      console.log(`Got page: ${nextPage.data.data?.length} rows, Total: ${allData.length}`);
+      allData = allData.concat(nextPage.data.data || [])
+      nextToken = nextPage.data.nextToken
+
+      console.log(`Got page: ${nextPage.data.data?.length} rows, Total: ${allData.length}`)
     } else {
-      break;
+      break
     }
   }
-  
-  return { columns, data: allData, totalRows: allData.length };
+
+  return { columns, data: allData, totalRows: allData.length }
 }
 ```
 
@@ -330,36 +331,36 @@ async function handleLargeQuery(sqlQuery: string, database: string) {
   const { data } = await client.mutations.executeAthenaQuery({
     queryString: sqlQuery,
     database: database,
-  });
-  
-  const queryId = data?.queryExecutionId;
-  
+  })
+
+  const queryId = data?.queryExecutionId
+
   // Wait for completion (via subscription or polling)
   // Then fetch results with pagination
-  
-  let hasMore = true;
-  let nextToken: string | undefined;
-  let pageNum = 1;
-  
+
+  let hasMore = true
+  let nextToken: string | undefined
+  let pageNum = 1
+
   while (hasMore) {
     const page = await client.mutations.executeAthenaQuery({
       queryExecutionId: queryId,
       nextToken: nextToken,
-    });
-    
+    })
+
     if (page.data?.status === 'SUCCEEDED') {
       // Process this page of data
-      console.log(`Processing page ${pageNum}: ${page.data.rowCount} rows`);
-      
+      console.log(`Processing page ${pageNum}: ${page.data.rowCount} rows`)
+
       // Present results to user incrementally
-      await presentDataToUser(page.data.data);
-      
+      await presentDataToUser(page.data.data)
+
       // Check for more pages
-      nextToken = page.data.nextToken;
-      hasMore = !!nextToken;
-      pageNum++;
+      nextToken = page.data.nextToken
+      hasMore = !!nextToken
+      pageNum++
     } else {
-      hasMore = false;
+      hasMore = false
     }
   }
 }
@@ -370,11 +371,13 @@ async function handleLargeQuery(sqlQuery: string, database: string) {
 ### CloudWatch Logs
 
 Lambda logs are available in CloudWatch:
+
 ```
 /aws/lambda/athena-query-{environment}
 ```
 
 Key log entries:
+
 - Query execution start
 - Query status checks
 - Results retrieval
@@ -387,6 +390,7 @@ Enable AppSync logging in AWS Console to debug GraphQL operations.
 ### Athena Console
 
 Check query history and execution details in Athena Console:
+
 - Query status and runtime
 - Data scanned and cost
 - Error messages
@@ -415,7 +419,8 @@ Amazon Athena charges $5 per TB of data scanned. To minimize costs:
 ### Query Stays in RUNNING State
 
 **Cause**: Query taking longer than expected
-**Solution**: 
+**Solution**:
+
 - Check Athena console for query progress
 - Verify data source accessibility
 - Optimize query with better predicates
@@ -424,6 +429,7 @@ Amazon Athena charges $5 per TB of data scanned. To minimize costs:
 
 **Cause**: Missing IAM permissions
 **Solution**:
+
 - Verify Lambda role has Athena permissions
 - Check Glue catalog permissions
 - Verify S3 bucket policies
@@ -432,6 +438,7 @@ Amazon Athena charges $5 per TB of data scanned. To minimize costs:
 
 **Cause**: Subscription not established before mutation
 **Solution**:
+
 - Always subscribe before executing mutation
 - Check WebSocket connection status
 - Verify AppSync endpoint configuration
@@ -440,6 +447,7 @@ Amazon Athena charges $5 per TB of data scanned. To minimize costs:
 
 **Cause**: Results exceed Lambda memory or timeout
 **Solution**:
+
 - Add LIMIT clause to queries
 - Increase Lambda memory if needed
 - Implement pagination
@@ -452,11 +460,11 @@ For large result sets, implement pagination using Athena's `NextToken`:
 
 ```typescript
 // Modify handler.ts to support pagination
-const resultsCommand = new GetQueryResultsCommand({ 
+const resultsCommand = new GetQueryResultsCommand({
   QueryExecutionId: queryExecutionId,
   MaxResults: 1000,
   NextToken: nextToken, // Add this parameter
-});
+})
 ```
 
 ### Query Cancellation
@@ -486,7 +494,7 @@ await dynamodb.putItem({
     timestamp,
     status,
   },
-});
+})
 ```
 
 ## Related Documentation

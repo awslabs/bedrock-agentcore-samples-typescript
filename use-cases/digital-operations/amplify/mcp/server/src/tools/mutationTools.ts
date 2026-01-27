@@ -1,3 +1,3 @@
-import { getConfiguredAmplifyClient } from "./amplifyUtils";
+import { getConfiguredAmplifyClient } from './amplifyUtils'
 
 export const allMutationTools = []

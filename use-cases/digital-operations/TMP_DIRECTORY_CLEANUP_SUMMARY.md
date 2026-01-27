@@ -33,18 +33,22 @@ tmp/
 The following files remain in `tmp/` but are now ignored by git:
 
 **Configuration Files:**
+
 - `amplify_outputs_dev.json` - Development environment outputs
 - `amplify_outputs_prod.json` - Production environment outputs
 - `package.json` / `package-lock.json` - Temporary package configs
 
 **Scripts:**
+
 - `delete_old_cloudformation_stacks.sh` - Cleanup script
 
 **Data Files:**
+
 - `prod.csv` - Production data
 - `transformedSrcDoc.html` - HTML transformation example
 
 **Notes:**
+
 - `BUILD.txt` - Build logs
 - `notes.md` - Development notes
 - `upstream.md` - Upstream documentation

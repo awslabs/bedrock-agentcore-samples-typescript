@@ -3,17 +3,17 @@
  */
 
 export interface DemoMessagePart {
-  type: 'text';
-  text: string;
+  type: 'text'
+  text: string
 }
 
 export interface DemoMessage {
-  id: string;
-  role: 'assistant';
-  parts: DemoMessagePart[];
+  id: string
+  role: 'assistant'
+  parts: DemoMessagePart[]
   metadata: {
-    createdAt: string;
-  };
+    createdAt: string
+  }
 }
 
 /**
@@ -79,7 +79,7 @@ var config = { responsive: true, displayModeBar: false };
 Plotly.newPlot("chart", [trace, thresholdTrace], layout, config);
 </script>
 </body>
-</html>`;
+</html>`
 
   const messageText = `🚨 **CRITICAL ALERT DETECTED**
 
@@ -124,7 +124,7 @@ I've detected a critical failure prediction from the asset health monitoring sys
 
 The alert is now visible in the Maintenance Dashboard on the left. I recommend we create an emergency work order immediately to address this issue before the predicted failure occurs in 8 hours.
 
-Would you like me to help you create a work order and coordinate the maintenance response?`;
+Would you like me to help you create a work order and coordinate the maintenance response?`
 
   return {
     id: `demo-${Date.now()}`,
@@ -132,11 +132,11 @@ Would you like me to help you create a work order and coordinate the maintenance
     parts: [
       {
         type: 'text',
-        text: messageText
-      }
+        text: messageText,
+      },
     ],
     metadata: {
-      createdAt: new Date().toISOString()
-    }
-  };
+      createdAt: new Date().toISOString(),
+    },
+  }
 }

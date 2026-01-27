@@ -203,11 +203,13 @@ The agent will automatically configure the appropriate color scale based on your
 ## Color Palette Recommendations
 
 ### Sequential (for continuous data)
+
 - **Blue to Red**: `#3b82f6` → `#fbbf24` → `#ef4444`
 - **Green to Red**: `#10b981` → `#fbbf24` → `#ef4444`
 - **Cool to Warm**: `#06b6d4` → `#8b5cf6` → `#ec4899`
 
 ### Categorical (for discrete categories)
+
 - **Status**: Green (#10b981), Yellow (#f59e0b), Red (#ef4444), Gray (#9ca3af)
 - **Priority**: Red (#ef4444), Orange (#f97316), Blue (#3b82f6)
 - **Types**: Blue (#3b82f6), Purple (#8b5cf6), Pink (#ec4899), Teal (#14b8a6)

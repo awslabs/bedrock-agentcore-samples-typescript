@@ -51,6 +51,7 @@ This guide explains how to customize common aspects of the Digital Operations Ag
 ```
 
 Don't forget to:
+
 1. Import the icon: `import { ShareIcon } from 'lucide-react';`
 2. Create the handler function: `const handleShare = (text: string) => { /* logic */ }`
 
@@ -67,7 +68,6 @@ Don't forget to:
 />
 ```
 
-
 ---
 
 ## AI Models
@@ -79,17 +79,17 @@ Don't forget to:
 **Location:** Top of the file, in the `models` array
 
 ```typescript
-const models: { name: string, id: string }[] = [
+const models: { name: string; id: string }[] = [
   {
     name: 'Claude Haiku 3.5',
-    id: 'us.anthropic.claude-3-5-haiku-20241022-v1:0'
+    id: 'us.anthropic.claude-3-5-haiku-20241022-v1:0',
   },
   {
-    name: 'GPT-4',  // Add new model
-    id: 'gpt-4'
+    name: 'GPT-4', // Add new model
+    id: 'gpt-4',
   },
   // Remove unwanted models by deleting entries
-];
+]
 ```
 
 ### Change Default Model
@@ -99,11 +99,10 @@ const models: { name: string, id: string }[] = [
 **Location:** In the `useState` initialization
 
 ```typescript
-const [model, setModel] = useState<string>(models[2].id);  // Change index
+const [model, setModel] = useState<string>(models[2].id) // Change index
 // Or use specific model ID:
-const [model, setModel] = useState<string>('us.anthropic.claude-sonnet-4-5-20250929-v1:0');
+const [model, setModel] = useState<string>('us.anthropic.claude-sonnet-4-5-20250929-v1:0')
 ```
-
 
 ---
 
@@ -185,7 +184,7 @@ SafetyEvent: a
 **Step-by-step process:**
 
 1. **Modify the schema** in `amplify/data/resource.ts`
-2. **Regenerate GraphQL code**: 
+2. **Regenerate GraphQL code**:
    ```bash
    npx ampx generate graphql-client-code
    ```
@@ -193,19 +192,19 @@ SafetyEvent: a
 4. **Update query tools** in both locations:
    - `amplify/agent/server/src/tools/queryTools.ts`
    - `amplify/mcp/server/src/tools/queryTools.ts`
-5. **Redeploy**: 
+5. **Redeploy**:
    ```bash
    npx ampx sandbox
    ```
 
 **Common scenarios:**
 
-| Scenario | Required Actions |
-|----------|-----------------|
-| **Adding a model** | 1. Add to schema<br>2. Regenerate GraphQL<br>3. Add corresponding tool to queryTools.ts<br>4. Export in `allQueryTools` array |
-| **Commenting out a model** | 1. Comment in schema<br>2. Regenerate GraphQL<br>3. Remove or comment out its tool<br>4. Remove from `allQueryTools` array |
-| **Renaming a model** | 1. Rename in schema<br>2. Regenerate GraphQL<br>3. Update tool name and query references<br>4. Update in `allQueryTools` array |
-| **Changing model fields** | 1. Modify in schema<br>2. Regenerate GraphQL<br>3. Update query strings in queryTools.ts if needed |
+| Scenario                   | Required Actions                                                                                                               |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| **Adding a model**         | 1. Add to schema<br>2. Regenerate GraphQL<br>3. Add corresponding tool to queryTools.ts<br>4. Export in `allQueryTools` array  |
+| **Commenting out a model** | 1. Comment in schema<br>2. Regenerate GraphQL<br>3. Remove or comment out its tool<br>4. Remove from `allQueryTools` array     |
+| **Renaming a model**       | 1. Rename in schema<br>2. Regenerate GraphQL<br>3. Update tool name and query references<br>4. Update in `allQueryTools` array |
+| **Changing model fields**  | 1. Modify in schema<br>2. Regenerate GraphQL<br>3. Update query strings in queryTools.ts if needed                             |
 
 **Example: Adding a tool for a new model**
 
@@ -232,23 +231,24 @@ const queries = {
       __typename
     }
   }`,
-};
+}
 
 // Create the tool
 export const listTrainingsTool = createListTool(
-  "list-trainings",
-  "List all training sessions. Returns training details including title, date, and status.",
+  'list-trainings',
+  'List all training sessions. Returns training details including title, date, and status.',
   queries.listTrainings
-);
+)
 
 // Add to exports
 export const allQueryTools = [
   // ... existing tools ...
-  listTrainingsTool,  // Add here
-];
+  listTrainingsTool, // Add here
+]
 ```
 
 **Warning signs of sync issues:**
+
 - ❌ `GraphQL validation error: Field 'listXXX' in type 'Query' is undefined`
 - ❌ `Field undefined` errors when calling tools
 - ❌ TypeScript errors in queryTools.ts after schema changes
@@ -256,7 +256,6 @@ export const allQueryTools = [
 These indicate tools are referencing queries that no longer exist in the generated schema.
 
 ---
-
 
 ---
 
@@ -291,11 +290,11 @@ These indicate tools are referencing queries that no longer exist in the generat
 ```typescript
 useEffect(() => {
   const interval = setInterval(() => {
-    loadData();
-  }, 5000);  // Change from 10000 (10s) to 5000 (5s) or any value
-  
-  return () => clearInterval(interval);
-}, []);
+    loadData()
+  }, 5000) // Change from 10000 (10s) to 5000 (5s) or any value
+
+  return () => clearInterval(interval)
+}, [])
 ```
 
 ### Add Custom Data Visualization
@@ -376,8 +375,8 @@ import { LineChart, Line, XAxis, YAxis } from 'recharts';
 :root {
   --background: 0 0% 100%;
   --foreground: 222.2 84% 4.9%;
-  --primary: 221.2 83.2% 53.3%;  /* Change primary color */
-  --secondary: 210 40% 96.1%;     /* Change secondary color */
+  --primary: 221.2 83.2% 53.3%; /* Change primary color */
+  --secondary: 210 40% 96.1%; /* Change secondary color */
   /* ... */
 }
 ```
@@ -390,9 +389,9 @@ import { LineChart, Line, XAxis, YAxis } from 'recharts';
 import { Inter, Roboto } from 'next/font/google';
 
 const inter = Inter({ subsets: ['latin'] });
-const roboto = Roboto({ 
+const roboto = Roboto({
   weight: ['400', '700'],
-  subsets: ['latin'] 
+  subsets: ['latin']
 });
 
 // Apply to body:
@@ -407,17 +406,14 @@ const roboto = Roboto({
 
 ```typescript
 // In src/components/ui/button.tsx
-const buttonVariants = cva(
-  "inline-flex items-center justify-center rounded-md text-sm font-medium",
-  {
-    variants: {
-      variant: {
-        default: "bg-blue-600 text-white hover:bg-blue-700",  // Customize
-        // ... other variants
-      },
+const buttonVariants = cva('inline-flex items-center justify-center rounded-md text-sm font-medium', {
+  variants: {
+    variant: {
+      default: 'bg-blue-600 text-white hover:bg-blue-700', // Customize
+      // ... other variants
     },
-  }
-);
+  },
+})
 ```
 
 ---
@@ -448,17 +444,17 @@ export default function YourPage() {
 2. Add handler:
 
 ```typescript
-import { NextResponse } from 'next/server';
+import { NextResponse } from 'next/server'
 
 export async function GET(request: Request) {
   // Your logic
-  return NextResponse.json({ data: 'response' });
+  return NextResponse.json({ data: 'response' })
 }
 
 export async function POST(request: Request) {
-  const body = await request.json();
+  const body = await request.json()
   // Your logic
-  return NextResponse.json({ success: true });
+  return NextResponse.json({ success: true })
 }
 ```
 
@@ -469,25 +465,25 @@ export async function POST(request: Request) {
 
 ```typescript
 server.tool(
-  "your_tool_name",
-  "Description of what your tool does",
+  'your_tool_name',
+  'Description of what your tool does',
   {
     // Input schema
-    param1: z.string().describe("Parameter description"),
+    param1: z.string().describe('Parameter description'),
   },
   async ({ param1 }) => {
     // Tool logic
-    const result = await yourFunction(param1);
+    const result = await yourFunction(param1)
     return {
       content: [
         {
-          type: "text",
+          type: 'text',
           text: JSON.stringify(result, null, 2),
         },
       ],
-    };
+    }
   }
-);
+)
 ```
 
 3. Redeploy: `npx ampx sandbox`
@@ -544,11 +540,13 @@ export default function TestPage() {
 ### GraphQL Query Tool Errors
 
 **Symptom:** Errors like:
+
 - `"Field 'listProcessEquipment' in type 'Query' is undefined"`
 - `"Field undefined"` when calling AI agent tools
 - `GraphQL validation error`
 
 **Common Causes:**
+
 1. Tools in `queryTools.ts` reference models that are commented out or removed
 2. GraphQL schema wasn't regenerated after model changes
 3. Tool query strings don't match the generated GraphQL queries (e.g., wrong plural form)
@@ -556,12 +554,14 @@ export default function TestPage() {
 **Solution Steps:**
 
 1. **Identify which models are active:**
+
    ```bash
    # Check your schema
    cat amplify/data/resource.ts | grep "\.model"
    ```
 
 2. **Check generated queries:**
+
    ```bash
    # See what queries actually exist
    cat amplify/graphql/queries.ts | grep "export const"
@@ -573,6 +573,7 @@ export default function TestPage() {
    - Ensure only active models have tools
 
 4. **Regenerate if needed:**
+
    ```bash
    npx ampx generate graphql-client-code
    ```
@@ -600,7 +601,7 @@ export const allQueryTools = [
   listAreasTool,
   // listEquipmentTool,  // ← Comment out or remove
   listPersonnelTool,
-];
+]
 ```
 
 ### Build Errors

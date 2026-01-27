@@ -9,6 +9,7 @@ This document describes how the chat session ID is automatically passed from the
 The solution uses a header-based approach to pass the `chatSessionId` from the frontend through AgentCore to the agent server, where it's automatically injected into tool parameters.
 
 **Important**: AWS BedrockAgentCore requires custom headers to follow a specific naming pattern:
+
 - Pattern: `X-Amzn-Bedrock-AgentCore-Runtime-Custom-[name]`
 - Our header: `X-Amzn-Bedrock-AgentCore-Runtime-Custom-Chat-Session-Id`
 
@@ -39,8 +40,8 @@ headers: {
   ...headers,
   'Content-Type': 'application/json',
   // AWS requires custom headers to follow the pattern: X-Amzn-Bedrock-AgentCore-Runtime-Custom-*
-  ...(options.body?.chatSessionId && { 
-    'X-Amzn-Bedrock-AgentCore-Runtime-Custom-Chat-Session-Id': options.body.chatSessionId 
+  ...(options.body?.chatSessionId && {
+    'X-Amzn-Bedrock-AgentCore-Runtime-Custom-Chat-Session-Id': options.body.chatSessionId
   }),
 }
 ```
@@ -59,9 +60,10 @@ requestHeaderConfiguration: {
 }
 ```
 
-This uses CloudFormation's `RequestHeaderConfiguration` property with a `RequestHeaderAllowlist` that specifies which custom headers should be forwarded to the container. 
+This uses CloudFormation's `RequestHeaderConfiguration` property with a `RequestHeaderAllowlist` that specifies which custom headers should be forwarded to the container.
 
 **Important**: AWS enforces a strict naming pattern for custom headers:
+
 - Must match: `^(Authorization|X-Amzn-Bedrock-AgentCore-Runtime-Custom-[a-zA-Z0-9_-]+)$`
 - Either `Authorization` or prefixed with `X-Amzn-Bedrock-AgentCore-Runtime-Custom-`
 - The allowlist can contain up to 20 header names
@@ -75,14 +77,17 @@ This uses CloudFormation's `RequestHeaderConfiguration` property with a `Request
 The server extracts the header and passes it to the handler:
 
 ```typescript
-const chatSessionId = req.headers['x-amzn-bedrock-agentcore-runtime-custom-chat-session-id'] as string | undefined;
-const response = await handleAgentRequest(req, chatSessionId);
+const chatSessionId = req.headers['x-amzn-bedrock-agentcore-runtime-custom-chat-session-id'] as string | undefined
+const response = await handleAgentRequest(req, chatSessionId)
 ```
 
 CORS is configured to allow the custom header:
 
 ```typescript
-res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Amzn-Bedrock-AgentCore-Runtime-Custom-Chat-Session-Id');
+res.header(
+  'Access-Control-Allow-Headers',
+  'Content-Type, Authorization, X-Amzn-Bedrock-AgentCore-Runtime-Custom-Chat-Session-Id'
+)
 ```
 
 ### 4. Request Context Module
@@ -93,14 +98,14 @@ A dedicated module manages the request context to avoid circular dependencies:
 
 ```typescript
 // Store the current chat session ID for tool access
-let currentChatSessionId: string | undefined;
+let currentChatSessionId: string | undefined
 
 export function setCurrentChatSessionId(sessionId: string | undefined): void {
-    currentChatSessionId = sessionId;
+  currentChatSessionId = sessionId
 }
 
 export function getCurrentChatSessionId(): string | undefined {
-    return currentChatSessionId;
+  return currentChatSessionId
 }
 ```
 
@@ -111,19 +116,19 @@ export function getCurrentChatSessionId(): string | undefined {
 The handler stores the session ID using the context module:
 
 ```typescript
-import { setCurrentChatSessionId } from './context';
+import { setCurrentChatSessionId } from './context'
 
 export async function handleAgentRequest(req, chatSessionId) {
-    // Store the session ID for tool access
-    setCurrentChatSessionId(chatSessionId);
-    
-    const result = streamText({
-        model: model,
-        messages: convertToModelMessages(messages),
-        system: systemPrompt,
-        tools: tools,
-        // ... other config
-    });
+  // Store the session ID for tool access
+  setCurrentChatSessionId(chatSessionId)
+
+  const result = streamText({
+    model: model,
+    messages: convertToModelMessages(messages),
+    system: systemPrompt,
+    tools: tools,
+    // ... other config
+  })
 }
 ```
 
@@ -136,22 +141,23 @@ This approach uses a dedicated context module to avoid circular dependencies bet
 Tools are configured to retrieve the session ID from the context module:
 
 ```typescript
-import { getCurrentChatSessionId } from './context';
+import { getCurrentChatSessionId } from './context'
 
 execute: async (params: any) => {
   // Inject chatSessionId from request context if not already provided
-  const chatSessionId = getCurrentChatSessionId();
+  const chatSessionId = getCurrentChatSessionId()
   const enrichedParams = {
     ...params,
-    ...(chatSessionId && !params.chatSessionId && { chatSessionId })
-  };
-  
-  const result = await queryTool.handler(enrichedParams as any);
-  return result.content?.[0]?.text || JSON.stringify(result);
+    ...(chatSessionId && !params.chatSessionId && { chatSessionId }),
+  }
+
+  const result = await queryTool.handler(enrichedParams as any)
+  return result.content?.[0]?.text || JSON.stringify(result)
 }
 ```
 
 This approach:
+
 - Uses a dedicated context module to avoid circular dependencies
 - Tools retrieve session ID via `getCurrentChatSessionId()` function
 - Simpler than passing context through the AI SDK
@@ -174,11 +180,12 @@ Tool handlers validate that the session ID is present (it's injected by the tool
 
 ```typescript
 if (!params.chatSessionId) {
-  throw new Error('chatSessionId is required but was not provided');
+  throw new Error('chatSessionId is required but was not provided')
 }
 ```
 
 This approach:
+
 - Prevents the AI from trying to provide the session ID
 - Reduces token usage in tool calls
 - Makes tool schemas cleaner and easier to understand
@@ -204,6 +211,7 @@ The following tools now automatically receive the chat session ID without it bei
 After making these changes, you need to:
 
 1. Deploy the updated CDK stack (for AgentCore configuration):
+
    ```bash
    npx ampx sandbox
    ```

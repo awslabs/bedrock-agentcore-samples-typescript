@@ -9,12 +9,15 @@ Instead of requiring the AI agent to construct full GraphQL queries using the `e
 ## Tool Categories
 
 ### Get Tools (16 tools)
+
 These tools retrieve a single item by ID. They all follow the same pattern:
 
 **Input Schema:**
+
 - `id` (string, required): The ID of the item to retrieve
 
 **Available Get Tools:**
+
 - `get-area` - Get area details by ID
 - `get-chat-message` - Get chat message by ID
 - `get-chat-session` - Get chat session by ID
@@ -33,14 +36,17 @@ These tools retrieve a single item by ID. They all follow the same pattern:
 - `get-work-permit` - Get work permit by ID
 
 ### List Tools (15 tools)
+
 These tools retrieve multiple items with optional filtering and pagination:
 
 **Input Schema:**
+
 - `filter` (object, optional): Filter criteria for the query
 - `limit` (number, optional): Maximum number of items to return (default: 100)
 - `nextToken` (string, optional): Pagination token for fetching next page
 
 **Available List Tools:**
+
 - `list-areas` - List all areas
 - `list-chat-sessions` - List all chat sessions
 - `list-emergency-responses` - List emergency response plans
@@ -60,6 +66,7 @@ These tools retrieve multiple items with optional filtering and pagination:
 ## Usage Examples
 
 ### Example 1: Get a specific area
+
 ```json
 {
   "tool": "get-area",
@@ -70,6 +77,7 @@ These tools retrieve multiple items with optional filtering and pagination:
 ```
 
 ### Example 2: List all operations
+
 ```json
 {
   "tool": "list-operations",
@@ -78,6 +86,7 @@ These tools retrieve multiple items with optional filtering and pagination:
 ```
 
 ### Example 3: List operations with filter
+
 ```json
 {
   "tool": "list-operations",
@@ -91,6 +100,7 @@ These tools retrieve multiple items with optional filtering and pagination:
 ```
 
 ### Example 4: List personnel with multiple filters
+
 ```json
 {
   "tool": "list-personnel",
@@ -114,6 +124,7 @@ These tools retrieve multiple items with optional filtering and pagination:
 ## Implementation Details
 
 ### File Structure
+
 ```
 amplify/mcp/server/src/tools/
 ├── queryTools.ts       # New file with all 31 query tools
@@ -137,16 +148,12 @@ amplify/mcp/server/src/tools/
 All tools are automatically registered in `server.ts`:
 
 ```typescript
-import { allQueryTools } from "./tools/queryTools";
+import { allQueryTools } from './tools/queryTools'
 
 // Register all query tools
-allQueryTools.forEach(tool => {
-  mcpServer.registerTool(
-    tool.name,
-    tool.config,
-    tool.handler
-  );
-});
+allQueryTools.forEach((tool) => {
+  mcpServer.registerTool(tool.name, tool.config, tool.handler)
+})
 ```
 
 ## Demo Scenarios
@@ -154,6 +161,7 @@ allQueryTools.forEach(tool => {
 These tools are particularly useful for the SAFE-AI demo scenarios:
 
 ### Morning Safety Brief
+
 - `list-safety-events` - Get overnight incidents
 - `list-areas` - Check area statuses
 - `list-work-permits` - Review active permits
@@ -161,23 +169,27 @@ These tools are particularly useful for the SAFE-AI demo scenarios:
 - `get-weather` - Check weather conditions
 
 ### Critical Decision Point
+
 - `get-operation` - Get FCCU operation details
 - `list-work-permits` - Check permit status (with filter)
 - `list-personnel` - Review team readiness
 - `list-gas-monitorings` - Check atmospheric conditions
 
 ### Emergency Response Planning
+
 - `list-operations` - Get planned operations
 - `list-equipment` - Check equipment status
 - `get-weather` - Get forecast details
 - `list-safety-events` - Review recent incidents
 
 ### Incident Prevention Analysis
+
 - `list-safety-indicators` - Analyze safety metrics
 - `list-safety-events` - Pattern analysis
 - `list-safety-bypasses` - Check active bypasses
 
 ### End of Shift Review
+
 - `list-operations` - Summary of active operations
 - `list-work-permits` - Permit status summary
 - `list-personnel` - Personnel status

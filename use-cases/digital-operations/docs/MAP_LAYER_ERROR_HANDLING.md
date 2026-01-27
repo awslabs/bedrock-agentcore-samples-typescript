@@ -9,6 +9,7 @@ Cannot return null for non-nullable type: 'String' within parent 'MapLayer' (/li
 ```
 
 This error occurs when a MapLayer record in the database has `null` values for required fields:
+
 - `athenaQuery` (String!)
 - `athenaDatabase` (String!)
 - `geoJsonMapping` (AWSJSON!)
@@ -23,6 +24,7 @@ This error occurs when a MapLayer record in the database has `null` values for r
 ## User-Specific Issue
 
 This issue is **session-specific** because:
+
 - Each user has their own `chatSessionId`
 - MapLayers are filtered by `chatSessionId`
 - If User A has an invalid MapLayer in their session, only User A sees the error
@@ -41,20 +43,21 @@ Both `MapViewer.tsx` and `mission-control/page.tsx` now:
 - **Display helpful error messages** in the console
 
 Example validation:
+
 ```typescript
 const validLayers = result.data.filter((layer): layer is MapLayer => {
   if (!layer) {
-    console.warn('Filtered out null/undefined map layer');
-    return false;
+    console.warn('Filtered out null/undefined map layer')
+    return false
   }
-  
+
   if (!layer.athenaQuery || !layer.athenaDatabase || !layer.geoJsonMapping) {
-    console.warn('Filtered out map layer with missing required fields:', layer.id);
-    return false;
+    console.warn('Filtered out map layer with missing required fields:', layer.id)
+    return false
   }
-  
-  return true;
-});
+
+  return true
+})
 ```
 
 ### 2. Subscription Validation
@@ -64,8 +67,8 @@ Real-time subscriptions (onCreate, onUpdate) now validate incoming layers:
 ```typescript
 // Validate the new layer
 if (!newLayer || !newLayer.athenaQuery || !newLayer.athenaDatabase || !newLayer.geoJsonMapping) {
-  console.warn('Received invalid layer, ignoring');
-  return;
+  console.warn('Received invalid layer, ignoring')
+  return
 }
 ```
 
@@ -78,6 +81,7 @@ npx tsx scripts/cleanupInvalidMapLayers.ts
 ```
 
 The script will:
+
 1. List all MapLayer records
 2. Identify those with missing required fields
 3. Display details about invalid records
@@ -88,12 +92,15 @@ The script will:
 ## How to Fix for Your Co-worker
 
 ### Option 1: Let Frontend Handle It (Easiest)
+
 The frontend now gracefully handles invalid data. Your co-worker should:
+
 1. Refresh the page
 2. Check the browser console for warnings about filtered layers
 3. The page should work normally, just without the invalid layers
 
 ### Option 2: Clean Up Database (Recommended)
+
 Run the cleanup script to permanently remove invalid records:
 
 ```bash
@@ -106,19 +113,20 @@ npx tsx scripts/cleanupInvalidMapLayers.ts
 ```
 
 ### Option 3: Manual Database Cleanup
+
 If you have database access, you can manually delete invalid MapLayer records:
 
 ```sql
 -- Find invalid records
-SELECT * FROM MapLayer 
-WHERE athenaQuery IS NULL 
-   OR athenaDatabase IS NULL 
+SELECT * FROM MapLayer
+WHERE athenaQuery IS NULL
+   OR athenaDatabase IS NULL
    OR geoJsonMapping IS NULL;
 
 -- Delete them (be careful!)
-DELETE FROM MapLayer 
-WHERE athenaQuery IS NULL 
-   OR athenaDatabase IS NULL 
+DELETE FROM MapLayer
+WHERE athenaQuery IS NULL
+   OR athenaDatabase IS NULL
    OR geoJsonMapping IS NULL;
 ```
 
@@ -127,6 +135,7 @@ WHERE athenaQuery IS NULL
 To prevent this issue in the future:
 
 1. **Always set required fields** when creating MapLayers:
+
    ```typescript
    await client.models.MapLayer.create({
      id: layerId,
@@ -140,9 +149,10 @@ To prevent this issue in the future:
    ```
 
 2. **Validate before creating** in your code:
+
    ```typescript
    if (!athenaQuery || !athenaDatabase || !geoJsonMapping) {
-     throw new Error('Missing required MapLayer fields');
+     throw new Error('Missing required MapLayer fields')
    }
    ```
 

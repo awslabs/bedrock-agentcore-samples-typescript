@@ -3,6 +3,7 @@
 ## Prerequisites
 
 1. Deploy the backend:
+
 ```bash
 npm run sandbox
 ```
@@ -33,13 +34,15 @@ npm run graphql -- 'mutation {
 ```
 
 **Expected Response**:
-- `status`: "RUNNING" or "SUCCEEDED" 
+
+- `status`: "RUNNING" or "SUCCEEDED"
 - `queryExecutionId`: A valid Athena query execution ID (not "unknown" or "none")
 - `error`: null (if successful)
 
 ### Check for Errors
 
 If you see:
+
 ```json
 {
   "queryExecutionId": "none",
@@ -49,6 +52,7 @@ If you see:
 ```
 
 The error message will tell you what went wrong:
+
 - **AccessDeniedException**: Lambda doesn't have Athena permissions
 - **InvalidRequestException**: Invalid query syntax
 - **Database not found**: Database doesn't exist
@@ -164,19 +168,21 @@ npm run graphql -- 'mutation {
 This test requires two separate clients (e.g., two browser tabs or two terminal sessions):
 
 **Client 1**:
+
 ```typescript
 // Start query 1
-const result1 = await executeQuery("SELECT 1");
+const result1 = await executeQuery('SELECT 1')
 // Subscribe to query 1 results
-subscribe(result1.queryExecutionId);
+subscribe(result1.queryExecutionId)
 ```
 
 **Client 2**:
+
 ```typescript
 // Start query 2
-const result2 = await executeQuery("SELECT 2");
+const result2 = await executeQuery('SELECT 2')
 // Subscribe to query 2 results
-subscribe(result2.queryExecutionId);
+subscribe(result2.queryExecutionId)
 ```
 
 **Expected**: Each client should only receive results for their own query, not the other client's query.
@@ -188,18 +194,15 @@ subscribe(result2.queryExecutionId);
 **Cause**: Lambda doesn't have Athena permissions
 
 **Solution**: Check `amplify/backend.ts` to ensure Lambda has:
+
 ```typescript
 backend.athenaQuery.resources.lambda.addToRolePolicy(
   new iam.PolicyStatement({
     effect: iam.Effect.ALLOW,
-    actions: [
-      'athena:StartQueryExecution',
-      'athena:GetQueryExecution',
-      'athena:GetQueryResults',
-    ],
+    actions: ['athena:StartQueryExecution', 'athena:GetQueryExecution', 'athena:GetQueryResults'],
     resources: ['*'],
   })
-);
+)
 ```
 
 ### Issue: "Failed to start query execution"
@@ -207,6 +210,7 @@ backend.athenaQuery.resources.lambda.addToRolePolicy(
 **Cause**: Missing S3 output location or permissions
 
 **Solution**: Ensure:
+
 1. S3 bucket exists for query results
 2. Lambda has S3 write permissions
 3. Output location is configured correctly
@@ -222,6 +226,7 @@ backend.athenaQuery.resources.lambda.addToRolePolicy(
 ### CloudWatch Logs
 
 Check Lambda logs for detailed execution info:
+
 ```bash
 aws logs tail /aws/lambda/athena-query-sandbox --follow
 ```

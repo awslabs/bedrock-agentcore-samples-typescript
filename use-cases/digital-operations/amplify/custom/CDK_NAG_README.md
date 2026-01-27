@@ -17,31 +17,38 @@ The `cdkNagHelper.ts` file provides automated CDK Nag checks and suppressions fo
 ## Suppressed Rules
 
 ### Stack-Level Suppressions
+
 - **AwsSolutions-IAM4**: AWS managed policies are used by Amplify-generated roles
 - **AwsSolutions-IAM5**: Wildcard permissions required for dynamic resources
 
 ### Lambda Functions
+
 - **AwsSolutions-L1**: Runtime version managed by Amplify
 - **AwsSolutions-IAM4**: Execution role uses AWS managed policies
 - **AwsSolutions-IAM5**: Wildcard permissions for Athena, Glue, S3
 
 ### Cognito User Pools
+
 - **AwsSolutions-COG1**: Password policy configured appropriately
 - **AwsSolutions-COG2**: MFA optional per user
 - **AwsSolutions-COG3**: Advanced security mode not required
 
 ### AppSync GraphQL APIs
+
 - **AwsSolutions-ASC3**: Cognito authentication configured
 - **AwsSolutions-IAM5**: Wildcard permissions for GraphQL operations
 
 ### IAM Roles & Policies
+
 - **AwsSolutions-IAM4**: AWS managed policies maintained by AWS
 - **AwsSolutions-IAM5**: Wildcard permissions for dynamic resources
 
 ### DynamoDB Tables
+
 - **AwsSolutions-DDB3**: Point-in-time recovery not required for dev/demo
 
 ### S3 Buckets
+
 - **AwsSolutions-S1**: Access logging not required
 - **AwsSolutions-S2**: Access controls configured appropriately
 - **AwsSolutions-S10**: Bucket policy configured appropriately
@@ -65,18 +72,15 @@ npm run sandbox
 To add suppressions for specific resources, edit `cdkNagHelper.ts` and add them in the appropriate function or create a new function for a new resource type.
 
 Example:
+
 ```typescript
 function applyCustomResourceSuppressions(stack: Stack, path: string): void {
-  NagSuppressions.addResourceSuppressionsByPath(
-    stack,
-    path,
-    [
-      {
-        id: 'AwsSolutions-XXX',
-        reason: 'Explanation of why this suppression is acceptable.',
-      },
-    ]
-  );
+  NagSuppressions.addResourceSuppressionsByPath(stack, path, [
+    {
+      id: 'AwsSolutions-XXX',
+      reason: 'Explanation of why this suppression is acceptable.',
+    },
+  ])
 }
 ```
 
@@ -87,13 +91,13 @@ To change which nag pack is used or add additional checks, modify the `applyCdkN
 ```typescript
 export function applyCdkNag(stack: Stack): void {
   // Use different nag pack
-  Aspects.of(stack).add(new HIPAASecurityChecks({ verbose: true }));
-  
+  Aspects.of(stack).add(new HIPAASecurityChecks({ verbose: true }))
+
   // Or add multiple packs
-  Aspects.of(stack).add(new AwsSolutionsChecks({ verbose: true }));
-  Aspects.of(stack).add(new NIST80053R5Checks({ verbose: true }));
-  
-  applyStackSuppressions(stack);
+  Aspects.of(stack).add(new AwsSolutionsChecks({ verbose: true }))
+  Aspects.of(stack).add(new NIST80053R5Checks({ verbose: true }))
+
+  applyStackSuppressions(stack)
 }
 ```
 

@@ -2,11 +2,11 @@
 /* eslint-disable */
 // this is an auto generated file. This will be overwritten
 
-import * as APITypes from "./API";
+import * as APITypes from './API'
 type GeneratedQuery<InputType, OutputType> = string & {
-  __generatedQueryInput: InputType;
-  __generatedQueryOutput: OutputType;
-};
+  __generatedQueryInput: InputType
+  __generatedQueryOutput: OutputType
+}
 
 export const getChatMessage = /* GraphQL */ `query GetChatMessage($id: ID!) {
   getChatMessage(id: $id) {
@@ -31,10 +31,7 @@ export const getChatMessage = /* GraphQL */ `query GetChatMessage($id: ID!) {
     __typename
   }
 }
-` as GeneratedQuery<
-  APITypes.GetChatMessageQueryVariables,
-  APITypes.GetChatMessageQuery
->;
+` as GeneratedQuery<APITypes.GetChatMessageQueryVariables, APITypes.GetChatMessageQuery>
 export const getChatSession = /* GraphQL */ `query GetChatSession($id: ID!) {
   getChatSession(id: $id) {
     createdAt
@@ -49,10 +46,7 @@ export const getChatSession = /* GraphQL */ `query GetChatSession($id: ID!) {
     __typename
   }
 }
-` as GeneratedQuery<
-  APITypes.GetChatSessionQueryVariables,
-  APITypes.GetChatSessionQuery
->;
+` as GeneratedQuery<APITypes.GetChatSessionQueryVariables, APITypes.GetChatSessionQuery>
 export const getMcpServer = /* GraphQL */ `query GetMcpServer($id: ID!) {
   getMcpServer(id: $id) {
     createdAt
@@ -77,10 +71,7 @@ export const getMcpServer = /* GraphQL */ `query GetMcpServer($id: ID!) {
     __typename
   }
 }
-` as GeneratedQuery<
-  APITypes.GetMcpServerQueryVariables,
-  APITypes.GetMcpServerQuery
->;
+` as GeneratedQuery<APITypes.GetMcpServerQueryVariables, APITypes.GetMcpServerQuery>
 export const getSettings = /* GraphQL */ `query GetSettings($id: ID!) {
   getSettings(id: $id) {
     createdAt
@@ -92,11 +83,9 @@ export const getSettings = /* GraphQL */ `query GetSettings($id: ID!) {
     __typename
   }
 }
-` as GeneratedQuery<
-  APITypes.GetSettingsQueryVariables,
-  APITypes.GetSettingsQuery
->;
-export const listChatMessageByChatSessionIdAndCreatedAt = /* GraphQL */ `query ListChatMessageByChatSessionIdAndCreatedAt(
+` as GeneratedQuery<APITypes.GetSettingsQueryVariables, APITypes.GetSettingsQuery>
+export const listChatMessageByChatSessionIdAndCreatedAt =
+  /* GraphQL */ `query ListChatMessageByChatSessionIdAndCreatedAt(
   $chatSessionId: ID!
   $createdAt: ModelStringKeyConditionInput
   $filter: ModelChatMessageFilterInput
@@ -130,10 +119,11 @@ export const listChatMessageByChatSessionIdAndCreatedAt = /* GraphQL */ `query L
   }
 }
 ` as GeneratedQuery<
-  APITypes.ListChatMessageByChatSessionIdAndCreatedAtQueryVariables,
-  APITypes.ListChatMessageByChatSessionIdAndCreatedAtQuery
->;
-export const listChatMessageByChatSessionIdUnderscoreAgentIdAndCreatedAt = /* GraphQL */ `query ListChatMessageByChatSessionIdUnderscoreAgentIdAndCreatedAt(
+    APITypes.ListChatMessageByChatSessionIdAndCreatedAtQueryVariables,
+    APITypes.ListChatMessageByChatSessionIdAndCreatedAtQuery
+  >
+export const listChatMessageByChatSessionIdUnderscoreAgentIdAndCreatedAt =
+  /* GraphQL */ `query ListChatMessageByChatSessionIdUnderscoreAgentIdAndCreatedAt(
   $chatSessionIdUnderscoreAgentId: String!
   $createdAt: ModelStringKeyConditionInput
   $filter: ModelChatMessageFilterInput
@@ -167,9 +157,9 @@ export const listChatMessageByChatSessionIdUnderscoreAgentIdAndCreatedAt = /* Gr
   }
 }
 ` as GeneratedQuery<
-  APITypes.ListChatMessageByChatSessionIdUnderscoreAgentIdAndCreatedAtQueryVariables,
-  APITypes.ListChatMessageByChatSessionIdUnderscoreAgentIdAndCreatedAtQuery
->;
+    APITypes.ListChatMessageByChatSessionIdUnderscoreAgentIdAndCreatedAtQueryVariables,
+    APITypes.ListChatMessageByChatSessionIdUnderscoreAgentIdAndCreatedAtQuery
+  >
 export const listChatMessages = /* GraphQL */ `query ListChatMessages(
   $filter: ModelChatMessageFilterInput
   $limit: Int
@@ -193,10 +183,7 @@ export const listChatMessages = /* GraphQL */ `query ListChatMessages(
     __typename
   }
 }
-` as GeneratedQuery<
-  APITypes.ListChatMessagesQueryVariables,
-  APITypes.ListChatMessagesQuery
->;
+` as GeneratedQuery<APITypes.ListChatMessagesQueryVariables, APITypes.ListChatMessagesQuery>
 export const listChatSessions = /* GraphQL */ `query ListChatSessions(
   $filter: ModelChatSessionFilterInput
   $limit: Int
@@ -215,10 +202,7 @@ export const listChatSessions = /* GraphQL */ `query ListChatSessions(
     __typename
   }
 }
-` as GeneratedQuery<
-  APITypes.ListChatSessionsQueryVariables,
-  APITypes.ListChatSessionsQuery
->;
+` as GeneratedQuery<APITypes.ListChatSessionsQueryVariables, APITypes.ListChatSessionsQuery>
 export const listMcpServers = /* GraphQL */ `query ListMcpServers(
   $filter: ModelMcpServerFilterInput
   $limit: Int
@@ -240,10 +224,7 @@ export const listMcpServers = /* GraphQL */ `query ListMcpServers(
     __typename
   }
 }
-` as GeneratedQuery<
-  APITypes.ListMcpServersQueryVariables,
-  APITypes.ListMcpServersQuery
->;
+` as GeneratedQuery<APITypes.ListMcpServersQueryVariables, APITypes.ListMcpServersQuery>
 export const listSettings = /* GraphQL */ `query ListSettings(
   $filter: ModelSettingsFilterInput
   $limit: Int
@@ -263,7 +244,4 @@ export const listSettings = /* GraphQL */ `query ListSettings(
     __typename
   }
 }
-` as GeneratedQuery<
-  APITypes.ListSettingsQueryVariables,
-  APITypes.ListSettingsQuery
->;
+` as GeneratedQuery<APITypes.ListSettingsQueryVariables, APITypes.ListSettingsQuery>

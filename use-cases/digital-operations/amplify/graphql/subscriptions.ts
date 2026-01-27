@@ -2,11 +2,11 @@
 /* eslint-disable */
 // this is an auto generated file. This will be overwritten
 
-import * as APITypes from "./API";
+import * as APITypes from './API'
 type GeneratedSubscription<InputType, OutputType> = string & {
-  __generatedSubscriptionInput: InputType;
-  __generatedSubscriptionOutput: OutputType;
-};
+  __generatedSubscriptionInput: InputType
+  __generatedSubscriptionOutput: OutputType
+}
 
 export const onCreateChatMessage = /* GraphQL */ `subscription OnCreateChatMessage(
   $filter: ModelSubscriptionChatMessageFilterInput
@@ -34,10 +34,7 @@ export const onCreateChatMessage = /* GraphQL */ `subscription OnCreateChatMessa
     __typename
   }
 }
-` as GeneratedSubscription<
-  APITypes.OnCreateChatMessageSubscriptionVariables,
-  APITypes.OnCreateChatMessageSubscription
->;
+` as GeneratedSubscription<APITypes.OnCreateChatMessageSubscriptionVariables, APITypes.OnCreateChatMessageSubscription>
 export const onCreateChatSession = /* GraphQL */ `subscription OnCreateChatSession(
   $filter: ModelSubscriptionChatSessionFilterInput
   $owner: String
@@ -55,10 +52,7 @@ export const onCreateChatSession = /* GraphQL */ `subscription OnCreateChatSessi
     __typename
   }
 }
-` as GeneratedSubscription<
-  APITypes.OnCreateChatSessionSubscriptionVariables,
-  APITypes.OnCreateChatSessionSubscription
->;
+` as GeneratedSubscription<APITypes.OnCreateChatSessionSubscriptionVariables, APITypes.OnCreateChatSessionSubscription>
 export const onCreateMcpServer = /* GraphQL */ `subscription OnCreateMcpServer(
   $filter: ModelSubscriptionMcpServerFilterInput
   $owner: String
@@ -86,10 +80,7 @@ export const onCreateMcpServer = /* GraphQL */ `subscription OnCreateMcpServer(
     __typename
   }
 }
-` as GeneratedSubscription<
-  APITypes.OnCreateMcpServerSubscriptionVariables,
-  APITypes.OnCreateMcpServerSubscription
->;
+` as GeneratedSubscription<APITypes.OnCreateMcpServerSubscriptionVariables, APITypes.OnCreateMcpServerSubscription>
 export const onCreateSettings = /* GraphQL */ `subscription OnCreateSettings(
   $filter: ModelSubscriptionSettingsFilterInput
   $owner: String
@@ -104,10 +95,7 @@ export const onCreateSettings = /* GraphQL */ `subscription OnCreateSettings(
     __typename
   }
 }
-` as GeneratedSubscription<
-  APITypes.OnCreateSettingsSubscriptionVariables,
-  APITypes.OnCreateSettingsSubscription
->;
+` as GeneratedSubscription<APITypes.OnCreateSettingsSubscriptionVariables, APITypes.OnCreateSettingsSubscription>
 export const onDeleteChatMessage = /* GraphQL */ `subscription OnDeleteChatMessage(
   $filter: ModelSubscriptionChatMessageFilterInput
   $owner: String
@@ -134,10 +122,7 @@ export const onDeleteChatMessage = /* GraphQL */ `subscription OnDeleteChatMessa
     __typename
   }
 }
-` as GeneratedSubscription<
-  APITypes.OnDeleteChatMessageSubscriptionVariables,
-  APITypes.OnDeleteChatMessageSubscription
->;
+` as GeneratedSubscription<APITypes.OnDeleteChatMessageSubscriptionVariables, APITypes.OnDeleteChatMessageSubscription>
 export const onDeleteChatSession = /* GraphQL */ `subscription OnDeleteChatSession(
   $filter: ModelSubscriptionChatSessionFilterInput
   $owner: String
@@ -155,10 +140,7 @@ export const onDeleteChatSession = /* GraphQL */ `subscription OnDeleteChatSessi
     __typename
   }
 }
-` as GeneratedSubscription<
-  APITypes.OnDeleteChatSessionSubscriptionVariables,
-  APITypes.OnDeleteChatSessionSubscription
->;
+` as GeneratedSubscription<APITypes.OnDeleteChatSessionSubscriptionVariables, APITypes.OnDeleteChatSessionSubscription>
 export const onDeleteMcpServer = /* GraphQL */ `subscription OnDeleteMcpServer(
   $filter: ModelSubscriptionMcpServerFilterInput
   $owner: String
@@ -186,10 +168,7 @@ export const onDeleteMcpServer = /* GraphQL */ `subscription OnDeleteMcpServer(
     __typename
   }
 }
-` as GeneratedSubscription<
-  APITypes.OnDeleteMcpServerSubscriptionVariables,
-  APITypes.OnDeleteMcpServerSubscription
->;
+` as GeneratedSubscription<APITypes.OnDeleteMcpServerSubscriptionVariables, APITypes.OnDeleteMcpServerSubscription>
 export const onDeleteSettings = /* GraphQL */ `subscription OnDeleteSettings(
   $filter: ModelSubscriptionSettingsFilterInput
   $owner: String
@@ -204,10 +183,7 @@ export const onDeleteSettings = /* GraphQL */ `subscription OnDeleteSettings(
     __typename
   }
 }
-` as GeneratedSubscription<
-  APITypes.OnDeleteSettingsSubscriptionVariables,
-  APITypes.OnDeleteSettingsSubscription
->;
+` as GeneratedSubscription<APITypes.OnDeleteSettingsSubscriptionVariables, APITypes.OnDeleteSettingsSubscription>
 export const onUpdateChatMessage = /* GraphQL */ `subscription OnUpdateChatMessage(
   $filter: ModelSubscriptionChatMessageFilterInput
   $owner: String
@@ -234,10 +210,7 @@ export const onUpdateChatMessage = /* GraphQL */ `subscription OnUpdateChatMessa
     __typename
   }
 }
-` as GeneratedSubscription<
-  APITypes.OnUpdateChatMessageSubscriptionVariables,
-  APITypes.OnUpdateChatMessageSubscription
->;
+` as GeneratedSubscription<APITypes.OnUpdateChatMessageSubscriptionVariables, APITypes.OnUpdateChatMessageSubscription>
 export const onUpdateChatSession = /* GraphQL */ `subscription OnUpdateChatSession(
   $filter: ModelSubscriptionChatSessionFilterInput
   $owner: String
@@ -255,10 +228,7 @@ export const onUpdateChatSession = /* GraphQL */ `subscription OnUpdateChatSessi
     __typename
   }
 }
-` as GeneratedSubscription<
-  APITypes.OnUpdateChatSessionSubscriptionVariables,
-  APITypes.OnUpdateChatSessionSubscription
->;
+` as GeneratedSubscription<APITypes.OnUpdateChatSessionSubscriptionVariables, APITypes.OnUpdateChatSessionSubscription>
 export const onUpdateMcpServer = /* GraphQL */ `subscription OnUpdateMcpServer(
   $filter: ModelSubscriptionMcpServerFilterInput
   $owner: String
@@ -286,10 +256,7 @@ export const onUpdateMcpServer = /* GraphQL */ `subscription OnUpdateMcpServer(
     __typename
   }
 }
-` as GeneratedSubscription<
-  APITypes.OnUpdateMcpServerSubscriptionVariables,
-  APITypes.OnUpdateMcpServerSubscription
->;
+` as GeneratedSubscription<APITypes.OnUpdateMcpServerSubscriptionVariables, APITypes.OnUpdateMcpServerSubscription>
 export const onUpdateSettings = /* GraphQL */ `subscription OnUpdateSettings(
   $filter: ModelSubscriptionSettingsFilterInput
   $owner: String
@@ -304,7 +271,4 @@ export const onUpdateSettings = /* GraphQL */ `subscription OnUpdateSettings(
     __typename
   }
 }
-` as GeneratedSubscription<
-  APITypes.OnUpdateSettingsSubscriptionVariables,
-  APITypes.OnUpdateSettingsSubscription
->;
+` as GeneratedSubscription<APITypes.OnUpdateSettingsSubscriptionVariables, APITypes.OnUpdateSettingsSubscription>

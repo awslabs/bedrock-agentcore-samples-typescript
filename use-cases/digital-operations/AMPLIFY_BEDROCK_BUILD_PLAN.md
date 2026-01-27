@@ -48,17 +48,20 @@ This document outlines the implementation plan for integrating your existing Nex
 ## Prerequisites
 
 ### 1. AWS Account Setup
+
 - [ x] AWS Account with appropriate permissions
 - [ x] AWS CLI configured locally
 - [ x] Node.js 18+ installed
 - [ x] npm/pnpm/yarn installed
 
 ### 2. Amazon Bedrock Access
+
 - [ x] Enable model access in Amazon Bedrock console
 - [ x] Choose region (e.g., us-east-1, us-west-2)
 - [ x] Enable at least one model (e.g., Claude 3 Sonnet)
 
 ### 3. Development Tools
+
 - [ x] AWS Amplify CLI: `npm install -g @aws-amplify/cli`
 - [ ]x AWS CDK (if using custom resources)
 
@@ -84,29 +87,26 @@ npm install @ai-sdk/amazon-bedrock
 Create `amplify/backend.ts`:
 
 ```typescript
-import { defineBackend } from '@aws-amplify/backend';
-import { auth } from './auth/resource';
-import { data } from './data/resource';
+import { defineBackend } from '@aws-amplify/backend'
+import { auth } from './auth/resource'
+import { data } from './data/resource'
 
 const backend = defineBackend({
   auth,
   data,
-});
+})
 
 // Add custom Bedrock permissions to authenticated users
 backend.auth.resources.authenticatedUserIamRole.addToPrincipalPolicy(
   new PolicyStatement({
     effect: Effect.ALLOW,
-    actions: [
-      'bedrock:InvokeModel',
-      'bedrock:InvokeModelWithResponseStream',
-    ],
+    actions: ['bedrock:InvokeModel', 'bedrock:InvokeModelWithResponseStream'],
     resources: [
       // Specific model ARN or use * for all models
       `arn:aws:bedrock:${backend.stack.region}::foundation-model/*`,
     ],
   })
-);
+)
 ```
 
 #### 2.2 Configure Authentication
@@ -114,7 +114,7 @@ backend.auth.resources.authenticatedUserIamRole.addToPrincipalPolicy(
 Create `amplify/auth/resource.ts`:
 
 ```typescript
-import { defineAuth } from '@aws-amplify/backend';
+import { defineAuth } from '@aws-amplify/backend'
 
 export const auth = defineAuth({
   loginWith: {
@@ -126,7 +126,7 @@ export const auth = defineAuth({
       mutable: true,
     },
   },
-});
+})
 ```
 
 #### 2.3 Configure Data (Optional - for conversation history)
@@ -134,7 +134,7 @@ export const auth = defineAuth({
 Create `amplify/data/resource.ts`:
 
 ```typescript
-import { type ClientSchema, a, defineData } from '@aws-amplify/backend';
+import { type ClientSchema, a, defineData } from '@aws-amplify/backend'
 
 const schema = a.schema({
   Conversation: a
@@ -145,15 +145,15 @@ const schema = a.schema({
       updatedAt: a.datetime(),
     })
     .authorization((allow) => [allow.owner()]),
-});
+})
 
-export type Schema = ClientSchema<typeof schema>;
+export type Schema = ClientSchema<typeof schema>
 export const data = defineData({
   schema,
   authorizationModes: {
     defaultAuthorizationMode: 'userPool',
   },
-});
+})
 ```
 
 ### Phase 3: Frontend Integration
@@ -163,12 +163,12 @@ export const data = defineData({
 Create `src/lib/amplify-config.ts`:
 
 ```typescript
-import { Amplify } from 'aws-amplify';
-import outputs from '@/amplify_outputs.json';
+import { Amplify } from 'aws-amplify'
+import outputs from '@/amplify_outputs.json'
 
-Amplify.configure(outputs);
+Amplify.configure(outputs)
 
-export default Amplify;
+export default Amplify
 ```
 
 Update `src/app/layout.tsx`:
@@ -200,15 +200,15 @@ export default function RootLayout({
 Create `src/lib/bedrock-client.ts`:
 
 ```typescript
-import { bedrock } from '@ai-sdk/amazon-bedrock';
-import { fetchAuthSession } from 'aws-amplify/auth';
+import { bedrock } from '@ai-sdk/amazon-bedrock'
+import { fetchAuthSession } from 'aws-amplify/auth'
 
 export async function getBedrockModel(modelId: string = 'anthropic.claude-3-sonnet-20240229-v1:0') {
   // Get temporary AWS credentials from Cognito
-  const session = await fetchAuthSession();
-  
+  const session = await fetchAuthSession()
+
   if (!session.credentials) {
-    throw new Error('No credentials available');
+    throw new Error('No credentials available')
   }
 
   // Create Bedrock model with Cognito credentials
@@ -219,33 +219,33 @@ export async function getBedrockModel(modelId: string = 'anthropic.claude-3-sonn
       secretAccessKey: session.credentials.secretAccessKey,
       sessionToken: session.credentials.sessionToken,
     },
-  });
+  })
 }
 ```
 
 Create API route `src/app/api/chat/route.ts`:
 
 ```typescript
-import { streamText } from 'ai';
-import { getBedrockModel } from '@/lib/bedrock-client';
+import { streamText } from 'ai'
+import { getBedrockModel } from '@/lib/bedrock-client'
 
 export async function POST(req: Request) {
-  const { messages } = await req.json();
+  const { messages } = await req.json()
 
   try {
-    const model = await getBedrockModel();
-    
+    const model = await getBedrockModel()
+
     const result = streamText({
       model,
       messages,
       maxTokens: 2048,
       temperature: 0.7,
-    });
+    })
 
-    return result.toDataStreamResponse();
+    return result.toDataStreamResponse()
   } catch (error) {
-    console.error('Bedrock error:', error);
-    return new Response('Error calling Bedrock', { status: 500 });
+    console.error('Bedrock error:', error)
+    return new Response('Error calling Bedrock', { status: 500 })
   }
 }
 ```
@@ -269,7 +269,7 @@ export default function ChatComponent() {
           <strong>{message.role}:</strong> {message.content}
         </div>
       ))}
-      
+
       <form onSubmit={handleSubmit}>
         <input
           value={input}
@@ -288,30 +288,27 @@ export default function ChatComponent() {
 Create `src/lib/bedrock-direct.ts`:
 
 ```typescript
-import {
-  BedrockRuntimeClient,
-  InvokeModelWithResponseStreamCommand,
-} from '@aws-sdk/client-bedrock-runtime';
-import { fetchAuthSession } from 'aws-amplify/auth';
+import { BedrockRuntimeClient, InvokeModelWithResponseStreamCommand } from '@aws-sdk/client-bedrock-runtime'
+import { fetchAuthSession } from 'aws-amplify/auth'
 
 export async function streamBedrockResponse(
   messages: Array<{ role: string; content: string }>,
   modelId: string = 'anthropic.claude-3-sonnet-20240229-v1:0'
 ) {
-  const session = await fetchAuthSession();
-  
+  const session = await fetchAuthSession()
+
   if (!session.credentials) {
-    throw new Error('No credentials available');
+    throw new Error('No credentials available')
   }
 
   const client = new BedrockRuntimeClient({
     region: process.env.NEXT_PUBLIC_AWS_REGION || 'us-east-1',
     credentials: session.credentials,
-  });
+  })
 
   // Format for Claude
-  const prompt = messages.map(m => `${m.role}: ${m.content}`).join('\n\n');
-  
+  const prompt = messages.map((m) => `${m.role}: ${m.content}`).join('\n\n')
+
   const command = new InvokeModelWithResponseStreamCommand({
     modelId,
     contentType: 'application/json',
@@ -322,12 +319,12 @@ export async function streamBedrockResponse(
       max_tokens: 2048,
       temperature: 0.7,
     }),
-  });
+  })
 
-  const response = await client.send(command);
-  
+  const response = await client.send(command)
+
   // Return streaming response
-  return response.body;
+  return response.body
 }
 ```
 
@@ -361,10 +358,7 @@ The IAM role attached to your Cognito Identity Pool needs these permissions:
   "Statement": [
     {
       "Effect": "Allow",
-      "Action": [
-        "bedrock:InvokeModel",
-        "bedrock:InvokeModelWithResponseStream"
-      ],
+      "Action": ["bedrock:InvokeModel", "bedrock:InvokeModelWithResponseStream"],
       "Resource": [
         "arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-3-sonnet-20240229-v1:0",
         "arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-3-haiku-20240307-v1:0"
@@ -375,6 +369,7 @@ The IAM role attached to your Cognito Identity Pool needs these permissions:
 ```
 
 **Security Best Practices:**
+
 - Use least privilege principle
 - Specify exact model ARNs instead of wildcards
 - Consider adding conditions for IP restrictions
@@ -406,6 +401,7 @@ npx ampx pipeline-deploy --branch main --app-id <your-app-id>
 ## Testing Plan
 
 ### 1. Authentication Testing
+
 - [ ] User can sign up with email
 - [ ] User can sign in
 - [ ] User receives temporary AWS credentials
@@ -413,6 +409,7 @@ npx ampx pipeline-deploy --branch main --app-id <your-app-id>
 - [ ] Sign out clears credentials
 
 ### 2. Bedrock Integration Testing
+
 - [ ] Chat messages are sent to Bedrock
 - [ ] Responses stream correctly
 - [ ] Error handling works properly
@@ -420,6 +417,7 @@ npx ampx pipeline-deploy --branch main --app-id <your-app-id>
 - [ ] Token limits are respected
 
 ### 3. Security Testing
+
 - [ ] Unauthenticated users cannot access Bedrock
 - [ ] Credentials are not exposed in browser
 - [ ] API endpoints require authentication
@@ -437,12 +435,14 @@ If you want to keep your existing `@ai-sdk/react` components with minimal change
 4. **Configure environment** for AWS region and model IDs
 
 ### What Changes:
+
 - `src/app/layout.tsx` - Add Authenticator
 - `src/app/api/chat/route.ts` - New file for Bedrock integration
 - `amplify/` - New directory for backend config
 - Environment variables for AWS configuration
 
 ### What Stays the Same:
+
 - All your UI components
 - Chat flow and UX
 - Styling and design
@@ -451,14 +451,17 @@ If you want to keep your existing `@ai-sdk/react` components with minimal change
 ## Cost Considerations
 
 ### Amazon Bedrock Pricing (example for Claude 3 Sonnet)
+
 - Input: ~$0.003 per 1K tokens
 - Output: ~$0.015 per 1K tokens
 
 ### AWS Amplify Gen2
+
 - Authentication: First 50K MAU free, then $0.0055/MAU
 - Hosting: Pay for build minutes and bandwidth
 
 ### Estimated Monthly Cost (low usage)
+
 - 1,000 conversations/month
 - Average 1K tokens input, 500 tokens output per conversation
 - ~$10-20/month for Bedrock
@@ -480,48 +483,61 @@ If you want to keep your existing `@ai-sdk/react` components with minimal change
 ## Troubleshooting Common Issues
 
 ### Issue: "No credentials available"
+
 **Solution:** Ensure user is authenticated and Identity Pool is configured
 
 ### Issue: "Access Denied calling Bedrock"
+
 **Solution:** Check IAM role permissions attached to Identity Pool
 
 ### Issue: "Model not found"
+
 **Solution:** Verify model access is enabled in Bedrock console
 
 ### Issue: "CORS errors"
+
 **Solution:** Configure API Gateway CORS or Next.js API route CORS headers
 
 ## Alternative Approaches
 
 ### Approach 1: Vercel AI SDK + Bedrock Provider (Recommended)
+
 **Pros:**
+
 - Minimal code changes
 - Keeps existing UI components
 - Type-safe
 - Streaming support built-in
 
 **Cons:**
+
 - Depends on third-party package
 - May lag behind Bedrock features
 
 ### Approach 2: Direct AWS SDK Integration
+
 **Pros:**
+
 - Full control over Bedrock API
 - No extra dependencies
 - Access to all Bedrock features immediately
 
 **Cons:**
+
 - More code to write
 - Handle streaming manually
 - More complex error handling
 
 ### Approach 3: Hybrid (API Gateway + Lambda)
+
 **Pros:**
+
 - Better for complex workflows
 - Can add caching/rate limiting
 - Centralized logging
 
 **Cons:**
+
 - More infrastructure
 - Additional latency
 - More complex to maintain
@@ -540,6 +556,7 @@ This gives you the fastest path to production with minimal disruption to your ex
 ## Next Steps
 
 1. **Initialize Amplify in your project**
+
    ```bash
    npm create amplify@latest
    ```
@@ -557,17 +574,20 @@ This gives you the fastest path to production with minimal disruption to your ex
 ## Resources
 
 ### Documentation
+
 - [AWS Amplify Gen2 Docs](https://docs.amplify.aws/gen2/)
 - [Amazon Bedrock User Guide](https://docs.aws.amazon.com/bedrock/latest/userguide/)
 - [Cognito Developer Guide](https://docs.aws.amazon.com/cognito/latest/developerguide/)
 - [Vercel AI SDK Docs](https://sdk.vercel.ai/docs)
 
 ### Example Projects
+
 - [AWS Amplify Social Room](https://github.com/aws-samples/amplify-social-room)
 - [Bedrock + Cognito Chat UI](https://github.com/aws-solutions-library-samples/guidance-for-a-secure-chat-user-interface-for-amazon-bedrock)
 - [Amplify AI Examples](https://github.com/aws-samples/amplify-ai-examples)
 
 ### AWS SDK References
+
 - [@ai-sdk/amazon-bedrock](https://www.npmjs.com/package/@ai-sdk/amazon-bedrock)
 - [@aws-sdk/client-bedrock-runtime](https://www.npmjs.com/package/@aws-sdk/client-bedrock-runtime)
 - [aws-amplify](https://www.npmjs.com/package/aws-amplify)

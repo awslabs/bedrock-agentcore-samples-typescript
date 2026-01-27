@@ -3,6 +3,7 @@
 ## Overview
 
 Map layers now support two modes:
+
 1. **Static GeoJSON**: Traditional approach where GeoJSON data is provided directly
 2. **Query-Based**: Store an Athena SQL query that generates GeoJSON data dynamically
 
@@ -24,7 +25,7 @@ The `MapLayer` model now includes these additional fields:
 {
   // Static GeoJSON (optional)
   geoJsonData?: JSON,
-  
+
   // Query-based fields (optional)
   athenaQuery?: string,           // SQL query to generate GeoJSON
   athenaDatabase?: string,         // Database for the query
@@ -82,8 +83,8 @@ The `coordinatesField` should contain a JSON array of coordinate rings: `[[[lon1
 
 ```typescript
 await createMapLayer({
-  name: "Active Wells in T30N R6W",
-  type: "point",
+  name: 'Active Wells in T30N R6W',
+  type: 'point',
   athenaQuery: `
     SELECT 
       id,
@@ -100,28 +101,29 @@ await createMapLayer({
       AND latitude IS NOT NULL
       AND longitude IS NOT NULL
   `,
-  athenaDatabase: "upstream",
+  athenaDatabase: 'upstream',
   geoJsonMapping: {
-    geometryType: "Point",
-    longitudeField: "longitude",
-    latitudeField: "latitude",
-    propertyFields: ["id", "name", "type", "status", "operator", "last_production_date"]
+    geometryType: 'Point',
+    longitudeField: 'longitude',
+    latitudeField: 'latitude',
+    propertyFields: ['id', 'name', 'type', 'status', 'operator', 'last_production_date'],
   },
   style: {
-    color: "#22c55e",
+    color: '#22c55e',
     radius: 6,
     opacity: 0.8,
     strokeWidth: 1,
-    strokeColor: "#ffffff"
+    strokeColor: '#ffffff',
   },
-  description: "Active wells in Township 30 North, Range 6 West",
-  source: "athena-query"
-});
+  description: 'Active wells in Township 30 North, Range 6 West',
+  source: 'athena-query',
+})
 ```
 
 ### Query Validation
 
 When creating a query-based layer, the tool automatically:
+
 1. Executes the query against Athena
 2. Validates the query syntax and database access
 3. Converts results to GeoJSON using the mapping configuration
@@ -135,20 +137,20 @@ Static layers work as before:
 
 ```typescript
 await createMapLayer({
-  name: "Custom Markers",
-  type: "point",
+  name: 'Custom Markers',
+  type: 'point',
   geoJsonData: {
-    type: "FeatureCollection",
+    type: 'FeatureCollection',
     features: [
       {
-        type: "Feature",
-        geometry: { type: "Point", coordinates: [-108.2, 36.8] },
-        properties: { name: "Location A" }
-      }
-    ]
+        type: 'Feature',
+        geometry: { type: 'Point', coordinates: [-108.2, 36.8] },
+        properties: { name: 'Location A' },
+      },
+    ],
   },
-  style: { color: "#ef4444", radius: 8 }
-});
+  style: { color: '#ef4444', radius: 8 },
+})
 ```
 
 ## Frontend Behavior
@@ -165,6 +167,7 @@ When the `MapViewer` component detects a layer with `athenaQuery` but no `geoJso
 ### Subscription Updates
 
 The MapViewer subscribes to layer changes:
+
 - When a new query-based layer is created → automatically executes the query
 - When a layer is updated with a new query → re-executes the query
 - When geoJsonData is updated → immediately renders the new data
@@ -187,6 +190,7 @@ The Athena query Lambda now handles two types of requests:
 2. **Map Layer Query** (`executeMapLayerQuery`): Executes query and converts to GeoJSON
 
 The `executeMapLayerQuery` mutation:
+
 - Validates the mapping configuration
 - Executes the Athena query
 - Polls for completion (up to 2 minutes)
@@ -208,7 +212,7 @@ All errors are stored in the `queryError` field and displayed in the UI.
 ### Wells by Production Status
 
 ```sql
-SELECT 
+SELECT
   id,
   name,
   status,
@@ -217,7 +221,7 @@ SELECT
   CAST(daily_oil_rate AS DOUBLE) as oil_rate,
   CAST(daily_gas_rate AS DOUBLE) as gas_rate
 FROM upstream.well_header wh
-LEFT JOIN upstream.monthly_production mp 
+LEFT JOIN upstream.monthly_production mp
   ON REPLACE(wh.id, '-', '') = mp.api
 WHERE wh.latitude IS NOT NULL
   AND wh.longitude IS NOT NULL
@@ -229,7 +233,7 @@ LIMIT 500
 ### Pipeline Network
 
 ```sql
-SELECT 
+SELECT
   pipeline_id as id,
   pipeline_name as name,
   status,
@@ -239,6 +243,7 @@ WHERE status = 'Active'
 ```
 
 Mapping:
+
 ```json
 {
   "geometryType": "LineString",
@@ -250,7 +255,7 @@ Mapping:
 ### Lease Boundaries
 
 ```sql
-SELECT 
+SELECT
   lease_id as id,
   lease_name as name,
   operator,
@@ -260,6 +265,7 @@ WHERE status = 'Active'
 ```
 
 Mapping:
+
 ```json
 {
   "geometryType": "Polygon",
@@ -271,6 +277,7 @@ Mapping:
 ## Future Enhancements
 
 Potential improvements:
+
 - Auto-refresh based on `queryRefreshInterval`
 - Manual refresh button in UI
 - Query result caching

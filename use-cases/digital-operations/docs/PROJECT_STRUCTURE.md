@@ -22,12 +22,14 @@ use-cases/digital-operations/
 AWS Amplify Gen 2 backend configuration and infrastructure.
 
 ### `/amplify/auth/`
+
 - **`resource.ts`** - Cognito authentication configuration
   - User pool settings
   - Admin-only user creation (self-signup disabled)
   - Password policies
 
 ### `/amplify/data/`
+
 - **`resource.ts`** - GraphQL data schema and authorization
   - All data models (ChatSession, MapLayer, WorkoverJob, etc.)
   - Relationships between models
@@ -35,6 +37,7 @@ AWS Amplify Gen 2 backend configuration and infrastructure.
   - **⚠️ Changes here require `npm run sandbox` to redeploy**
 
 ### `/amplify/agent/`
+
 AgentCore Runtime agent implementation.
 
 - **`server/`** - Agent server implementation
@@ -51,6 +54,7 @@ AgentCore Runtime agent implementation.
   - `package.json` - Agent dependencies
 
 ### `/amplify/mcp/`
+
 Model Context Protocol server (optional integration).
 
 - **`server/`** - MCP server implementation
@@ -59,6 +63,7 @@ Model Context Protocol server (optional integration).
   - Can be used alongside or instead of agent
 
 ### `/amplify/functions/`
+
 Lambda functions for backend operations.
 
 - **`athena-query/`** - Athena query execution
@@ -66,6 +71,7 @@ Lambda functions for backend operations.
   - `resource.ts` - Lambda resource definition
 
 ### `/amplify/custom/`
+
 Custom CDK constructs and utilities.
 
 - **`agentCoreRuntimeWithBuild.ts`** - AgentCore Runtime deployment
@@ -73,6 +79,7 @@ Custom CDK constructs and utilities.
 - **`cdkNagHelper.ts`** - CDK Nag security checks
 
 ### Root Backend Files
+
 - **`backend.ts`** - Main Amplify backend configuration
   - Imports auth, data, agent, and function resources
   - Configures IAM permissions
@@ -89,6 +96,7 @@ Frontend application code built with Next.js 15 and React 19.
 Application pages and routing structure.
 
 #### `/src/app/(with-layout)/`
+
 Pages that include the main navigation and layout.
 
 - **`layout.tsx`** - Main layout wrapper with navigation
@@ -96,6 +104,7 @@ Pages that include the main navigation and layout.
 - **`globals.css`** - Global styles and Tailwind configuration
 
 ##### `/src/app/(with-layout)/(with-auth)/`
+
 Authenticated routes (require login).
 
 - **`layout.tsx`** - Auth layout wrapper
@@ -103,9 +112,11 @@ Authenticated routes (require login).
 - **`map/page.tsx`** - Interactive map viewer page
 
 ##### `/src/app/(with-layout)/(without-auth)/`
+
 Public routes (no login required).
 
 #### `/src/app/(without-layout)/`
+
 Pages without the main layout.
 
 ---
@@ -134,9 +145,11 @@ Pages without the main layout.
 - **`WithAuth.tsx`** - Authentication wrapper
 
 #### `/src/components/ai-elements/`
+
 Reusable AI-powered UI components.
 
 **Core Chat Components:**
+
 - **`message.tsx`** - Message container and styling
   - `Message` - Wrapper for user/assistant messages
   - `MessageContent` - Message content with variants
@@ -158,6 +171,7 @@ Reusable AI-powered UI components.
   - **🔘 Add new message actions here**
 
 **Input Components:**
+
 - **`prompt-input.tsx`** - Chat input system
   - Text input with attachments
   - Model selection
@@ -165,6 +179,7 @@ Reusable AI-powered UI components.
   - **⌨️ Customize input behavior here**
 
 **Content Display Components:**
+
 - **`tool.tsx`** - Tool execution display
 - **`reasoning.tsx`** - AI reasoning display
 - **`sources.tsx`** - Source citations display
@@ -174,6 +189,7 @@ Reusable AI-powered UI components.
 - **`loader.tsx`** - Loading indicators
 
 **Advanced Components:**
+
 - **`canvas.tsx`** - Canvas rendering
 - **`chain-of-thought.tsx`** - Reasoning chains
 - **`plan.tsx`** - Plan display
@@ -185,6 +201,7 @@ Reusable AI-powered UI components.
 - **`toolbar.tsx`** - Toolbar components
 
 **Specialized Components:**
+
 - **`branch.tsx`** - Conversation branches
 - **`connection.tsx`** - Connection status
 - **`context.tsx`** - Context display
@@ -197,6 +214,7 @@ Reusable AI-powered UI components.
 - **`shimmer.tsx`** - Loading animations
 
 #### `/src/components/ui/`
+
 Base UI components from shadcn/ui.
 
 - **`button.tsx`** - Button component
@@ -262,17 +280,20 @@ Utility scripts for development and maintenance.
 ## Configuration Files (Root)
 
 ### Build & Development
+
 - **`package.json`** - Dependencies and scripts
 - **`tsconfig.json`** - TypeScript configuration
 - **`next.config.ts`** - Next.js configuration
 - **`amplify.yml`** - Amplify hosting build settings
 
 ### Styling
+
 - **`tailwind.config.js`** - Tailwind CSS configuration (if exists)
 - **`postcss.config.mjs`** - PostCSS configuration
 - **`components.json`** - shadcn/ui configuration
 
 ### Code Quality
+
 - **`eslint.config.mjs`** - ESLint configuration
 - **`.gitignore`** - Git ignore patterns
 
@@ -281,6 +302,7 @@ Utility scripts for development and maintenance.
 ## Key File Relationships
 
 ### Chat Flow
+
 ```
 User Input → ChatBox.tsx
            ↓
@@ -298,6 +320,7 @@ User Input → ChatBox.tsx
 ```
 
 ### Map Layer Flow
+
 ```
 Agent creates MapLayer → Amplify Data (DynamoDB)
                       ↓
@@ -313,6 +336,7 @@ Agent creates MapLayer → Amplify Data (DynamoDB)
 ```
 
 ### Data Flow
+
 ```
 Data Models (amplify/data/resource.ts)
            ↓
@@ -326,6 +350,7 @@ Data Models (amplify/data/resource.ts)
 ```
 
 ### Authentication Flow
+
 ```
 User Login → Cognito (amplify/auth/)
           ↓
@@ -343,7 +368,9 @@ User Login → Cognito (amplify/auth/)
 ## Important Notes
 
 ### When to Redeploy Backend
+
 Run `npm run sandbox` after changes to:
+
 - `amplify/data/resource.ts` (schema changes)
 - `amplify/auth/resource.ts` (auth config)
 - `amplify/backend.ts` (backend config)
@@ -351,13 +378,17 @@ Run `npm run sandbox` after changes to:
 - `amplify/functions/` files (Lambda changes)
 
 ### When to Restart Dev Server
+
 Restart `npm run dev` after changes to:
+
 - Environment variables
 - Next.js configuration
 - Major dependency updates
 
 ### Hot Reload
+
 These changes hot-reload automatically:
+
 - React components in `/src`
 - CSS files
 - Most TypeScript files

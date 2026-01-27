@@ -37,17 +37,20 @@ Frontend (useChat) → AgentCore Runtime → Bedrock Model
 ### AgentCore HTTP Protocol Contract
 
 **Container Requirements:**
+
 - Host: `0.0.0.0`
 - Port: `8080`
 - Platform: ARM64
 
 **Required Endpoints:**
+
 - `POST /invocations` - Primary agent interaction endpoint
   - Input: JSON with `{ messages, modelId, chatSessionId }`
   - Output: SSE streaming or JSON response
 - `GET /health` - Health check for monitoring
 
 **Response Formats:**
+
 - SSE (Server-Sent Events) for streaming
 - JSON for non-streaming responses
 - Must include proper CORS headers for browser access
@@ -57,6 +60,7 @@ Frontend (useChat) → AgentCore Runtime → Bedrock Model
 ### Phase 1: Backend Updates
 
 #### 1.1 Update index.ts
+
 - [x] Change port from 8000 to 8080
 - [x] Change primary endpoint from `/mcp` to `/invocations`
 - [x] Add CORS headers for browser requests
@@ -64,12 +68,14 @@ Frontend (useChat) → AgentCore Runtime → Bedrock Model
 - [x] Return streaming response in SSE format
 
 #### 1.2 Refactor server.ts
+
 - [x] Export agent logic as callable function
 - [x] Keep Vercel AI SDK streamText implementation
 - [x] Maintain toUIMessageStreamResponse format
 - [x] Support tool calling if needed
 
 #### 1.3 Update Dockerfile
+
 - [x] Ensure ARM64 platform specification
 - [x] Expose port 8080
 - [x] Optimize for AgentCore Runtime
@@ -77,12 +83,15 @@ Frontend (useChat) → AgentCore Runtime → Bedrock Model
 ### Phase 2: Frontend Updates
 
 #### 2.1 Create AgentCore Client Utility
+
 Create `src/lib/agentCoreClient.ts`:
+
 - URL construction with ARN encoding
 - Bearer token header generation
 - Reusable across components
 
 #### 2.2 Update ChatBox Component
+
 - Configure custom transport for useChat
 - Point to AgentCore endpoint
 - Add Bearer token authentication
@@ -91,10 +100,12 @@ Create `src/lib/agentCoreClient.ts`:
 ### Phase 3: Infrastructure
 
 #### 3.1 Amplify Outputs
+
 - Export agent ARN from custom resource
 - Make available to frontend via loadOutputs()
 
 #### 3.2 Deployment
+
 - Deploy container to AgentCore Runtime
 - Configure environment variables
 - Set up monitoring and logging
@@ -102,12 +113,14 @@ Create `src/lib/agentCoreClient.ts`:
 ### Phase 4: Testing
 
 #### 4.1 Local Testing
+
 - Test agent locally on port 8080
 - Verify /invocations endpoint accepts requests
 - Test streaming responses
 - Verify CORS configuration
 
 #### 4.2 Integration Testing
+
 - Deploy to AgentCore Runtime
 - Test frontend transport connection
 - Verify Bearer token authentication
@@ -123,15 +136,17 @@ https://bedrock-agentcore.{region}.amazonaws.com/runtimes/{encoded-arn}/invocati
 ```
 
 Where:
+
 - `{region}`: AWS region (e.g., us-east-1)
 - `{encoded-arn}`: URL-encoded agent ARN (`:` → `%3A`, `/` → `%2F`)
 - `qualifier`: Runtime qualifier (typically "DEFAULT")
 
 Example:
+
 ```typescript
-const agentArn = "arn:aws:bedrock-agentcore:us-east-1:123456789012:agent/my-agent";
-const encodedArn = agentArn.replace(/:/g, '%3A').replace(/\//g, '%2F');
-const url = `https://bedrock-agentcore.us-east-1.amazonaws.com/runtimes/${encodedArn}/invocations?qualifier=DEFAULT`;
+const agentArn = 'arn:aws:bedrock-agentcore:us-east-1:123456789012:agent/my-agent'
+const encodedArn = agentArn.replace(/:/g, '%3A').replace(/\//g, '%2F')
+const url = `https://bedrock-agentcore.us-east-1.amazonaws.com/runtimes/${encodedArn}/invocations?qualifier=DEFAULT`
 ```
 
 ## Authentication Flow
@@ -146,17 +161,17 @@ const url = `https://bedrock-agentcore.us-east-1.amazonaws.com/runtimes/${encode
 ## Request/Response Format
 
 ### Request (from useChat)
+
 ```json
 {
-  "messages": [
-    { "role": "user", "content": "Hello" }
-  ],
+  "messages": [{ "role": "user", "content": "Hello" }],
   "modelId": "us.anthropic.claude-sonnet-4-5-20250929-v1:0",
   "chatSessionId": "abc123"
 }
 ```
 
 ### Response (SSE Streaming)
+
 ```
 Content-Type: text/event-stream
 
@@ -167,6 +182,7 @@ data: {"type":"finish"}
 ## CORS Configuration
 
 Required CORS headers for browser access:
+
 ```
 Access-Control-Allow-Origin: * (or specific domain)
 Access-Control-Allow-Methods: POST, OPTIONS
@@ -186,15 +202,15 @@ Preflight (OPTIONS) requests must return 200 status.
 
 ## Key Differences from MCP Server
 
-| Aspect | MCP Server | GenAI Agent |
-|--------|-----------|-------------|
-| Protocol | JSON-RPC (MCP) | HTTP REST + SSE |
-| Port | 8000 | 8080 |
-| Endpoint | `/mcp` | `/invocations` |
-| Purpose | Tool provider | Conversational agent |
-| Input | MCP tool calls | User prompts + messages |
-| Output | Tool results | Streaming chat responses |
-| Auth | Bearer token | Bearer token (same) |
+| Aspect   | MCP Server     | GenAI Agent              |
+| -------- | -------------- | ------------------------ |
+| Protocol | JSON-RPC (MCP) | HTTP REST + SSE          |
+| Port     | 8000           | 8080                     |
+| Endpoint | `/mcp`         | `/invocations`           |
+| Purpose  | Tool provider  | Conversational agent     |
+| Input    | MCP tool calls | User prompts + messages  |
+| Output   | Tool results   | Streaming chat responses |
+| Auth     | Bearer token   | Bearer token (same)      |
 
 ## Troubleshooting
 

@@ -36,6 +36,7 @@ npm run graphql -- interactive
 ```
 
 In interactive mode:
+
 - Type your GraphQL queries directly
 - Type `help` to see examples
 - Type `exit` or `quit` to leave
@@ -64,16 +65,16 @@ npm run graphql -- 'query { listPersonnel(limit: 10) { items { id name role } } 
 
 ```bash
 # Filter by status
-npm run graphql -- 'query { 
+npm run graphql -- 'query {
   listProcessEquipment(
     filter: { healthStatus: { eq: "CRITICAL" } }
-  ) { 
-    items { 
-      equipmentTag 
-      name 
-      healthStatus 
-    } 
-  } 
+  ) {
+    items {
+      equipmentTag
+      name
+      healthStatus
+    }
+  }
 }'
 ```
 
@@ -81,16 +82,16 @@ npm run graphql -- 'query {
 
 ```bash
 # Get a specific work order by ID
-npm run graphql -- 'query { 
-  getWorkOrder(id: "work-order-123") { 
-    id 
-    workOrderNumber 
-    status 
+npm run graphql -- 'query {
+  getWorkOrder(id: "work-order-123") {
+    id
+    workOrderNumber
+    status
     equipment {
       equipmentTag
       name
     }
-  } 
+  }
 }'
 ```
 
@@ -251,10 +252,7 @@ Standard GraphQL syntax applies:
 
 ```graphql
 query {
-  listModelNames(
-    filter: { field: { eq: "value" } },
-    limit: 10
-  ) {
+  listModelNames(filter: { field: { eq: "value" } }, limit: 10) {
     items {
       id
       field1
@@ -271,6 +269,7 @@ query {
 ### Filter Operators
 
 Common filter operators:
+
 - `eq` - Equals
 - `ne` - Not equals
 - `gt` - Greater than
@@ -298,6 +297,7 @@ Ensure your AWS credentials are properly configured. The script uses the credent
 ### Query Syntax Errors
 
 Make sure your queries:
+
 - Start with `query` or `mutation`
 - Use proper GraphQL syntax
 - Reference valid model names and fields from your schema
@@ -306,6 +306,7 @@ Make sure your queries:
 ### No Data Returned
 
 If your query succeeds but returns no data:
+
 - Check if your database has any items
 - Verify your filter conditions
 - Ensure you have proper authorization to read the data
@@ -315,6 +316,7 @@ If your query succeeds but returns no data:
 1. **Use Interactive Mode for Exploration**: Interactive mode is great for testing queries before adding them to your application
 
 2. **Pretty Print Queries**: For complex queries, format them nicely:
+
    ```bash
    npm run graphql -- 'query {
      listWorkOrders {

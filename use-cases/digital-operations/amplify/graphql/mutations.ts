@@ -2,11 +2,11 @@
 /* eslint-disable */
 // this is an auto generated file. This will be overwritten
 
-import * as APITypes from "./API";
+import * as APITypes from './API'
 type GeneratedMutation<InputType, OutputType> = string & {
-  __generatedMutationInput: InputType;
-  __generatedMutationOutput: OutputType;
-};
+  __generatedMutationInput: InputType
+  __generatedMutationOutput: OutputType
+}
 
 export const createChatMessage = /* GraphQL */ `mutation CreateChatMessage(
   $condition: ModelChatMessageConditionInput
@@ -34,10 +34,7 @@ export const createChatMessage = /* GraphQL */ `mutation CreateChatMessage(
     __typename
   }
 }
-` as GeneratedMutation<
-  APITypes.CreateChatMessageMutationVariables,
-  APITypes.CreateChatMessageMutation
->;
+` as GeneratedMutation<APITypes.CreateChatMessageMutationVariables, APITypes.CreateChatMessageMutation>
 export const createChatSession = /* GraphQL */ `mutation CreateChatSession(
   $condition: ModelChatSessionConditionInput
   $input: CreateChatSessionInput!
@@ -55,10 +52,7 @@ export const createChatSession = /* GraphQL */ `mutation CreateChatSession(
     __typename
   }
 }
-` as GeneratedMutation<
-  APITypes.CreateChatSessionMutationVariables,
-  APITypes.CreateChatSessionMutation
->;
+` as GeneratedMutation<APITypes.CreateChatSessionMutationVariables, APITypes.CreateChatSessionMutation>
 export const createMcpServer = /* GraphQL */ `mutation CreateMcpServer(
   $condition: ModelMcpServerConditionInput
   $input: CreateMcpServerInput!
@@ -86,10 +80,7 @@ export const createMcpServer = /* GraphQL */ `mutation CreateMcpServer(
     __typename
   }
 }
-` as GeneratedMutation<
-  APITypes.CreateMcpServerMutationVariables,
-  APITypes.CreateMcpServerMutation
->;
+` as GeneratedMutation<APITypes.CreateMcpServerMutationVariables, APITypes.CreateMcpServerMutation>
 export const createSettings = /* GraphQL */ `mutation CreateSettings(
   $condition: ModelSettingsConditionInput
   $input: CreateSettingsInput!
@@ -104,10 +95,7 @@ export const createSettings = /* GraphQL */ `mutation CreateSettings(
     __typename
   }
 }
-` as GeneratedMutation<
-  APITypes.CreateSettingsMutationVariables,
-  APITypes.CreateSettingsMutation
->;
+` as GeneratedMutation<APITypes.CreateSettingsMutationVariables, APITypes.CreateSettingsMutation>
 export const deleteChatMessage = /* GraphQL */ `mutation DeleteChatMessage(
   $condition: ModelChatMessageConditionInput
   $input: DeleteChatMessageInput!
@@ -134,10 +122,7 @@ export const deleteChatMessage = /* GraphQL */ `mutation DeleteChatMessage(
     __typename
   }
 }
-` as GeneratedMutation<
-  APITypes.DeleteChatMessageMutationVariables,
-  APITypes.DeleteChatMessageMutation
->;
+` as GeneratedMutation<APITypes.DeleteChatMessageMutationVariables, APITypes.DeleteChatMessageMutation>
 export const deleteChatSession = /* GraphQL */ `mutation DeleteChatSession(
   $condition: ModelChatSessionConditionInput
   $input: DeleteChatSessionInput!
@@ -155,10 +140,7 @@ export const deleteChatSession = /* GraphQL */ `mutation DeleteChatSession(
     __typename
   }
 }
-` as GeneratedMutation<
-  APITypes.DeleteChatSessionMutationVariables,
-  APITypes.DeleteChatSessionMutation
->;
+` as GeneratedMutation<APITypes.DeleteChatSessionMutationVariables, APITypes.DeleteChatSessionMutation>
 export const deleteMcpServer = /* GraphQL */ `mutation DeleteMcpServer(
   $condition: ModelMcpServerConditionInput
   $input: DeleteMcpServerInput!
@@ -186,10 +168,7 @@ export const deleteMcpServer = /* GraphQL */ `mutation DeleteMcpServer(
     __typename
   }
 }
-` as GeneratedMutation<
-  APITypes.DeleteMcpServerMutationVariables,
-  APITypes.DeleteMcpServerMutation
->;
+` as GeneratedMutation<APITypes.DeleteMcpServerMutationVariables, APITypes.DeleteMcpServerMutation>
 export const deleteSettings = /* GraphQL */ `mutation DeleteSettings(
   $condition: ModelSettingsConditionInput
   $input: DeleteSettingsInput!
@@ -204,10 +183,7 @@ export const deleteSettings = /* GraphQL */ `mutation DeleteSettings(
     __typename
   }
 }
-` as GeneratedMutation<
-  APITypes.DeleteSettingsMutationVariables,
-  APITypes.DeleteSettingsMutation
->;
+` as GeneratedMutation<APITypes.DeleteSettingsMutationVariables, APITypes.DeleteSettingsMutation>
 export const updateChatMessage = /* GraphQL */ `mutation UpdateChatMessage(
   $condition: ModelChatMessageConditionInput
   $input: UpdateChatMessageInput!
@@ -234,10 +210,7 @@ export const updateChatMessage = /* GraphQL */ `mutation UpdateChatMessage(
     __typename
   }
 }
-` as GeneratedMutation<
-  APITypes.UpdateChatMessageMutationVariables,
-  APITypes.UpdateChatMessageMutation
->;
+` as GeneratedMutation<APITypes.UpdateChatMessageMutationVariables, APITypes.UpdateChatMessageMutation>
 export const updateChatSession = /* GraphQL */ `mutation UpdateChatSession(
   $condition: ModelChatSessionConditionInput
   $input: UpdateChatSessionInput!
@@ -255,10 +228,7 @@ export const updateChatSession = /* GraphQL */ `mutation UpdateChatSession(
     __typename
   }
 }
-` as GeneratedMutation<
-  APITypes.UpdateChatSessionMutationVariables,
-  APITypes.UpdateChatSessionMutation
->;
+` as GeneratedMutation<APITypes.UpdateChatSessionMutationVariables, APITypes.UpdateChatSessionMutation>
 export const updateMcpServer = /* GraphQL */ `mutation UpdateMcpServer(
   $condition: ModelMcpServerConditionInput
   $input: UpdateMcpServerInput!
@@ -286,10 +256,7 @@ export const updateMcpServer = /* GraphQL */ `mutation UpdateMcpServer(
     __typename
   }
 }
-` as GeneratedMutation<
-  APITypes.UpdateMcpServerMutationVariables,
-  APITypes.UpdateMcpServerMutation
->;
+` as GeneratedMutation<APITypes.UpdateMcpServerMutationVariables, APITypes.UpdateMcpServerMutation>
 export const updateSettings = /* GraphQL */ `mutation UpdateSettings(
   $condition: ModelSettingsConditionInput
   $input: UpdateSettingsInput!
@@ -304,7 +271,4 @@ export const updateSettings = /* GraphQL */ `mutation UpdateSettings(
     __typename
   }
 }
-` as GeneratedMutation<
-  APITypes.UpdateSettingsMutationVariables,
-  APITypes.UpdateSettingsMutation
->;
+` as GeneratedMutation<APITypes.UpdateSettingsMutationVariables, APITypes.UpdateSettingsMutation>

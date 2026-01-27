@@ -40,6 +40,7 @@ npx ampx sandbox
 ```
 
 This will:
+
 1. Build the Docker image locally
 2. Push it to ECR
 3. Create the AgentCore Runtime
@@ -62,6 +63,7 @@ After deployment, find the Runtime ARN in the CloudFormation outputs:
 ```
 
 Or check the AWS Console:
+
 - CloudFormation → Your Stack → Outputs tab
 
 ### Invoke the Runtime
@@ -69,9 +71,9 @@ Or check the AWS Console:
 The MCP server is now running in AgentCore and can be invoked using the AWS SDK:
 
 ```typescript
-import { BedrockAgentCoreClient, InvokeAgentRuntimeCommand } from '@aws-sdk/client-bedrock-agentcore';
+import { BedrockAgentCoreClient, InvokeAgentRuntimeCommand } from '@aws-sdk/client-bedrock-agentcore'
 
-const client = new BedrockAgentCoreClient({ region: 'us-east-1' });
+const client = new BedrockAgentCoreClient({ region: 'us-east-1' })
 
 // Invoke the runtime
 const response = await client.send(
@@ -81,7 +83,7 @@ const response = await client.send(
       // Your MCP protocol messages here
     },
   })
-);
+)
 ```
 
 ### Test the Tools
@@ -89,6 +91,7 @@ const response = await client.send(
 The MCP server exposes these tools:
 
 #### 1. Addition Tool
+
 ```json
 {
   "jsonrpc": "2.0",
@@ -105,6 +108,7 @@ The MCP server exposes these tools:
 ```
 
 #### 2. Subtraction Tool
+
 ```json
 {
   "jsonrpc": "2.0",
@@ -121,6 +125,7 @@ The MCP server exposes these tools:
 ```
 
 #### 3. Greeting Prompt
+
 ```json
 {
   "jsonrpc": "2.0",
@@ -144,22 +149,25 @@ To add your own tools to the MCP server:
 Open `amplify/mcp/server/src/server.ts`:
 
 ```typescript
-mcpServer.registerTool("my_custom_tool",
+mcpServer.registerTool(
+  'my_custom_tool',
   {
-    title: "My Custom Tool",
-    description: "Does something custom",
-    inputSchema: z.object({ 
+    title: 'My Custom Tool',
+    description: 'Does something custom',
+    inputSchema: z.object({
       param1: z.string(),
-      param2: z.number()
-    })
+      param2: z.number(),
+    }),
   },
   async ({ param1, param2 }) => ({
-    content: [{ 
-      type: "text", 
-      text: `Result: ${param1} - ${param2}` 
-    }]
+    content: [
+      {
+        type: 'text',
+        text: `Result: ${param1} - ${param2}`,
+      },
+    ],
   })
-);
+)
 ```
 
 ### 2. Redeploy
@@ -169,6 +177,7 @@ npx ampx sandbox
 ```
 
 The CDK will automatically:
+
 1. Detect the code change
 2. Rebuild the Docker image
 3. Push the new image to ECR
@@ -213,7 +222,7 @@ const mcpServer = new McpServerConstruct(backend.stack, 'McpServer', {
     MY_API_KEY: 'your-api-key',
     CUSTOM_CONFIG: 'value',
   },
-});
+})
 ```
 
 ### 2. Use in Server
@@ -221,7 +230,7 @@ const mcpServer = new McpServerConstruct(backend.stack, 'McpServer', {
 Access in `amplify/mcp/server/src/index.ts`:
 
 ```typescript
-const apiKey = process.env.MY_API_KEY;
+const apiKey = process.env.MY_API_KEY
 ```
 
 ## Monitoring & Debugging
@@ -246,6 +255,7 @@ aws bedrock-agentcore describe-runtime \
 ### Runtime Compute
 
 The runtime is configured with:
+
 - CPU: 1024 (1 vCPU)
 - Memory: 2048 MB (2 GB)
 
@@ -260,6 +270,7 @@ Docker images are stored in ECR. Old images are automatically cleaned up by CDK 
 ### Build Fails
 
 If Docker build fails:
+
 ```bash
 cd amplify/mcp/server
 npm install
@@ -273,6 +284,7 @@ Check for TypeScript errors.
 Check CloudWatch Logs for container startup errors.
 
 Common issues:
+
 - Port not exposed (must be 8000)
 - Endpoint not at /mcp
 - Missing dependencies in package.json
@@ -280,6 +292,7 @@ Common issues:
 ### Tool Not Working
 
 Verify the tool is registered:
+
 ```bash
 # List tools
 curl -X POST https://your-runtime-endpoint/mcp \
