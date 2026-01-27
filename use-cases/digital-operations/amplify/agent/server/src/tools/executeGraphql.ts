@@ -18,10 +18,13 @@ export const executeGraphqlTool = {
       // await setAmplifyEnvVars()
       const amplifyClient = getConfiguredAmplifyClient()
 
-      const result = await amplifyClient.graphql({
-        query: query as any,
-        variables: variables || {},
-      })
+      const result = await amplifyClient.graphql(
+        {
+          query: query as any,
+          variables: variables || {},
+        },
+        { authMode: 'identityPool' }
+      )
 
       return {
         content: [

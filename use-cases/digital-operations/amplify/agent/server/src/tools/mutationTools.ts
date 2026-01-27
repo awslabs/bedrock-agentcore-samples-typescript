@@ -191,7 +191,7 @@ const createMapLayerTool = {
                   'Array of [value, color] pairs for linear/step scales. Example: [[0, "#blue"], [50, "#yellow"], [100, "#red"]]'
                 ),
               categories: z
-                .record(z.string())
+                .record(z.string(), z.string())
                 .optional()
                 .describe(
                   'Object mapping category values to colors. Example: {"Active": "#green", "Inactive": "#red"}'
@@ -267,23 +267,26 @@ const createMapLayerTool = {
 
       // Execute the query to validate it
       console.log('Validating query for map layer:', params.name)
-      const queryResult = await amplifyClient.graphql({
-        query: /* GraphQL */ `
-          mutation ExecuteMapLayerQuery($queryString: String!, $database: String!, $geoJsonMapping: AWSJSON!) {
-            executeMapLayerQuery(queryString: $queryString, database: $database, geoJsonMapping: $geoJsonMapping) {
-              success
-              geoJsonData
-              error
-              rowCount
+      const queryResult = await amplifyClient.graphql(
+        {
+          query: /* GraphQL */ `
+            mutation ExecuteMapLayerQuery($queryString: String!, $database: String!, $geoJsonMapping: AWSJSON!) {
+              executeMapLayerQuery(queryString: $queryString, database: $database, geoJsonMapping: $geoJsonMapping) {
+                success
+                geoJsonData
+                error
+                rowCount
+              }
             }
-          }
-        `,
-        variables: {
-          queryString: params.athenaQuery,
-          database: params.athenaDatabase,
-          geoJsonMapping: JSON.stringify(params.geoJsonMapping),
+          `,
+          variables: {
+            queryString: params.athenaQuery,
+            database: params.athenaDatabase,
+            geoJsonMapping: JSON.stringify(params.geoJsonMapping),
+          },
         },
-      })
+        { authMode: 'identityPool' }
+      )
 
       const queryData = 'data' in queryResult ? queryResult.data : null
       if (!queryData || !queryData.executeMapLayerQuery.success) {
@@ -325,10 +328,13 @@ const createMapLayerTool = {
         source: params.source || 'ai-created',
       }
 
-      const result = await amplifyClient.graphql({
-        query: mutations.createMapLayer,
-        variables: { input },
-      })
+      const result = await amplifyClient.graphql(
+        {
+          query: mutations.createMapLayer,
+          variables: { input },
+        },
+        { authMode: 'identityPool' }
+      )
 
       const data = 'data' in result ? result.data : null
       if (!data) {
@@ -419,7 +425,7 @@ const updateMapLayerTool = {
               type: z.enum(['linear', 'categorical', 'step']),
               property: z.string(),
               stops: z.array(z.tuple([z.union([z.number(), z.string()]), z.string()])).optional(),
-              categories: z.record(z.string()).optional(),
+              categories: z.record(z.string(), z.string()).optional(),
               defaultColor: z.string().optional(),
             })
             .optional(),
@@ -474,10 +480,13 @@ const updateMapLayerTool = {
       if (params.order !== undefined) input.order = params.order
       if (params.description !== undefined) input.description = params.description
 
-      const result = await amplifyClient.graphql({
-        query: mutations.updateMapLayer,
-        variables: { input },
-      })
+      const result = await amplifyClient.graphql(
+        {
+          query: mutations.updateMapLayer,
+          variables: { input },
+        },
+        { authMode: 'identityPool' }
+      )
 
       const data = 'data' in result ? result.data : null
       if (!data) {
@@ -543,10 +552,13 @@ const deleteMapLayerTool = {
     try {
       const amplifyClient = getConfiguredAmplifyClient()
 
-      const result = await amplifyClient.graphql({
-        query: mutations.deleteMapLayer,
-        variables: { input: { id: params.id } },
-      })
+      const result = await amplifyClient.graphql(
+        {
+          query: mutations.deleteMapLayer,
+          variables: { input: { id: params.id } },
+        },
+        { authMode: 'identityPool' }
+      )
 
       return {
         content: [
@@ -613,14 +625,17 @@ const listMapLayersTool = {
         throw new Error('chatSessionId is required but was not provided')
       }
 
-      const result = await amplifyClient.graphql({
-        query: queries.listMapLayers,
-        variables: {
-          chatSessionId,
-          limit: params.limit,
-          nextToken: params.nextToken,
+      const result = await amplifyClient.graphql(
+        {
+          query: queries.listMapLayers,
+          variables: {
+            chatSessionId,
+            limit: params.limit,
+            nextToken: params.nextToken,
+          },
         },
-      })
+        { authMode: 'identityPool' }
+      )
 
       const data = 'data' in result ? result.data : null
       if (!data) {
@@ -694,10 +709,13 @@ const updateActionItemTool = {
         status: params.status,
       }
 
-      const result = await amplifyClient.graphql({
-        query: mutations.updateActionItem,
-        variables: { input },
-      })
+      const result = await amplifyClient.graphql(
+        {
+          query: mutations.updateActionItem,
+          variables: { input },
+        },
+        { authMode: 'identityPool' }
+      )
 
       const data = 'data' in result ? result.data : null
       if (!data) {
@@ -781,10 +799,13 @@ const updateWorkoverJobTool = {
       if (params.estimatedDuration !== undefined) input.estimatedDuration = params.estimatedDuration
       if (params.description !== undefined) input.description = params.description
 
-      const result = await amplifyClient.graphql({
-        query: mutations.updateWorkoverJob,
-        variables: { input },
-      })
+      const result = await amplifyClient.graphql(
+        {
+          query: mutations.updateWorkoverJob,
+          variables: { input },
+        },
+        { authMode: 'identityPool' }
+      )
 
       const data = 'data' in result ? result.data : null
       if (!data) {
