@@ -363,52 +363,14 @@ export function MapViewer({
     const fetchLayers = async () => {
       try {
         setInitialLoading(true);
-        
-        const result = await client.graphql({
-          query: `
-            query ListMapLayerByChatSessionIdAndOrder(
-              $chatSessionId: ID!
-              $sortDirection: ModelSortDirection
-              $limit: Int
-            ) {
-              listMapLayerByChatSessionIdAndOrder(
-                chatSessionId: $chatSessionId
-                sortDirection: $sortDirection
-                limit: $limit
-              ) {
-                items {
-                  id
-                  chatSessionId
-                  name
-                  type
-                  visible
-                  athenaQuery
-                  athenaDatabase
-                  geoJsonMapping
-                  queryRefreshInterval
-                  lastQueryExecutedAt
-                  queryError
-                  style
-                  order
-                  description
-                  source
-                  createdAt
-                  updatedAt
-                }
-                nextToken
-              }
-            }
-          `,
-          variables: {
-            chatSessionId,
-            sortDirection: 'ASC',
-            limit: 100
-          }
+
+        const result = await client.models.MapLayer.listMapLayerByChatSessionIdAndOrder({
+          chatSessionId: chatSessionId
         });
-        
-        if (result.data?.listMapLayerByChatSessionIdAndOrder?.items) {
+
+        if (result.data) {
           // Filter out null/undefined items (caused by GraphQL schema violations)
-          const validLayers = result.data.listMapLayerByChatSessionIdAndOrder.items.filter((layer): layer is typeof layer & MapLayer => {
+          const validLayers = result.data.filter((layer): layer is typeof layer & MapLayer => {
             if (!layer) {
               console.warn('Filtered out null/undefined map layer');
               return false;
