@@ -58,17 +58,6 @@ export default [
         setInterval: 'readonly',
         clearInterval: 'readonly',
         Buffer: 'readonly',
-        fetch: 'readonly',
-        ReadableStream: 'readonly',
-        TextDecoderStream: 'readonly',
-        AbortSignal: 'readonly',
-        DOMParser: 'readonly',
-        ResizeObserver: 'readonly',
-        requestAnimationFrame: 'readonly',
-        window: 'readonly',
-        document: 'readonly',
-        Date: 'readonly',
-        encodeURIComponent: 'readonly',
       },
     },
     plugins: {
@@ -80,6 +69,20 @@ export default [
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
       '@typescript-eslint/explicit-function-return-type': 'off',
       quotes: ['error', 'single', { avoidEscape: true }],
+      'no-undef': 'off',
+    },
+  },
+  {
+    files: ['use-cases/digital-operations/**/*.ts'],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+        DOMParser: 'readonly',
+        ResizeObserver: 'readonly',
+        requestAnimationFrame: 'readonly',
+        window: 'readonly',
+        document: 'readonly',
+      },
     },
   },
 ]

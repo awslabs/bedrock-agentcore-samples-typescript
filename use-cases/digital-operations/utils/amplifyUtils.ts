@@ -3,18 +3,17 @@ import { generateClient } from 'aws-amplify/data'
 import type { Schema } from '../amplify/data/resource'
 import { STSClient } from '@aws-sdk/client-sts'
 
-/* eslint-disable no-undef, @typescript-eslint/no-require-imports */
 export const loadOutputs = () => {
   try {
     // In Next.js, we import the JSON file directly
     // This works in both server and client contexts
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     return require('../amplify_outputs.json')
   } catch {
     console.warn('amplify_outputs.json not found - this is expected during initial build')
     return null
   }
 }
-/* eslint-enable no-undef, @typescript-eslint/no-require-imports */
 
 export const getConfiguredAmplifyClient = () => {
   Amplify.configure(
