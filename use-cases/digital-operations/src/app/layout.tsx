@@ -4,7 +4,6 @@ import "./globals.css";
 
 import '@aws-amplify/ui-react/styles.css';
 
-import Navigation from "@/components/Navigation";
 import ConfigureAmplify from '@/components/ConfigureAmplify';
 import Providers from '@/components/Providers';
 

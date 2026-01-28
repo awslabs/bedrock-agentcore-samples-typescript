@@ -29,13 +29,11 @@ import {
 } from '@/components/ai-elements/prompt-input';
 import { Action, Actions } from '@/components/ai-elements/actions';
 import { Suggestion } from '@/components/ai-elements/suggestion';
-import { Fragment, useState, useEffect, useRef } from 'react';
+import { Fragment, useState, useEffect, useRef, useMemo } from 'react';
 import { useChat } from '@ai-sdk/react';
-import { DefaultChatTransport } from 'ai';
 import type { ToolUIPart } from 'ai';
 import { Response } from '@/components/ai-elements/response';
 import { preprocessContent } from '@/lib/htmlPreprocessing';
-import { isAgentConfigured } from '@/lib/agentCoreClient';
 import { AgentCoreChatTransport } from '@/lib/agentCoreTransport';
 import { CopyIcon, RefreshCcwIcon } from 'lucide-react';
 import {
@@ -59,10 +57,7 @@ import {
 import { Loader } from '@/components/ai-elements/loader';
 
 import { saveChat, loadChat } from '@/../utils/chatStore';
-import { useDemoContext } from '@/contexts/DemoContext';
-import { AlertTriangle, Zap } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { createCriticalAlertMessage } from '@/lib/demoMessages';
+import { Zap } from 'lucide-react';
 
 const models: { name: string, id: string }[] = [
   {
@@ -94,18 +89,10 @@ interface ChatBoxProps {
 export const ChatBox = ({ chatSessionId }: ChatBoxProps) => {
   const [input, setInput] = useState('');
   const [model, setModel] = useState<string>(models[0].id);
-  // const [webSearch, setWebSearch] = useState(false);
   const savedMessages = useRef<typeof messages>([]);
-  const { startDemo, resetDemo } = useDemoContext();
-  const [isStartingDemo, setIsStartingDemo] = useState(false);
-  const [isResettingDemo, setIsResettingDemo] = useState(false);
-  const [suggestions, setSuggestions] = useState<string[]>([ // Default suggestions for when there are no messages
-    'Show me a map of the largest ports in the US, and plot their throughput over the past 5 years.',
-    'Make a report on expected future electricty demand in the USA.',
-  ])
 
   const { messages, setMessages, sendMessage, status, error, regenerate } = useChat({
-    transport: new AgentCoreChatTransport(),  // Use custom transport for AgentCore
+    transport: new AgentCoreChatTransport(),
     onFinish: async ({ messages }) => {
       console.log('onFinish called.')
       if (chatSessionId) {
@@ -117,7 +104,6 @@ export const ChatBox = ({ chatSessionId }: ChatBoxProps) => {
             chatSessionId,
             messages: newMessages
           });
-          // Update the ref with all messages to prevent duplicate saves
           savedMessages.current = messages;
           console.log('Completed the saveChat call')
         } catch (error) {
@@ -127,6 +113,24 @@ export const ChatBox = ({ chatSessionId }: ChatBoxProps) => {
       else console.log('No Chat Session Id')
     },
   });
+
+  const defaultSuggestions = [
+    'Show me a map of the largest ports in the US, and plot their throughput over the past 5 years.',
+    'Make a report on expected future electricty demand in the USA.',
+  ];
+
+  const suggestions = useMemo(() => {
+    const latestAssistantMessage = messages.filter(m => m.role === 'assistant').at(-1);
+    const suggestionsToolCall = latestAssistantMessage?.parts.find(
+      (part) => (part.type === 'tool-generate_suggestions')
+    );
+
+    const extractedSuggestions = suggestionsToolCall
+      ? (suggestionsToolCall as { input?: { suggestions?: string[] } }).input?.suggestions
+      : undefined;
+
+    return extractedSuggestions || defaultSuggestions;
+  }, [messages, defaultSuggestions]);
 
   // Load messages on mount
   useEffect(() => {
@@ -141,75 +145,6 @@ export const ChatBox = ({ chatSessionId }: ChatBoxProps) => {
         });
     }
   }, [chatSessionId, setMessages]);
-
-  // Set suggested messages
-  useEffect(() => {
-    // Extract suggestions from the latest assistant message
-    // Find the most recent generate_suggestions tool CALL (not output)
-    const latestAssistantMessage = messages.filter(m => m.role === 'assistant').at(-1);
-    const suggestionsToolCall = latestAssistantMessage?.parts.find(
-      (part) => (part.type === 'tool-generate_suggestions')
-    );
-
-    // Extract suggestions from the tool call INPUT (where the AI fills them in)
-    const newSuggestions = suggestionsToolCall
-      ? (suggestionsToolCall as { input?: { suggestions?: string[] } }).input?.suggestions
-      : undefined;
-
-    if (newSuggestions) setSuggestions(newSuggestions)
-  }, [messages]);
-
-  const handleDemoStart = async () => {
-    return
-    setIsStartingDemo(true);
-    try {
-      // Start the demo (creates alerts in database)
-      await startDemo();
-
-      // Create the demo message using the utility function
-      const demoMessage = createCriticalAlertMessage();
-
-      // Add the message to the chat
-      setMessages([...messages, demoMessage]);
-
-      // Set suggestions based on the demo scenario
-      setSuggestions([
-        'Draft a work order to address this issue.',
-        'What is the status of the P-2201 centrifugal pump repair?',
-        'Show me all emergency work orders from last night',
-        'How can I fit this into my current schedule, and what are the cost and material implications?',
-      ])
-
-      // Save the demo message
-      await saveChat({
-        chatSessionId,
-        messages: [demoMessage]
-      });
-      savedMessages.current = [...messages, demoMessage];
-
-    } catch (error) {
-      console.error('Error starting demo:', error);
-    } finally {
-      setIsStartingDemo(false);
-    }
-  };
-
-  const handleDemoReset = async () => {
-    setIsResettingDemo(true);
-    try {
-      // Reset the demo (deletes all failure alerts)
-      await resetDemo();
-
-      // Clear the chat messages
-      setMessages([]);
-      savedMessages.current = [];
-
-    } catch (error) {
-      console.error('Error resetting demo:', error);
-    } finally {
-      setIsResettingDemo(false);
-    }
-  };
 
   const handleSubmit = (message: PromptInputMessage) => {
     const hasText = Boolean(message.text);
@@ -235,7 +170,6 @@ export const ChatBox = ({ chatSessionId }: ChatBoxProps) => {
       },
     );
     setInput('');
-    setSuggestions([])
   };
 
   const handleSuggestionClick = (suggestion: string) => {

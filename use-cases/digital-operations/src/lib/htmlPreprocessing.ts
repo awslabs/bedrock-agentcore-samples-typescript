@@ -5,8 +5,6 @@
  * particularly for cleaning and validating iframe srcdoc attributes.
  */
 
-/* eslint-disable no-undef */
-
 /**
  * Validates if a string is valid HTML
  */
@@ -326,7 +324,7 @@ export function preprocessContent(content: string, chatSessionId: string): strin
       // Process self-closing iframe
       const processed = iframeContent.replace(
         /^(<iframe)([\s\S]*?)(srcdoc=(["']))([\s\S]*?)(\4)([\s\S]*?)(\/?>)$/i,
-        (_match, iframeTag, beforeSrcdoc, srcdocStart, _quote, srcdocContent, srcdocEnd, afterSrcdoc, _closeTag) => {
+        (_match, iframeTag, beforeSrcdoc, srcdocStart, _quote, srcdocContent, srcdocEnd, afterSrcdoc) => {
           // Process script tags BEFORE removing newlines
           const processedSrcdoc = processScriptTags(srcdocContent)
 

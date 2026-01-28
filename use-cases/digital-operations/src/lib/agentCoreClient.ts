@@ -1,11 +1,18 @@
 import { fetchAuthSession } from 'aws-amplify/auth'
 import { loadOutputs } from '@/../utils/amplifyUtils'
 
-let outputs: any = null
+interface AmplifyOutputs {
+  custom: Record<string, string>
+  auth: {
+    aws_region: string
+  }
+}
 
-const getOutputs = () => {
+let outputs: AmplifyOutputs | null = null
+
+const getOutputs = (): AmplifyOutputs => {
   if (!outputs) {
-    outputs = loadOutputs()
+    outputs = loadOutputs() as AmplifyOutputs
   }
   if (!outputs) {
     throw new Error('amplify_outputs.json not found')
@@ -62,5 +69,10 @@ export async function getAgentCoreHeaders(): Promise<Record<string, string>> {
  * @returns Boolean indicating if the agent ARN is configured
  */
 export function isAgentConfigured(agentArnKey: string = 'agentServerAgentArn'): boolean {
-  return Boolean(outputs.custom?.[agentArnKey])
+  try {
+    const currentOutputs = getOutputs();
+    return Boolean(currentOutputs.custom?.[agentArnKey]);
+  } catch {
+    return false;
+  }
 }

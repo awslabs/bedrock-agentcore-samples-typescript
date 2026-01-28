@@ -1,5 +1,4 @@
 import React from "react";
-import WithAuth from "@/components/WithAuth";
 import Navigation from "@/components/Navigation";
 
 export default function AuthRequiredLayout({

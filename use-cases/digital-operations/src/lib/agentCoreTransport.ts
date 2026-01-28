@@ -1,4 +1,3 @@
-/* eslint-disable no-undef */
 import type { ChatTransport, UIMessage, UIMessageChunk, ChatRequestOptions } from 'ai'
 import { getAgentCoreUrl, getAgentCoreHeaders } from './agentCoreClient'
 
