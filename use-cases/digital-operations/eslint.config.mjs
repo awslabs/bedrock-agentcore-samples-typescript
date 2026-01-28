@@ -5,6 +5,19 @@ import nextTs from "eslint-config-next/typescript";
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
+  {
+    languageOptions: {
+      globals: {
+        fetch: "readonly",
+        ReadableStream: "readonly",
+        TextDecoderStream: "readonly",
+        AbortSignal: "readonly",
+        DOMParser: "readonly",
+        ResizeObserver: "readonly",
+        requestAnimationFrame: "readonly",
+      },
+    },
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:

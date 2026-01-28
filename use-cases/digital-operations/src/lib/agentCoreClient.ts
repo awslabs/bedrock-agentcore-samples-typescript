@@ -70,9 +70,9 @@ export async function getAgentCoreHeaders(): Promise<Record<string, string>> {
  */
 export function isAgentConfigured(agentArnKey: string = 'agentServerAgentArn'): boolean {
   try {
-    const currentOutputs = getOutputs();
-    return Boolean(currentOutputs.custom?.[agentArnKey]);
+    const currentOutputs = getOutputs()
+    return Boolean(currentOutputs.custom?.[agentArnKey])
   } catch {
-    return false;
+    return false
   }
 }
