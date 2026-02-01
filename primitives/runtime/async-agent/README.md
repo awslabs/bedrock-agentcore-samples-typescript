@@ -56,7 +56,7 @@ const getTaskStatus = tool({
 
     // Return task details
     return `Currently running tasks: ${taskStatus.activeCount}...`
-  }
+  },
 })
 ```
 
