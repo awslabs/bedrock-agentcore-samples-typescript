@@ -150,6 +150,10 @@ Full-duplex WebSocket communication for real-time applications.
 
 Long-running background tasks with automatic health status tracking.
 
+### [background-workers](./background-workers/)
+
+Node.js Worker Threads for CPU-blocking operations. Demonstrates how to offload blocking tasks (loops, dataset processing, calculations) to separate threads, keeping the agent responsive and able to handle concurrent requests.
+
 ---
 
 ## Running Locally
