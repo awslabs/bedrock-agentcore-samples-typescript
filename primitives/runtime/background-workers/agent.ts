@@ -90,7 +90,7 @@ const app = new BedrockAgentCoreApp({
   invocationHandler: {
     requestSchema: z.object({ prompt: z.string() }),
     process: async function* (request, _context) {
-      const response = await agent.invoke(request.prompt);
+      const response = await agent.invoke(request.prompt)
       yield { event: 'message', data: { text: response.lastMessage } }
     },
   },

@@ -42,6 +42,7 @@ callback: async (): Promise<string> => {
 ```
 
 **Impact on concurrent users:**
+
 - User A: "Process this dataset" → Blocks agent for 10 seconds
 - User B: "What's 2+2?" → Request blocked, must wait 10 seconds for User A to complete
 - User C: Attempts to connect → Connection refused or times out while agent is blocked
@@ -74,6 +75,7 @@ callback: async (): Promise<string> => {
 ```
 
 **Impact on concurrent users:**
+
 - User A: "Process this dataset" → Worker spawned, processes for 10 seconds in background
 - User B: "What's 2+2?" → Responds immediately (main thread remains available)
 - User C: "Tell me a joke" → Responds immediately (main thread remains available)
@@ -105,12 +107,13 @@ Use worker threads for these CPU-blocking tasks:
 The agent provides two tools:
 
 #### 1. Start Background Worker
+
 ```typescript
 const startBackgroundWorker = tool({
   name: 'start_background_worker',
   description: 'Start a background worker for CPU-intensive processing',
   inputSchema: z.object({
-    duration: z.number().default(5)
+    duration: z.number().default(5),
   }),
   callback: async (input: { duration: number }): Promise<string> => {
     const taskId = app.addAsyncTask('background_worker_processing', { duration })
@@ -127,7 +130,7 @@ const startBackgroundWorker = tool({
 
     // Return immediately without waiting
     return `Worker started (Task ID: ${taskId}). Processing in background...`
-  }
+  },
 })
 ```
 
@@ -150,21 +153,25 @@ const getTaskStatus = tool({
 
     // Return task details: name, duration
     return `Currently running tasks: ${taskStatus.activeCount}...`
-  }
+  },
 })
 ```
 
 This tool uses `app.getAsyncTaskInfo()` to query the async task status, which returns:
+
 - `activeCount`: Number of currently running background tasks
 - `runningJobs`: Array of jobs with `name` and `duration` properties
 
 ### Worker Thread (worker.ts)
+
 ```typescript
 parentPort.on('message', (message: { duration: number }) => {
   // CPU-intensive blocking loop
   // This blocks the WORKER thread, NOT the main thread
   const end = Date.now() + message.duration * 1000
-  while (Date.now() < end) { /* busy loop */ }
+  while (Date.now() < end) {
+    /* busy loop */
+  }
 
   // Send completion message back to main thread
   parentPort?.postMessage({ status: 'completed' })
@@ -172,6 +179,7 @@ parentPort.on('message', (message: { duration: number }) => {
 ```
 
 ### Health Status
+
 When a task is registered with `addAsyncTask()`, the `/ping` endpoint automatically returns `HealthyBusy`. Once `completeAsyncTask()` is called, status returns to `Healthy`.
 
 **Note:** The `/ping` endpoint is used by Amazon Bedrock AgentCore for internal health monitoring and session management. It is only accessible locally during development and is not exposed when the agent is deployed publicly.
@@ -219,6 +227,7 @@ curl -X POST http://localhost:8080/invocations \
 ```
 
 The agent will:
+
 1. Start the worker thread
 2. Return immediately with "Worker started" message
 3. Worker processes for 5 seconds in the background
@@ -237,6 +246,7 @@ curl -X POST http://localhost:8080/invocations \
 ```
 
 The agent will use the `get_task_status` tool to query `app.getAsyncTaskInfo()` and return:
+
 - Number of active tasks (`activeCount`)
 - List of running jobs with name and duration
 - Current agent status (Healthy or HealthyBusy)
@@ -246,6 +256,7 @@ The agent will use the `get_task_status` tool to query `app.getAsyncTaskInfo()` 
 This demonstrates that the agent returns immediately and can handle concurrent requests while workers process in the background.
 
 **Terminal 1:** Start a long-running worker (10 seconds)
+
 ```bash
 curl -X POST http://localhost:8080/invocations \
   -H "Content-Type: application/json" \
@@ -254,6 +265,7 @@ curl -X POST http://localhost:8080/invocations \
 ```
 
 **Terminal 2:** Immediately send another request
+
 ```bash
 curl -X POST http://localhost:8080/invocations \
   -H "Content-Type: application/json" \
@@ -268,12 +280,14 @@ curl -X POST http://localhost:8080/invocations \
 Monitor the agent's health status while a worker processes in the background.
 
 **Check initial status:**
+
 ```bash
 curl http://localhost:8080/ping
 # Response: {"status": "Healthy"}
 ```
 
 **Start a 10-second worker:**
+
 ```bash
 curl -X POST http://localhost:8080/invocations \
   -d '{"prompt": "start 10 second worker"}'
@@ -281,12 +295,14 @@ curl -X POST http://localhost:8080/invocations \
 ```
 
 **Immediately check status (worker is now processing):**
+
 ```bash
 curl http://localhost:8080/ping
 # Response: {"status": "HealthyBusy"}
 ```
 
 **Wait 10 seconds for worker to complete, then check again:**
+
 ```bash
 sleep 10
 curl http://localhost:8080/ping
@@ -294,6 +310,7 @@ curl http://localhost:8080/ping
 ```
 
 This demonstrates that:
+
 - Agent returns immediately after starting the worker
 - Health status changes to HealthyBusy while worker processes
 - Agent can still accept requests (try sending another request while status is HealthyBusy)
@@ -318,6 +335,7 @@ curl -X POST http://localhost:8080/invocations \
 ```
 
 Response will show:
+
 ```
 Currently running background tasks (2):
 
@@ -389,6 +407,7 @@ This sample demonstrates the integration of Node.js Worker Threads with Strands 
    - Sends completion message back to main thread to mark async task as complete, changing agent status from HealthyBusy to Healthy
 
 3. **Message Passing Flow (Fire and Forget)**:
+
    ```
    User Request → Agent → Spawn Worker → Return "Worker started"
                             ↓
