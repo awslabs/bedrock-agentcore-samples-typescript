@@ -18,7 +18,7 @@
     "zod": "^4.0.0"
   },
   "devDependencies": {
-    "@aws-sdk/client-bedrock-agentcore": "^3.971.0",
+    "@aws-sdk/client-bedrock-agentcore": "^3.1041.0",
     "@types/node": "^22.0.0",
     "aws-cdk": "^2.170.0",
     "aws-cdk-lib": "^2.240.0",
