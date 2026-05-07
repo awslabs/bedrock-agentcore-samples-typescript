@@ -7,7 +7,7 @@ Building blocks for AI agents using Amazon Bedrock AgentCore.
 ```
 primitives/
 ├── runtime/                      # AgentCore Runtime samples
-│   ├── hosting-agent/            # Deploy agents (Strands, Vercel AI)
+│   ├── hosting-agent/            # Deploy agents (Strands, Vercel AI, Claude Agent SDK)
 │   ├── bidirectional-streaming/  # WebSocket communication
 │   └── async-agent/              # Long-running tasks
 ├── identity/                     # AgentCore Identity samples

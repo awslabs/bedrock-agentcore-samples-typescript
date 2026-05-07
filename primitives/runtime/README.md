@@ -140,7 +140,7 @@ For OAuth setup, see the [AgentCore Identity documentation](https://docs.aws.ama
 
 ### [hosting-agent](./hosting-agent/)
 
-Deploy an AI agent that responds to prompts with tool use. Implementations for Strands Agents SDK and Vercel AI SDK.
+Deploy an AI agent that responds to prompts with tool use. Implementations for Strands Agents SDK, Vercel AI SDK, and Claude Agent SDK.
 
 ### [bidirectional-streaming](./bidirectional-streaming/)
 

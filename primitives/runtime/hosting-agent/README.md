@@ -76,7 +76,43 @@ const app = new BedrockAgentCoreApp({
 
 ---
 
+### [Claude Agent SDK](./claude-agent/)
+
+Uses `@anthropic-ai/claude-agent-sdk` — model calls route through Amazon Bedrock via `CLAUDE_CODE_USE_BEDROCK=1`. Deployed via container image since the SDK spawns the Claude Code CLI as a subprocess.
+
+```typescript
+import { query } from '@anthropic-ai/claude-agent-sdk'
+import { BedrockAgentCoreApp } from 'bedrock-agentcore/runtime'
+
+const app = new BedrockAgentCoreApp({
+  invocationHandler: {
+    process: async function* (request, _context) {
+      const response = query({
+        prompt: request.prompt,
+        options: { systemPrompt: "You're a helpful assistant.", maxTurns: 5, allowedTools: [] },
+      })
+
+      for await (const message of response) {
+        if (message.type === 'assistant') {
+          for (const block of message.message.content) {
+            if (block.type === 'text') {
+              yield { event: 'message', data: { text: block.text } }
+            }
+          }
+        }
+      }
+    },
+  },
+})
+```
+
+→ [Full source](./claude-agent/src/agent.ts)
+
+---
+
 ## Quick Start
+
+For Strands or Vercel AI:
 
 ```bash
 cd strands  # or vercel-ai
@@ -85,6 +121,16 @@ npm install
 agentcore configure
 agentcore dev       # Run locally
 agentcore deploy    # Deploy to AgentCore
+```
+
+For Claude Agent SDK (container-based deployment):
+
+```bash
+cd claude-agent
+npm install
+npm run dev         # Run locally
+./build-image.sh    # Build container
+npm run deploy      # Deploy to AgentCore
 ```
 
 ## How It Works
