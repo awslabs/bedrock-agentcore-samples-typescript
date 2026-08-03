@@ -147,7 +147,7 @@ npm outdated
 ## Built-in Security Features
 
 - **AWS SDK Integration**: Leverages AWS SDK's credential provider chain and request signing
-- **Input Validation**: Zod schemas validate all tool inputs at runtime
+- **Input Validation**: Zod schemas validate tool inputs and keep runtime prompts typed as strings
 - **Session Isolation**: Each CodeInterpreter/Browser session is isolated in AWS infrastructure
 - **HTTPS Only**: All communication with AWS services uses HTTPS
 - **No Credential Storage**: SDK never persists credentials to disk
