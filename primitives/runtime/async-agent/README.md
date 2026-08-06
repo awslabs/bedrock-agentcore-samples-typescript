@@ -14,7 +14,9 @@ Agent code communicates its processing status using the "/ping" endpoint health 
 
 ## How It Works
 
-The agent uses the AgentCore Runtime's task tracking system to manage background jobs:
+The agent provides two tools for managing and monitoring background tasks:
+
+### 1. Start Background Task
 
 ```typescript
 const startBackgroundTask = tool({
@@ -36,6 +38,29 @@ const startBackgroundTask = tool({
 ```
 
 When a task is registered with `addAsyncTask()`, the runtime's health endpoint (`/ping`) automatically returns `HealthyBusy`. Once `completeAsyncTask()` is called, the status returns to `Healthy`.
+
+### 2. Get Task Status
+
+```typescript
+const getTaskStatus = tool({
+  name: 'get_task_status',
+  description: 'Get information about currently running background tasks',
+  inputSchema: z.object({}),
+  callback: async (): Promise<string> => {
+    const taskStatus = app.getAsyncTaskInfo()
+    // Returns: { activeCount: number, runningJobs: Array<{ name: string, duration: number }> }
+
+    if (taskStatus.activeCount === 0) {
+      return 'No background tasks currently running. Agent status is Healthy.'
+    }
+
+    // Return task details
+    return `Currently running tasks: ${taskStatus.activeCount}...`
+  },
+})
+```
+
+This tool uses `app.getAsyncTaskInfo()` to query all currently active async tasks, allowing users to check what background tasks are running.
 
 ## Build and Run Locally
 
@@ -67,7 +92,7 @@ BedrockAgentCoreApp server listening on port 8080
 
 ## Testing the Async Agent
 
-**Note:** The `/ping` endpoint is only accessible when running locally. In deployed agents, AgentCore uses this endpoint internally for health monitoring and does not expose it to external traffic.
+**Note:** The `/ping` endpoint is only accessible when running locally for testing purposes. When the agent is deployed publicly on Amazon Bedrock AgentCore, this endpoint is not exposed to external traffic. AgentCore uses the `/ping` endpoint internally for health monitoring to manage agent session lifecycle.
 
 ### 1. Check Initial Health Status
 
@@ -116,7 +141,29 @@ Response while task is active:
 }
 ```
 
-### 4. Check Status After Task Completes
+### 4. Query Running Tasks
+
+While tasks are running, query their status using the agent:
+
+```bash
+curl -X POST http://localhost:8080/invocations \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "what tasks are running?"}'
+```
+
+Response will show currently active tasks:
+
+```
+Currently running background tasks (1):
+
+Task 1:
+  - Name: background_processing
+  - Duration: 20 seconds
+
+Agent status: HealthyBusy
+```
+
+### 5. Check Status After Task Completes
 
 Wait for the task duration to complete, then check again:
 
