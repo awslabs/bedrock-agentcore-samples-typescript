@@ -21,7 +21,7 @@
     "@aws-sdk/client-bedrock-agentcore": "^3.1041.0",
     "@types/node": "^22.0.0",
     "aws-cdk": "^2.170.0",
-    "aws-cdk-lib": "^2.252.0",
+    "aws-cdk-lib": "^2.260.0",
     "constructs": "^10.4.0",
     "tsx": "^4.19.0",
     "typescript": "^5.7.0"
