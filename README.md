@@ -70,6 +70,9 @@ const app = new BedrockAgentCoreApp({
 app.run()
 ```
 
+Use `requestSchema` to validate agent entrypoint input. Keep text prompts defined as `z.string()` and pass only prompt
+text to the agent.
+
 → [Runtime examples](./primitives/runtime/)
 
 ### Tools

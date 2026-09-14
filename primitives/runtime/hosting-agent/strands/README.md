@@ -69,6 +69,9 @@ const app = new BedrockAgentCoreApp({
 app.run()
 ```
 
+The Zod request schema validates entrypoint input. Keep prompts typed as strings and pass only prompt text to
+Strands.
+
 → [Full source](./agent.ts)
 
 ## Quick Start

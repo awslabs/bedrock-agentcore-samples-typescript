@@ -18,6 +18,7 @@ Uses `@strands-agents/sdk` with native Bedrock integration.
 ```typescript
 import { Agent, BedrockModel, tool } from '@strands-agents/sdk'
 import { BedrockAgentCoreApp } from 'bedrock-agentcore/runtime'
+import { z } from 'zod'
 
 const agent = new Agent({
   model: new BedrockModel({
@@ -29,6 +30,7 @@ const agent = new Agent({
 
 const app = new BedrockAgentCoreApp({
   invocationHandler: {
+    requestSchema: z.object({ prompt: z.string() }),
     process: async function* (request, _context) {
       for await (const event of agent.stream(request.prompt)) {
         if (event.type === 'modelContentBlockDeltaEvent' && event.delta?.type === 'textDelta') {
@@ -52,6 +54,7 @@ Uses `ai` SDK with `ToolLoopAgent` for agentic workflows.
 import { ToolLoopAgent, tool } from 'ai'
 import { createAmazonBedrock } from '@ai-sdk/amazon-bedrock'
 import { BedrockAgentCoreApp } from 'bedrock-agentcore/runtime'
+import { z } from 'zod'
 
 const bedrock = createAmazonBedrock({ region: 'us-east-1' })
 
@@ -62,6 +65,7 @@ const agent = new ToolLoopAgent({
 
 const app = new BedrockAgentCoreApp({
   invocationHandler: {
+    requestSchema: z.object({ prompt: z.string() }),
     process: async function* (request, _context) {
       const stream = await agent.stream({ prompt: request.prompt })
       for await (const chunk of stream.textStream) {
@@ -83,9 +87,11 @@ Uses `@anthropic-ai/claude-agent-sdk` — model calls route through Amazon Bedro
 ```typescript
 import { query } from '@anthropic-ai/claude-agent-sdk'
 import { BedrockAgentCoreApp } from 'bedrock-agentcore/runtime'
+import { z } from 'zod'
 
 const app = new BedrockAgentCoreApp({
   invocationHandler: {
+    requestSchema: z.object({ prompt: z.string() }),
     process: async function* (request, _context) {
       const response = query({
         prompt: request.prompt,
@@ -106,9 +112,14 @@ const app = new BedrockAgentCoreApp({
 })
 ```
 
-→ [Full source](./claude-agent/src/agent.ts)
+→ [Full source](./claude-agent/agent.ts)
 
 ---
+
+## Input Validation
+
+Validate invocation payloads before forwarding them to an agent. Keep the Zod string schema when adapting these
+samples so prompts stay typed as strings.
 
 ## Quick Start
 
@@ -123,14 +134,16 @@ agentcore dev       # Run locally
 agentcore deploy    # Deploy to AgentCore
 ```
 
-For Claude Agent SDK (container-based deployment):
+For Claude Agent SDK (container-based deployment via the sample's `Dockerfile`):
 
 ```bash
 cd claude-agent
+
 npm install
-npm run dev         # Run locally
-./build-image.sh    # Build container
-npm run deploy      # Deploy to AgentCore
+agentcore configure
+agentcore configure env CLAUDE_CODE_USE_BEDROCK=1
+agentcore dev       # Run locally
+agentcore deploy    # Deploy to AgentCore
 ```
 
 ## How It Works

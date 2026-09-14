@@ -58,6 +58,9 @@ const app = new BedrockAgentCoreApp({
 app.run() // Starts HTTP server on port 8080
 ```
 
+Validate invocation payloads before forwarding them to an agent. Keep text prompts defined as `z.string()` and pass
+only prompt text to the agent.
+
 The generator function (`async function*`) enables streaming — each `yield` sends an event to the client immediately.
 
 ## The AgentCore Protocol

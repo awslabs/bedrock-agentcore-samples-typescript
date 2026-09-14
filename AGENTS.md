@@ -150,7 +150,7 @@ Examples include customer support agents, data analyzers, and other practical ap
 
 - Never hardcode credentials — use environment variables or AWS SDK credential chain
 - Demonstrate proper error handling in production-ready examples
-- Use secure defaults (e.g., input validation with Zod schemas)
+- Use secure defaults (e.g., string input validation with Zod schemas)
 - Follow AWS security best practices
 
 ## Testing and Validation
