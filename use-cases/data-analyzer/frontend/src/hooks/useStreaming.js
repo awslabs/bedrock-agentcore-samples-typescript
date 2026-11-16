@@ -1,55 +1,53 @@
 import { useState } from 'react'
 
+function parseEventData(eventType, data) {
+  try {
+    return JSON.parse(data)
+  } catch {
+    console.error(`Could not parse "${eventType}" event:`, data)
+    return null
+  }
+}
+
+async function readErrorMessage(response) {
+  const body = await response.text()
+  try {
+    const parsed = JSON.parse(body)
+    return parsed.error ?? parsed.message ?? body
+  } catch {
+    return body || response.statusText
+  }
+}
+
 export default function useStreaming() {
   const [isStreaming, setIsStreaming] = useState(false)
 
-  const streamMessage = async (endpoint, message, sessionId, onEvent, getValidAccessToken, files = []) => {
+  const streamMessage = async ({ endpoint, prompt, files, sessionId, getAccessToken, onEvent }) => {
     setIsStreaming(true)
-
     try {
       const headers = {
         'Content-Type': 'application/json',
         Accept: 'text/event-stream',
+        'X-Amzn-Bedrock-AgentCore-Runtime-Session-Id': sessionId,
       }
-
-      if (getValidAccessToken) {
-        const token = await getValidAccessToken()
+      if (getAccessToken) {
+        const token = await getAccessToken()
+        if (!token) return
         headers['Authorization'] = `Bearer ${token}`
       }
 
-      if (sessionId) {
-        headers['X-Amzn-Bedrock-AgentCore-Runtime-Session-Id'] = sessionId
-      }
-
-      const body = { prompt: message }
-      if (files.length > 0) {
-        body.files = files
-      }
-
-      let response = await fetch(endpoint, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(body),
-      })
-
-      if (response.status === 401 && getValidAccessToken) {
-        const freshToken = await getValidAccessToken()
-        if (!freshToken) throw new Error('Authentication failed')
-        headers['Authorization'] = `Bearer ${freshToken}`
-        response = await fetch(endpoint, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify(body),
-        })
-      }
-
+      const body = files.length > 0 ? { prompt, files } : { prompt }
+      const response = await fetch(endpoint, { method: 'POST', headers, body: JSON.stringify(body) })
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+        throw new Error(`The agent returned ${response.status}: ${await readErrorMessage(response)}`)
       }
 
       const reader = response.body.getReader()
       const decoder = new TextDecoder()
       let buffer = ''
+      // An event's lines can arrive in different network chunks, so its state lives outside the read loop.
+      let eventType = 'message'
+      let dataLines = []
 
       while (true) {
         const { done, value } = await reader.read()
@@ -57,62 +55,26 @@ export default function useStreaming() {
 
         buffer += decoder.decode(value, { stream: true })
         const lines = buffer.split('\n')
-        buffer = lines.pop() || ''
+        buffer = lines.pop() ?? ''
 
-        let currentEventType = 'message'
-        for (const line of lines) {
-          if (!line.trim()) continue
-
-          if (line.startsWith('event:')) {
-            currentEventType = line.slice(6).trim()
-            continue
-          }
-
-          if (line.startsWith('data:')) {
-            try {
-              const json = line.slice(5).trim()
-              const data = JSON.parse(json)
-
-              switch (currentEventType) {
-                case 'text':
-                  onEvent({ type: 'text', content: data.content })
-                  break
-                case 'tool':
-                  onEvent({ type: 'tool', name: data.name, input: data.input, toolUseId: data.toolUseId })
-                  break
-                case 'tool_result':
-                  onEvent({
-                    type: 'tool_result',
-                    toolUseId: data.toolUseId,
-                    status: data.status,
-                    content: data.content,
-                  })
-                  break
-                case 'data':
-                  onEvent({ type: 'data', dataType: data.type, url: data.url, mimeType: data.mimeType })
-                  break
-                case 'uploading':
-                  onEvent({ type: 'uploading', status: data.status })
-                  break
-                case 'result':
-                  onEvent({ type: 'result' })
-                  break
-                case 'error':
-                  onEvent({ type: 'error', message: data.message })
-                  break
-              }
-            } catch (err) {
-              console.error('Failed to parse event:', line, err)
+        for (const rawLine of lines) {
+          const line = rawLine.replace(/\r$/, '')
+          if (line === '') {
+            if (dataLines.length > 0) {
+              const data = parseEventData(eventType, dataLines.join('\n'))
+              if (data) onEvent(eventType, data)
             }
+            eventType = 'message'
+            dataLines = []
+          } else if (line.startsWith('event:')) {
+            eventType = line.slice(6).trim()
+          } else if (line.startsWith('data:')) {
+            dataLines.push(line.slice(5).trimStart())
           }
         }
       }
-
+    } finally {
       setIsStreaming(false)
-    } catch (error) {
-      console.error('Streaming error:', error)
-      setIsStreaming(false)
-      throw error
     }
   }
 
