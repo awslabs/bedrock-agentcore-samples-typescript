@@ -1,126 +1,124 @@
 # Customer Support Multi-Agent
 
-Deploy a multi-agent customer support system to Amazon Bedrock AgentCore Runtime.
+A [Strands Agents](https://strandsagents.com/) orchestrator that routes customer requests to three specialist agents,
+hosted on Amazon Bedrock AgentCore Runtime.
+
+→ See the [parent README](../README.md) for the other use cases.
 
 ## Prerequisites
 
-- Node.js 20+
-- AWS credentials configured
+- Node.js 22+
+- AWS credentials with access to Amazon Bedrock and AgentCore
+- The [AgentCore CLI](https://github.com/aws/agentcore-cli):
 
-## Architecture
-
-```
-┌─────────────────────────────────────────────────────────┐
-│                    Orchestrator Agent                   │
-│  Routes requests to appropriate specialist              │
-└─────────────────┬───────────────┬───────────────┬───────┘
-                  │               │               │
-         ┌────────▼───────┐ ┌────▼────────┐ ┌────▼────────┐
-         │ Warranty Agent │ │ Tech Support│ │ Scheduling  │
-         │- check_warranty│ │-troubleshoot│ │-appointments│
-         └────────────────┘ └─────────────┘ └─────────────┘
+```bash
+npm install -g @aws/agentcore
 ```
 
-## Implementation
+## Project Structure
+
+```
+customer-support-agent/
+├── app/agent/
+│   ├── main.ts         # Orchestrator and AgentCore Runtime entry point
+│   └── specialists.ts  # Specialist agents and their tools
+└── agentcore/
+    ├── agentcore.json  # Runtime configuration read by the AgentCore CLI
+    └── cdk/            # CDK app the CLI deploys
+```
+
+## How It Works
+
+| Specialist                | Handles                                            | Tools (sample data)                         |
+| ------------------------- | -------------------------------------------------- | ------------------------------------------- |
+| `warranty_specialist`     | Warranty status by serial number, policy questions | `check_warranty`                            |
+| `tech_support_specialist` | Device problems, step-by-step troubleshooting      | `get_troubleshooting_guide`                 |
+| `scheduling_specialist`   | Finding a free slot, booking a support appointment | `get_available_slots`, `create_appointment` |
+
+Each specialist is a Strands `Agent` with a `name` and a `description`. Agents passed in another agent's `tools` become
+tools, so the orchestrator picks a specialist the way it picks any tool: from its description.
 
 ```typescript
-// Specialized agents wrapped as tools for the orchestrator
-const warrantyTool = tool({
+new Agent({
   name: 'warranty_specialist',
-  description: 'Handles warranty checks and policy questions',
-  inputSchema: z.object({ query: z.string() }),
-  callback: async ({ query }) => {
-    const result = await warrantyAgent.invoke(query)
-    return result.message?.content?.[0]?.text ?? String(result)
-  },
+  description: 'Checks warranty status by serial number and answers warranty policy questions.',
+  model,
+  tools: [checkWarranty],
 })
+```
 
-const orchestrator = new Agent({
-  model: new BedrockModel({ modelId: 'global.amazon.nova-2-lite-v1:0' }),
-  tools: [warrantyTool, techSupportTool, schedulingTool],
-})
+The orchestrator holds the conversation. There is one per runtime session, so a customer can refer back to an earlier
+message, and sessions never share history or block each other:
+
+```typescript
+const agentsBySession = new Map<string, Agent>()
+
+function getAgent(sessionId: string): Agent {
+  let agent = agentsBySession.get(sessionId)
+  if (!agent) {
+    agent = new Agent({ model, systemPrompt: SYSTEM_PROMPT, tools: createSpecialists() })
+    agentsBySession.set(sessionId, agent)
+  }
+  return agent
+}
 
 const app = new BedrockAgentCoreApp({
   invocationHandler: {
     requestSchema: z.object({ prompt: z.string() }),
-    process: async function* (request, _context) {
-      for await (const event of orchestrator.stream(request.prompt)) {
-        if (event.type === 'modelContentBlockDeltaEvent' && event.delta?.type === 'textDelta') {
-          yield { event: 'message', data: { text: event.delta.text } }
-        }
+    process: async function* (request, context) {
+      for await (const event of getAgent(context.sessionId).stream(request.prompt)) {
+        // yield the orchestrator's text deltas as { event: 'message', data: { text } }
       }
     },
   },
 })
-
-app.run()
 ```
 
-→ [Full source](./src/index.ts) | [Agents](./src/agents.ts)
+The history lives in memory for as long as the session runs. To keep it longer, add AgentCore Memory
+(`agentcore add memory`).
 
-## Quick Start
+→ [Full source](./app/agent/main.ts) | [Specialists](./app/agent/specialists.ts)
 
-Requires AWS credentials in your shell (for Bedrock model access).
+## Run Locally
 
 ```bash
-npm install
-make dev
+agentcore dev
 ```
 
-## Test
+The first run installs the agent's dependencies. In a second terminal, send one request to each specialist:
 
 ```bash
-curl -X POST http://localhost:8080/invocations \
-  -H "Content-Type: application/json" \
-  -H "Accept: text/event-stream" \
-  -H "x-amzn-bedrock-agentcore-runtime-session-id: test-123" \
-  -d '{"prompt": "Check warranty for serial number MNO33333333"}'
+agentcore invoke --runtime agent --local --payload '{"prompt": "Check the warranty for serial number MNO33333333"}'
+agentcore invoke --runtime agent --local --payload '{"prompt": "My Gaming Console Pro keeps overheating. How do I fix it?"}'
+agentcore invoke --runtime agent --local --payload '{"prompt": "Which slots are free? Book the first one for a warranty renewal."}'
 ```
 
-## Deploy to AWS
+To hold a conversation, send each message with the same session ID (at least 33 characters):
 
 ```bash
-make build-and-push
-make deploy
+agentcore invoke --runtime agent --local --session-id support-session-0000000000000000000001 \
+  --payload '{"prompt": "Hi, my serial number is ABC12345678. Is my warranty still valid?"}'
+agentcore invoke --runtime agent --local --session-id support-session-0000000000000000000001 \
+  --payload '{"prompt": "What product was that, and what serial number did I give you?"}'
 ```
 
-## Test Deployed Agent
+Prefer a chat UI? `agentcore dev --mode browser` opens the Agent Inspector.
 
-Get the Runtime ARN from the stack outputs:
+## Deploy
 
 ```bash
-make outputs
+npm install --prefix agentcore/cdk
+agentcore deploy
+agentcore invoke --runtime agent --payload '{"prompt": "Check the warranty for serial number MNO33333333"}'
 ```
 
-Invoke the deployed agent:
-
-```bash
-aws bedrock-agentcore invoke-agent-runtime \
-  --agent-runtime-arn "<RuntimeArn from outputs>" \
-  --runtime-session-id "test-session-00000000000000000001" \
-  --content-type "application/json" \
-  --accept "text/event-stream" \
-  --payload '{"prompt": "Check warranty for serial MNO33333333"}' \
-  --cli-binary-format raw-in-base64-out \
-  --region us-east-1 \
-  /dev/stdout
-```
-
-## Sample Queries
-
-1. "I have a Gaming Console Pro device, warranty serial number is MNO33333333"
-2. "I have overheating issues with my device, help me debug"
-3. "Can you schedule a support call for warranty renewal?"
-4. "Check available slots and book one for warranty renewal"
-
-## Run Tests
-
-```bash
-npx tsx test/invoke.ts <RuntimeArn from deploy output>
-```
+Add `--session-id` to hold a conversation with the deployed agent too.
 
 ## Clean Up
 
 ```bash
-make delete
+agentcore remove all --yes
+agentcore deploy --yes
 ```
+
+This deletes the deployed stack. Run `git checkout agentcore` to restore the configuration and deploy again.
