@@ -2,10 +2,14 @@
 
 Give agents a secure code sandbox and a cloud browser with Amazon Bedrock AgentCore's built-in tools.
 
-| Tool                                    | What the agent gets                                                   | Samples                                                                                 |
-| --------------------------------------- | --------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| [Code Interpreter](./code-interpreter/) | Run Python, JavaScript or TypeScript and shell commands               | [Strands](./code-interpreter/strands/) · [Vercel AI SDK](./code-interpreter/vercel-ai/) |
-| [Browser](./browser/)                   | Navigate, click, type, read pages and take screenshots via Playwright | [Strands](./browser/strands/) · [Vercel AI SDK](./browser/vercel-ai/)                   |
+## Samples
+
+| Sample                                  | What it shows                                                            |
+| --------------------------------------- | ------------------------------------------------------------------------ |
+| [code-interpreter](./code-interpreter/) | Agents that run code in a secure sandbox with AgentCore Code Interpreter |
+| [browser](./browser/)                   | Agents that browse the web in a cloud browser with AgentCore Browser     |
+
+## The Tools
 
 `bedrock-agentcore` ships both tools ready-made for each framework. With Strands:
 
@@ -22,9 +26,13 @@ The Vercel AI SDK integrations live at `bedrock-agentcore/code-interpreter/verce
 ## How the Samples Run
 
 Each sample is an agent on AgentCore Runtime, built with the [AgentCore CLI](https://github.com/aws/agentcore-cli):
-`agentcore dev` runs it locally, `agentcore deploy` deploys it. A sandbox or browser session starts on the agent's
-first tool call and serves the rest of the runtime session, so a follow-up prompt with the same `--session-id` can use
-what the first one left behind.
+`agentcore dev` runs it locally, `agentcore deploy` deploys it. The Browser samples build a container, so they need
+Docker, Podman or Finch to run locally.
+
+A sandbox or browser session starts on the agent's first tool call. Deployed, each runtime session (`--session-id`)
+runs in its own microVM with its own agent, so a follow-up prompt with the same session id continues the conversation
+and, for Code Interpreter, can use what the first prompt left in the sandbox. Locally, `agentcore dev` runs a single
+agent for every session id.
 
 The tools share one session per tools instance, so the samples run tool calls one at a time (`toolExecutor:
 'sequential'` in Strands, `toolCallConcurrency: 1` in the Vercel AI SDK). Parallel first calls would each start a

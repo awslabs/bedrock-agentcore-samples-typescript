@@ -12,10 +12,10 @@ const codeInterpreter = new CodeInterpreterTools({ region })
 
 const agent = new ToolLoopAgent({
   model: bedrock('global.anthropic.claude-haiku-5-5'),
-  tools: codeInterpreter.tools,
   instructions:
     'You are a data analyst. Run Python in the sandbox to answer questions. Variables and files persist between calls.',
-  // The tools share one sandbox session, which starts on the first call
+  tools: codeInterpreter.tools,
+  // The tools share one sandbox session, so they run one at a time
   toolCallConcurrency: 1,
 })
 

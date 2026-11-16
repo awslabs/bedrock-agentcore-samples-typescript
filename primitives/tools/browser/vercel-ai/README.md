@@ -33,10 +33,11 @@ const browser = new BrowserTools({ region })
 
 const agent = new ToolLoopAgent({
   model: bedrock('global.anthropic.claude-haiku-5-5'),
-  tools: browser.tools,
   instructions:
     'You are a web assistant with a cloud browser. Each request starts with a fresh browser, so navigate first. ' +
     'Never enter payment or other sensitive details; hand off to the user instead.',
+  tools: browser.tools,
+  // The tools share one browser session, so they run one at a time
   toolCallConcurrency: 1,
 })
 
@@ -83,9 +84,9 @@ agentcore dev
 The first run builds the agent's container image. In a second terminal:
 
 ```bash
-agentcore invoke --runtime agent --local --session-id browser-demo-session-000000000001 \
+agentcore invoke --runtime agent --local --session-id browser-session-00000000000000000001 \
   --payload '{"prompt": "Go to https://news.ycombinator.com and list the top 3 story titles"}'
-agentcore invoke --runtime agent --local --session-id browser-demo-session-000000000001 \
+agentcore invoke --runtime agent --local --session-id browser-session-00000000000000000001 \
   --payload '{"prompt": "Now list the first 3 titles on the second page"}'
 ```
 
@@ -98,9 +99,9 @@ Prefer a chat UI? `agentcore dev --mode browser` opens the Agent Inspector.
 ```bash
 npm install --prefix agentcore/cdk
 agentcore deploy
-agentcore invoke --runtime agent --session-id browser-demo-session-000000000001 \
+agentcore invoke --runtime agent --session-id browser-session-00000000000000000001 \
   --payload '{"prompt": "Go to https://news.ycombinator.com and list the top 3 story titles"}'
-agentcore invoke --runtime agent --session-id browser-demo-session-000000000001 \
+agentcore invoke --runtime agent --session-id browser-session-00000000000000000001 \
   --payload '{"prompt": "Now list the first 3 titles on the second page"}'
 ```
 
@@ -114,4 +115,4 @@ agentcore remove all --yes
 agentcore deploy --yes
 ```
 
-This deletes the deployed stack. Run `git checkout agentcore` to restore the configuration and deploy again.
+This deletes the deployed stack. Run `git checkout -- agentcore` to restore the configuration and deploy again.

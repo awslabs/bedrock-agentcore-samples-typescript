@@ -12,11 +12,11 @@ const browser = new BrowserTools({ region })
 
 const agent = new ToolLoopAgent({
   model: bedrock('global.anthropic.claude-haiku-5-5'),
-  tools: browser.tools,
   instructions:
     'You are a web assistant with a cloud browser. Each request starts with a fresh browser, so navigate first. ' +
     'Never enter payment or other sensitive details; hand off to the user instead.',
-  // The tools share one browser page, which starts on the first call
+  tools: browser.tools,
+  // The tools share one browser session, so they run one at a time
   toolCallConcurrency: 1,
 })
 

@@ -32,9 +32,10 @@ const codeInterpreter = new CodeInterpreterTools({ region })
 
 const agent = new ToolLoopAgent({
   model: bedrock('global.anthropic.claude-haiku-5-5'),
-  tools: codeInterpreter.tools,
   instructions:
     'You are a data analyst. Run Python in the sandbox to answer questions. Variables and files persist between calls.',
+  tools: codeInterpreter.tools,
+  // The tools share one sandbox session, so they run one at a time
   toolCallConcurrency: 1,
 })
 
@@ -76,9 +77,9 @@ agentcore dev
 The first run installs the agent's dependencies. In a second terminal:
 
 ```bash
-agentcore invoke --runtime agent --local --session-id fibonacci-demo-session-000000000001 \
+agentcore invoke --runtime agent --local --session-id code-interpreter-session-00000000000000000001 \
   --payload '{"prompt": "Use Python to compute the first 15 Fibonacci numbers and store them in a variable named fib"}'
-agentcore invoke --runtime agent --local --session-id fibonacci-demo-session-000000000001 \
+agentcore invoke --runtime agent --local --session-id code-interpreter-session-00000000000000000001 \
   --payload '{"prompt": "Use Python to print the sum of fib and how many of its values are even"}'
 ```
 
@@ -100,9 +101,9 @@ Prefer a chat UI? `agentcore dev --mode browser` opens the Agent Inspector.
 ```bash
 npm install --prefix agentcore/cdk
 agentcore deploy
-agentcore invoke --runtime agent --session-id fibonacci-demo-session-000000000001 \
+agentcore invoke --runtime agent --session-id code-interpreter-session-00000000000000000001 \
   --payload '{"prompt": "Use Python to compute the first 15 Fibonacci numbers and store them in a variable named fib"}'
-agentcore invoke --runtime agent --session-id fibonacci-demo-session-000000000001 \
+agentcore invoke --runtime agent --session-id code-interpreter-session-00000000000000000001 \
   --payload '{"prompt": "Use Python to print the sum of fib and how many of its values are even"}'
 ```
 
@@ -116,4 +117,4 @@ agentcore remove all --yes
 agentcore deploy --yes
 ```
 
-This deletes the deployed stack. Run `git checkout agentcore` to restore the configuration and deploy again.
+This deletes the deployed stack. Run `git checkout -- agentcore` to restore the configuration and deploy again.

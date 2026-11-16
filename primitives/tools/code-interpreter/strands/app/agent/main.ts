@@ -8,11 +8,11 @@ const region = process.env['AWS_REGION'] ?? 'us-east-1'
 const codeInterpreter = new CodeInterpreterTools({ region })
 
 const agent = new Agent({
-  model: new BedrockModel({ modelId: 'global.anthropic.claude-haiku-5-5', region }),
-  tools: codeInterpreter.tools,
+  model: new BedrockModel({ modelId: 'global.anthropic.claude-haiku-5-5', region, maxTokens: 8192 }),
   systemPrompt:
     'You are a data analyst. Run Python in the sandbox to answer questions. Variables and files persist between calls.',
-  // The tools share one sandbox session, which starts on the first call
+  tools: codeInterpreter.tools,
+  // The tools share one sandbox session, so they run one at a time
   toolExecutor: 'sequential',
 })
 

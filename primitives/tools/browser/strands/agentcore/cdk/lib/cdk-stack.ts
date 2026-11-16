@@ -7,11 +7,7 @@ export interface AgentCoreStackProps extends StackProps {
   application: AgentCoreApplicationProps
 }
 
-/**
- * The stack the AgentCore CLI deploys. Everything declared in agentcore/agentcore.json is
- * created by the AgentCoreApplication construct. Add your own resources below it and wire
- * them to your runtimes and harnesses through the application's accessors.
- */
+/** The stack the AgentCore CLI deploys, with permission for the runtime to use the AWS-managed Browser. */
 export class AgentCoreStack extends Stack {
   public readonly application: AgentCoreApplication
 
@@ -20,7 +16,7 @@ export class AgentCoreStack extends Stack {
     this.application = new AgentCoreApplication(this, 'Application', props.application)
 
     const runtime = this.application.runtimes.get('agent')
-    // After `agentcore remove all` the stack must be empty so the CLI can delete it
+    // After `agentcore remove all` there is no runtime, and an empty stack lets the CLI delete it
     if (!runtime) return
 
     // The runtime role can call Bedrock models but not the AWS-managed Browser the agent's tools use

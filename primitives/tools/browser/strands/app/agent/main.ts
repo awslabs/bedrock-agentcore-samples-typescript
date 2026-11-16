@@ -8,12 +8,12 @@ const region = process.env['AWS_REGION'] ?? 'us-east-1'
 const browser = new BrowserTools({ region })
 
 const agent = new Agent({
-  model: new BedrockModel({ modelId: 'global.anthropic.claude-haiku-5-5', region }),
-  tools: browser.tools,
+  model: new BedrockModel({ modelId: 'global.anthropic.claude-haiku-5-5', region, maxTokens: 8192 }),
   systemPrompt:
     'You are a web assistant with a cloud browser. Each request starts with a fresh browser, so navigate first. ' +
     'Never enter payment or other sensitive details; hand off to the user instead.',
-  // The tools share one browser page, which starts on the first call
+  tools: browser.tools,
+  // The tools share one browser session, so they run one at a time
   toolExecutor: 'sequential',
 })
 
