@@ -1,42 +1,39 @@
 # Bidirectional Streaming
 
-Real-time, full-duplex communication using WebSocket connections.
+Real-time, full-duplex communication over WebSocket connections: client and agent can both send messages at any time.
 
-## Testing Local vs Deployed
+## Samples
+
+### [echo](./echo/)
+
+A WebSocket server that echoes every JSON message back, with a client that connects locally or to the deployed
+runtime.
+
+## Local vs Deployed
 
 ### Local Development
 
-Run `agentcore dev` and connect directly with any WebSocket client:
-
-```bash
-wscat -c ws://localhost:8080/ws \
-  -H "x-amzn-bedrock-agentcore-runtime-session-id: test-123"
-```
-
-No authentication required - the connection goes directly to your local server.
+`agentcore dev` serves the WebSocket endpoint at `ws://localhost:8080/ws` with no authentication. Send the session ID in
+the `x-amzn-bedrock-agentcore-runtime-session-id` header.
 
 ### Deployed Runtime
 
-Deployed runtimes require authenticated WebSocket connections. Use `RuntimeClient` to handle signing:
+Deployed runtimes only accept authenticated WebSocket connections. `RuntimeClient` from the SDK signs them:
 
 ```typescript
 import { RuntimeClient } from 'bedrock-agentcore/runtime'
 import { WebSocket } from 'ws'
 
-const client = new RuntimeClient({ region: 'us-east-1' })
+const client = new RuntimeClient({ region: process.env['AWS_REGION'] ?? 'us-east-1' })
 
-// For IAM authentication (SigV4 signing)
-const { url, headers } = await client.generateWsConnection({
-  runtimeArn: process.env.RUNTIME_ARN!,
-})
+// IAM authentication (SigV4)
+const { url, headers } = await client.generateWsConnection({ runtimeArn })
 
-// For OAuth authentication (bearer token)
-const { url, headers } = await client.generateWsConnectionOAuth({
-  runtimeArn: process.env.RUNTIME_ARN!,
-  bearerToken: userToken,
-})
+// Or OAuth authentication (bearer token)
+// const { url, headers } = await client.generateWsConnectionOAuth({ runtimeArn, bearerToken })
 
 const ws = new WebSocket(url, { headers })
 ```
 
-See the [echo sample](./echo/) for a complete test client implementation.
+The [echo sample's client](./echo/app/agent/client.ts) does both: it connects directly to a local URL and signs the
+connection for a runtime ARN.

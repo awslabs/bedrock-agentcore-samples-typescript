@@ -9,21 +9,14 @@ const bedrock = createAmazonBedrock({
   credentialProvider: fromNodeProviderChain(),
 })
 
-// Request schema
-const requestSchema = z.object({
-  prompt: z.string(),
-})
-
-const calculatorSchema = z.object({
-  operation: z.enum(['add', 'subtract', 'multiply', 'divide']),
-  a: z.number(),
-  b: z.number(),
-})
-
 const calculator = tool({
   description: 'Performs basic arithmetic',
-  inputSchema: calculatorSchema,
-  execute: async ({ operation, a, b }) => {
+  inputSchema: z.object({
+    operation: z.enum(['add', 'subtract', 'multiply', 'divide']),
+    a: z.number(),
+    b: z.number(),
+  }),
+  execute: async ({ operation, a, b }): Promise<{ result: number }> => {
     switch (operation) {
       case 'add':
         return { result: a + b }
@@ -33,21 +26,19 @@ const calculator = tool({
         return { result: a * b }
       case 'divide':
         return { result: a / b }
-      default:
-        throw new Error(`Unknown operation: ${operation}`)
     }
   },
 })
 
 const agent = new ToolLoopAgent({
-  model: bedrock('global.amazon.nova-2-lite-v1:0'),
+  model: bedrock('global.anthropic.claude-haiku-5-5'),
   tools: { calculator },
 })
 
 const app = new BedrockAgentCoreApp({
   invocationHandler: {
-    requestSchema,
-    process: async function* (request, _context) {
+    requestSchema: z.object({ prompt: z.string() }),
+    process: async function* (request) {
       const stream = await agent.stream({ prompt: request.prompt })
 
       for await (const chunk of stream.textStream) {
@@ -57,4 +48,4 @@ const app = new BedrockAgentCoreApp({
   },
 })
 
-app.run()
+app.run({ port: parseInt(process.env['PORT'] ?? '8080') })

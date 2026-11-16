@@ -1,0 +1,24 @@
+{
+  "name": "HostingAgentVercelAi",
+  "version": 2,
+  "managedBy": "CDK",
+  "runtimes": [
+    {
+      "name": "agent",
+      "build": "CodeZip",
+      "entrypoint": "main.js",
+      "codeLocation": "app/agent",
+      "runtimeVersion": "NODE_22",
+      "protocol": "HTTP"
+    }
+  ],
+  "memories": [],
+  "knowledgeBases": [],
+  "credentials": [],
+  "evaluators": [],
+  "onlineEvalConfigs": [],
+  "agentCoreGateways": [],
+  "policyEngines": [],
+  "configBundles": [],
+  "harnesses": []
+}

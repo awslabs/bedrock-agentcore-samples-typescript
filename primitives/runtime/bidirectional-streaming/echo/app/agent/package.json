@@ -1,0 +1,25 @@
+{
+  "name": "bidirectional-streaming-echo",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "main.ts",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsc --noEmit",
+    "dev": "tsx watch main.ts",
+    "client": "tsx client.ts"
+  },
+  "dependencies": {
+    "bedrock-agentcore": "^0.4.7",
+    "ws": "^8.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "@types/ws": "^8.18.2",
+    "tsx": "^4.23.15",
+    "typescript": "~6.0.3"
+  }
+}

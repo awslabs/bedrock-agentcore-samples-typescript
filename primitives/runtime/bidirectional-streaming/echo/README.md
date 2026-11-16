@@ -1,179 +1,102 @@
-# Bidirectional Streaming
+# Bidirectional Streaming (Echo)
 
-This sample demonstrates WebSocket bidirectional communication on AgentCore Runtime.
+A WebSocket echo server on Amazon Bedrock AgentCore Runtime: the smallest example of full-duplex communication.
 
-## What This Sample Demonstrates
-
-- Using `websocketHandler` in `BedrockAgentCoreApp`
-- Full-duplex WebSocket communication
-- Session context in WebSocket connections
-- Message sending and receiving patterns
-
-## What is Bidirectional Streaming?
-
-Unlike HTTP request/response, WebSocket enables full-duplex communication — both client and server can send messages at any time without waiting for the other. This is essential for:
-
-- **Real-time chat** — Messages flow in both directions instantly
-- **Live updates** — Server pushes data as it becomes available
-- **Voice/audio** — Continuous audio streaming (future: Nova Sonic integration)
+→ See the [parent README](../README.md) for how bidirectional streaming works.
 
 ## Prerequisites
 
-- Node.js 20+
-- AWS credentials configured (for deployment)
-- [AgentCore Starter Toolkit](https://github.com/aws/bedrock-agentcore-starter-toolkit):
+- Node.js 22+
+- AWS credentials with access to AgentCore (for deploying)
+- The [AgentCore CLI](https://github.com/aws/agentcore-cli):
 
 ```bash
-pip install bedrock-agentcore-starter-toolkit
+npm install -g @aws/agentcore
 ```
 
-## Implementation
+## Project Structure
+
+```
+echo/
+├── app/agent/
+│   ├── main.ts         # The WebSocket server
+│   └── client.ts       # A client for the local or deployed server
+└── agentcore/
+    ├── agentcore.json  # Runtime configuration read by the AgentCore CLI
+    └── cdk/            # CDK app the CLI deploys
+```
+
+## The Server
 
 ```typescript
-import { BedrockAgentCoreApp, type RequestContext } from 'bedrock-agentcore/runtime'
-import type { WebSocket } from 'ws'
-
 const app = new BedrockAgentCoreApp({
-  // HTTP handler (required)
   invocationHandler: {
-    process: async (_request, _context) => {
-      return { message: 'Use WebSocket endpoint /ws for bidirectional streaming' }
+    process: async (): Promise<{ message: string }> => {
+      return { message: 'Use the WebSocket endpoint /ws for bidirectional streaming' }
     },
   },
 
-  // WebSocket handler for bidirectional streaming
-  websocketHandler: async (socket: WebSocket, context: RequestContext) => {
-    // Send welcome message
-    socket.send(
-      JSON.stringify({
-        type: 'connected',
-        sessionId: context.sessionId,
-      })
-    )
-
-    // Echo messages back
+  websocketHandler: async (socket: WebSocket, context: RequestContext): Promise<void> => {
     socket.on('message', (data) => {
-      const message = JSON.parse(data.toString())
+      const received = parseMessage(data)
+
+      if (received === undefined) {
+        socket.send(JSON.stringify({ type: 'error', message: 'Messages must be JSON' }))
+        return
+      }
+
       socket.send(
-        JSON.stringify({
-          type: 'echo',
-          received: message,
-        })
+        JSON.stringify({ type: 'echo', sessionId: context.sessionId, received, timestamp: new Date().toISOString() })
       )
     })
   },
 })
-
-app.run()
 ```
 
-→ [Full source](./agent.ts)
+`websocketHandler` serves `/ws` next to the HTTP `/invocations` endpoint. Each connection belongs to one runtime
+session.
 
-## Quick Start
+→ [Full source](./app/agent/main.ts)
 
-Install dependencies:
-
-```bash
-npm install
-```
-
-Configure the agent (specify `agent.ts` as the entrypoint):
-
-```bash
-agentcore configure
-```
-
-Accept defaults for all prompts, except for memory—enter `s` to skip memory creation.
-
-## Local Development
-
-Start the local dev server (no AWS credentials required for this echo server):
+## Run Locally
 
 ```bash
 agentcore dev
 ```
 
-## Test - Local Development
-
-Connect directly with any WebSocket client:
+The first run installs the dependencies. In a second terminal, send two messages with the included client:
 
 ```bash
-# Install wscat if needed
-npm install -g wscat
-
-# Connect to the WebSocket endpoint
-wscat -c ws://localhost:8080/ws \
-  -H "x-amzn-bedrock-agentcore-runtime-session-id: test-123"
+npm run client --prefix app/agent -- ws://localhost:8080/ws
 ```
-
-**Expected output:**
 
 ```
 Connected
-< {"type":"connected","sessionId":"test-123"}
-> {"message":"hello"}
-< {"type":"echo","received":{"message":"hello"},"timestamp":"2025-01-08T..."}
+Received: {"type":"echo","sessionId":"f8b9063e-...","received":{"message":"hello"},"timestamp":"..."}
+Received: {"type":"error","message":"Messages must be JSON"}
+Closed
 ```
 
-## Deploy to AgentCore
+## Deploy
 
 ```bash
+npm install --prefix agentcore/cdk
 agentcore deploy
+agentcore status
 ```
 
-## Test - Deployed Runtime
-
-Deployed runtimes require authenticated WebSocket connections. Use the included test client which handles IAM authentication.
-
-### Using the Test Client
+Deployed runtimes only accept signed WebSocket connections. Given a runtime ARN instead of a URL, the client signs the
+connection with `RuntimeClient` from the SDK. Pass it the ARN that `agentcore status` shows:
 
 ```bash
-npm run test:deployed -- "<runtime-arn>"
+npm run client --prefix app/agent -- <runtime-arn>
 ```
-
-### How It Works
-
-The test client ([client.ts](./client.ts)) uses `RuntimeClient` to handle SigV4 signing:
-
-```typescript
-import { RuntimeClient } from 'bedrock-agentcore/runtime'
-import { WebSocket } from 'ws'
-
-const client = new RuntimeClient({ region: 'us-east-1' })
-
-const { url, headers } = await client.generateWsConnection({
-  runtimeArn: RUNTIME_ARN,
-  endpointName: 'DEFAULT',
-})
-
-const ws = new WebSocket(url, { headers })
-```
-
-`RuntimeClient` handles:
-
-- AWS credential resolution (environment, profile, IAM role)
-- SigV4 request signing
-- Session ID generation
 
 ## Clean Up
 
 ```bash
-agentcore destroy
+agentcore remove all --yes
+agentcore deploy --yes
 ```
 
-## Key Concepts
-
-### The `websocketHandler` Option
-
-`BedrockAgentCoreApp` accepts an optional `websocketHandler` that receives:
-
-- `socket` — The WebSocket connection (from `ws` package)
-- `context` — Same `RequestContext` as HTTP, includes `sessionId`, `headers`, etc.
-
-### Session ID
-
-The session ID is passed via the `x-amzn-bedrock-agentcore-runtime-session-id` header during the WebSocket upgrade handshake.
-
-### Endpoint
-
-WebSocket connections use `GET /ws` with an HTTP upgrade handshake. The SDK handles the upgrade automatically when `websocketHandler` is provided.
+This deletes the deployed stack. Run `git checkout agentcore` to restore the configuration and deploy again.
