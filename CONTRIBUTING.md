@@ -39,13 +39,21 @@ Please read through this document before submitting any issues or pull requests.
 
 ## Testing Examples
 
-Each example should be independently runnable. To test an example:
+Each example should be independently runnable. Samples hosted on AgentCore Runtime use the
+[AgentCore CLI](https://github.com/aws/agentcore-cli):
 
 ```bash
+npm install -g @aws/agentcore
 cd primitives/runtime/hosting-agent/strands
-npm install
-npm start
+
+agentcore dev                          # Run locally
+npm install --prefix agentcore/cdk
+agentcore deploy                       # Deploy to AgentCore Runtime
+agentcore invoke --runtime agent --payload '{"prompt": "What is 25 * 4?"}'
+agentcore remove all --yes && agentcore deploy --yes   # Clean up
 ```
+
+CI type-checks every sample, but only running it shows that it works: run and deploy each sample you change.
 
 ## Reporting Bugs/Feature Requests
 
@@ -98,19 +106,23 @@ GitHub provides additional documentation on [forking a repository](https://help.
 
 ### Example Structure
 
-Each example should be **self-sufficient** with the following structure:
+Each example should be **self-sufficient**. A sample hosted on AgentCore Runtime is an AgentCore CLI project; create
+one with `agentcore create --name YourExample` and `agentcore add runtime --name agent --language typescript`:
 
 ```
 primitives/runtime/your-example/
-├── src/index.ts        # Entry point using BedrockAgentCoreApp
-├── package.json        # Dependencies
-├── tsconfig.json       # TypeScript config
-├── Dockerfile          # Container build (optional)
-├── docker-compose.yaml # Local development (optional)
-├── Makefile            # Build, deploy, delete commands (optional)
-├── template.yaml       # CloudFormation template (optional)
+├── app/agent/
+│   ├── main.ts         # Entry point using BedrockAgentCoreApp
+│   ├── package.json    # Dependencies
+│   └── tsconfig.json   # TypeScript config
+├── agentcore/
+│   ├── agentcore.json  # Project configuration, written by the AgentCore CLI
+│   └── cdk/            # CDK app the CLI deploys; add extra AWS resources in lib/cdk-stack.ts
 └── README.md           # Documentation (required)
 ```
+
+A sample that runs locally (such as the tools samples) keeps `src/index.ts`, `package.json` and `tsconfig.json` in
+its folder.
 
 ### Code Style
 
@@ -144,19 +156,27 @@ One-line description of what this example demonstrates.
 ## Prerequisites
 
 - Node.js 22+
-- AWS CLI configured
-- Access to Amazon Bedrock AgentCore
+- AWS credentials with access to Amazon Bedrock and AgentCore
+- The AgentCore CLI: `npm install -g @aws/agentcore`
 
-## Setup
+## Run Locally
 
 \`\`\`bash
-npm install
+agentcore dev
 \`\`\`
 
-## Running the Example
+## Deploy
 
 \`\`\`bash
-npm start
+npm install --prefix agentcore/cdk
+agentcore deploy
+\`\`\`
+
+## Clean Up
+
+\`\`\`bash
+agentcore remove all --yes
+agentcore deploy --yes
 \`\`\`
 
 ## How It Works
