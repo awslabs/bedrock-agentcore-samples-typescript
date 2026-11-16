@@ -32,7 +32,7 @@ const app = new BedrockAgentCoreApp({
   },
 })
 
-app.run() // Starts HTTP server on :8080
+app.run() // Starts an HTTP server on port 8080
 ```
 
 With a full agent framework:
@@ -50,7 +50,7 @@ const getWeather = tool({
 })
 
 const agent = new Agent({
-  model: new BedrockModel({ modelId: 'global.amazon.nova-2-lite-v1:0', region: 'us-east-1' }),
+  model: new BedrockModel({ modelId: 'global.anthropic.claude-haiku-5-5', region: 'us-east-1' }),
   tools: [getWeather],
 })
 
@@ -59,8 +59,12 @@ const app = new BedrockAgentCoreApp({
     requestSchema: z.object({ prompt: z.string() }),
     process: async function* (request, context) {
       for await (const event of agent.stream(request.prompt)) {
-        if (event.type === 'modelContentBlockDeltaEvent' && event.delta?.type === 'textDelta') {
-          yield { event: 'message', data: { text: event.delta.text } }
+        if (
+          event.type === 'modelStreamUpdateEvent' &&
+          event.event.type === 'modelContentBlockDeltaEvent' &&
+          event.event.delta.type === 'textDelta'
+        ) {
+          yield { event: 'message', data: { text: event.event.delta.text } }
         }
       }
     },
@@ -72,6 +76,19 @@ app.run()
 
 Use `requestSchema` to validate agent entrypoint input. Keep text prompts defined as `z.string()` and pass only prompt
 text to the agent.
+
+Every runtime sample is an [AgentCore CLI](https://github.com/aws/agentcore-cli) project, so trying one takes a few
+commands:
+
+```bash
+npm install -g @aws/agentcore
+cd primitives/runtime/hosting-agent/strands
+
+agentcore dev                          # Run locally with hot reload
+npm install --prefix agentcore/cdk
+agentcore deploy                       # Deploy to AgentCore Runtime
+agentcore invoke --runtime agent --payload '{"prompt": "What is 25 * 4?"}'
+```
 
 → [Runtime examples](./primitives/runtime/)
 
@@ -87,8 +104,9 @@ import { CodeInterpreterTools } from 'bedrock-agentcore/experimental/code-interp
 const codeInterpreter = new CodeInterpreterTools({ region: 'us-east-1' })
 
 const agent = new Agent({
-  model: new BedrockModel({ modelId: 'global.amazon.nova-2-lite-v1:0', region: 'us-east-1' }),
+  model: new BedrockModel({ modelId: 'global.anthropic.claude-haiku-5-5', region: 'us-east-1' }),
   tools: codeInterpreter.tools,
+  toolExecutor: 'sequential', // the tools share one sandbox session
 })
 
 // Agent can now run: "Calculate the standard deviation of [1, 2, 3, 4, 5]"
@@ -103,15 +121,15 @@ const agent = new Agent({
 import { BrowserTools } from 'bedrock-agentcore/experimental/browser/strands'
 
 const browserTools = new BrowserTools({ region: 'us-east-1' })
-await browserTools.startSession()
 
 const agent = new Agent({
-  model: new BedrockModel({ modelId: 'global.amazon.nova-2-lite-v1:0', region: 'us-east-1' }),
+  model: new BedrockModel({ modelId: 'global.anthropic.claude-haiku-5-5', region: 'us-east-1' }),
   tools: browserTools.tools,
+  toolExecutor: 'sequential', // the tools share one browser session
 })
 
-// Agent can now: "Go to amazon.com and find the Echo Show"
-// → Navigates, searches, reads results from a real browser
+// Agent can now: "Go to news.ycombinator.com and list the top 3 stories"
+// → Starts a browser session on the first tool call, then navigates and reads the page
 ```
 
 → [Browser examples](./primitives/tools/browser/)
@@ -131,16 +149,18 @@ const agent = new Agent({
 │       ├── code-interpreter/         # Secure code execution
 │       └── browser/                  # Web automation
 ├── use-cases/
-│   ├── customer-support-agent/       # Complete support chatbot
-│   └── data-analyzer/                # Data analysis agent
+│   ├── customer-support-agent/       # Multi-agent customer support
+│   ├── data-analyzer/                # Data analysis agent with a web app
+│   └── browser-live-view-agent/      # Browser agent with a live view
 └── .github/                          # GitHub workflows and templates
 ```
 
 ## Prerequisites
 
 - Node.js 22+
-- AWS CLI configured with credentials
-- Access to Amazon Bedrock and AgentCore
+- AWS credentials with access to Amazon Bedrock and AgentCore
+- The [AgentCore CLI](https://github.com/aws/agentcore-cli) (`npm install -g @aws/agentcore`) for samples hosted on
+  AgentCore Runtime
 
 ## Related Resources
 

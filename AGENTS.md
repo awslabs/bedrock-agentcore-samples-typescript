@@ -64,7 +64,8 @@ Default to `us-east-1` with environment variable override: `process.env['AWS_REG
 
 ### Model Selection
 
-Examples can use any appropriate Bedrock model. Choose models based on the specific use case requirements (latency, cost, capabilities, etc.).
+Use Claude Haiku 5.5 through its global inference profile, `global.anthropic.claude-haiku-5-5`, unless a sample needs a
+different model for its use case.
 
 ## Framework-Specific Patterns
 
@@ -73,17 +74,26 @@ Examples can use any appropriate Bedrock model. Choose models based on the speci
 - Use `Agent` class for agent orchestration
 - Use `tool()` function for defining tools with Zod schemas
 - Use `agent.stream()` for streaming responses
-- Handle events via async iteration and filter for `modelContentBlockDeltaEvent` with `textDelta`
+- Handle events via async iteration: text arrives as a `modelContentBlockDeltaEvent` with a `textDelta`, wrapped in a
+  `modelStreamUpdateEvent`
+- Pass agents in another agent's `tools` for agents-as-tools (multi-agent) patterns
 
 ```typescript
 const agent = new Agent({
-  model: new BedrockModel({ modelId: 'global.amazon.nova-2-lite-v1:0', region: 'us-east-1' }),
+  model: new BedrockModel({
+    modelId: 'global.anthropic.claude-haiku-5-5',
+    region: process.env['AWS_REGION'] ?? 'us-east-1',
+  }),
   tools: [myTool],
 })
 
 for await (const event of agent.stream(prompt)) {
-  if (event.type === 'modelContentBlockDeltaEvent' && event.delta?.type === 'textDelta') {
-    yield { event: 'message', data: { text: event.delta.text } }
+  if (
+    event.type === 'modelStreamUpdateEvent' &&
+    event.event.type === 'modelContentBlockDeltaEvent' &&
+    event.event.delta.type === 'textDelta'
+  ) {
+    yield { event: 'message', data: { text: event.event.delta.text } }
   }
 }
 ```
@@ -92,7 +102,7 @@ for await (const event of agent.stream(prompt)) {
 
 - **Always use `ToolLoopAgent`** for agentic workflows with tools (not `generateText` with `maxSteps`)
 - Use `instructions` property for system prompts (not `system`)
-- Required packages: `@ai-sdk/amazon-bedrock@^4.0.0`, `ai@^6.0.0`, `zod@^4.0.0`
+- Required packages: `@ai-sdk/amazon-bedrock@^5.0.0`, `ai@^7.0.0`, `zod@^4.0.0`
 
 ### Other Frameworks
 
@@ -115,6 +125,8 @@ Focused examples demonstrating individual AgentCore capabilities:
 - **`primitives/identity/`** — Authentication and authorization
   - Inbound authentication (authenticating requests to your agent)
   - Outbound authentication (agent accessing external services)
+- **`primitives/tools/`** — Built-in tools
+  - Code Interpreter and Browser, with Strands and Vercel AI SDK
 
 Each primitive example is self-contained and demonstrates a single concept clearly.
 
@@ -127,7 +139,8 @@ Examples include customer support agents, data analyzers, and other practical ap
 ```
 ├── primitives/
 │   ├── runtime/          # Runtime primitives (hosting, streaming, async)
-│   └── identity/         # Auth primitives (inbound, outbound)
+│   ├── identity/         # Auth primitives (inbound, outbound)
+│   └── tools/            # Code Interpreter and Browser
 ├── use-cases/           # End-to-end examples combining primitives
 └── .github/             # GitHub-specific configuration
 ```
@@ -136,13 +149,18 @@ Examples include customer support agents, data analyzers, and other practical ap
 
 - Use kebab-case for directory names (e.g., `code-interpreter`, `customer-support-agent`)
 - Use kebab-case for multi-word file names
-- Main entry point should be `src/index.ts` or `index.ts` (when using AgentCore Starter Toolkit, use flat structure with `agent.ts`)
+- Samples hosted on AgentCore Runtime are [AgentCore CLI](https://github.com/aws/agentcore-cli) projects, laid out as
+  `agentcore create` and `agentcore add runtime --language typescript` generate them:
+  - `app/agent/main.ts` — the entry point (the CLI requires this name), with its own `package.json` and `tsconfig.json`
+  - `agentcore/agentcore.json` — the project configuration; let the CLI write it
+  - `agentcore/cdk/` — the CDK app the CLI deploys; add a sample's extra AWS resources in `lib/cdk-stack.ts`
+- Samples that run locally (tools, local apps) use `src/index.ts` as the entry point
 - Keep examples focused and in separate directories
 
 ## Dependencies
 
 - Minimize external dependencies — only include what's necessary for the example
-- Use workspace/monorepo structure to avoid duplicate dependencies
+- Keep each sample self-contained with its own `package.json`, so it can be copied out of the repository
 - Pin major versions for stability
 - Node.js 22+ is the minimum required version
 
@@ -157,8 +175,9 @@ Examples include customer support agents, data analyzers, and other practical ap
 
 - All examples must be runnable
 - Use `npm run validate` to check formatting and linting before committing
+- CI type-checks every sample against the latest versions its `package.json` allows
+- Run a runtime sample with `agentcore dev`, and deploy it with `agentcore deploy` before changing its README
 - Examples should work with minimal setup (documented in each README)
-- Testing requirements: **To be defined**
 
 ## Common Patterns to Follow
 
@@ -176,7 +195,7 @@ const app = new BedrockAgentCoreApp({
   },
 })
 
-app.run()
+app.run({ port: parseInt(process.env['PORT'] ?? '8080') })
 ```
 
 ### Tool Definitions
@@ -190,7 +209,7 @@ const myTool = tool({
   inputSchema: z.object({
     param: z.string().describe('What this parameter does'),
   }),
-  callback: async (input) => {
+  callback: async ({ param }): Promise<string> => {
     // Implementation
   },
 })
