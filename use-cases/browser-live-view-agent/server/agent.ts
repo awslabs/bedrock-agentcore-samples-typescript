@@ -7,7 +7,6 @@ import {
   type ToolResultContentBlock,
 } from '@aws-sdk/client-bedrock-runtime'
 import { PlaywrightBrowser } from 'bedrock-agentcore/browser/playwright'
-import type { BrowserClientConfig } from 'bedrock-agentcore/browser'
 import { config } from './config.js'
 
 export interface AgentState {
@@ -155,45 +154,70 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
   }
 }
 
-export async function startSession(): Promise<string> {
+let liveViewUrlPromise: Promise<string> | null = null
+
+async function createSession(): Promise<string> {
   agentState.status = 'starting'
   agentState.logs = []
   agentState.result = null
   agentState.error = null
-
   log('Creating browser session...')
 
-  const clientConfig: BrowserClientConfig = {
-    region: config.region,
-    identifier: config.browser.identifier,
-    credentialsProvider: async () => config.credentials,
+  const session = new PlaywrightBrowser({ region: config.region, identifier: config.browser.identifier })
+  try {
+    await session.startSession({
+      sessionName: 'liveview-demo',
+      timeout: config.browser.sessionTimeout,
+      viewport: config.browser.viewport,
+    })
+    log(`Session started: ${config.browser.identifier}`)
+
+    const liveViewUrl = await session.generateLiveViewUrl()
+    browser = session
+    agentState.liveViewUrl = liveViewUrl
+    agentState.status = 'idle'
+    log('Live view URL generated')
+    return liveViewUrl
+  } catch (err) {
+    liveViewUrlPromise = null
+    agentState.status = 'error'
+    agentState.error = err instanceof Error ? err.message : 'Failed to start browser session'
+    log(`Session error: ${agentState.error}`)
+    await session.stopSession()
+    throw err
   }
+}
 
-  browser = new PlaywrightBrowser(clientConfig)
-  await browser.startSession({
-    sessionName: 'liveview-demo',
-    timeout: config.browser.sessionTimeout,
-    viewport: config.browser.viewport,
-  })
-  log(`Session started: ${config.browser.identifier}`)
-
-  const liveViewUrl = await browser.generateLiveViewUrl()
-  agentState.liveViewUrl = liveViewUrl
-  log('Live view URL generated')
-
-  agentState.status = 'idle'
-  return liveViewUrl
+// Concurrent callers share one in-flight start, so a second request can't orphan a session
+export async function startSession(): Promise<string> {
+  if (browser) {
+    // Presigned live view URLs expire after 5 minutes, so an existing session gets a fresh one
+    agentState.liveViewUrl = await browser.generateLiveViewUrl()
+    return agentState.liveViewUrl
+  }
+  liveViewUrlPromise ??= createSession()
+  return liveViewUrlPromise
 }
 
 export async function stopSession(): Promise<void> {
-  if (browser) {
-    log('Stopping session...')
-    await browser.stopSession()
-    browser = null
-    agentState.status = 'idle'
-    agentState.liveViewUrl = null
-    log('Session stopped')
+  try {
+    await liveViewUrlPromise
+  } catch {
+    return
   }
+  const session = browser
+  if (!session) return
+  browser = null
+  liveViewUrlPromise = null
+  agentState.status = 'idle'
+  agentState.liveViewUrl = null
+  log('Stopping session...')
+  await session.stopSession()
+  log('Session stopped')
+}
+
+export function hasSession(): boolean {
+  return browser !== null
 }
 
 const SYSTEM_PROMPT = `You are a browser automation agent. You MUST use the provided tools to browse websites. You CANNOT answer from memory.
@@ -210,21 +234,22 @@ IMPORTANT:
 - When you have enough information, respond with your final answer as plain text (no tool call)`
 
 export async function runAgent(prompt: string): Promise<void> {
-  if (!browser) throw new Error('No active session')
-
   agentState.status = 'running'
-  log(`Agent starting with prompt: "${prompt.slice(0, 80)}..."`)
+  agentState.result = null
+  agentState.error = null
+  log(`Agent starting with prompt: "${prompt.slice(0, 80)}${prompt.length > 80 ? '...' : ''}"`)
 
   try {
-    const bedrockClient = new BedrockRuntimeClient({
-      region: config.region,
-      credentials: config.credentials,
-    })
+    const bedrockClient = new BedrockRuntimeClient({ region: config.region })
 
     const messages: Message[] = [{ role: 'user', content: [{ text: prompt }] }]
     let step = 0
 
     while (step < 40) {
+      if (!browser) {
+        log('Agent cancelled: session stopped')
+        return
+      }
       step++
       log(`Step ${step}/40`)
 

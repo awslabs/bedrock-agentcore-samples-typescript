@@ -6,18 +6,18 @@ import { viteStaticCopy } from 'vite-plugin-static-copy'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
-// Path to the vendored DCV SDK inside bedrock-agentcore
-const dcvSdkDir = resolve(
-  __dirname,
-  'node_modules/bedrock-agentcore/dist/src/tools/browser/live-view/nice-dcv-web-client-sdk'
-)
+// The DCV SDK vendored inside bedrock-agentcore, relative to the project root
+const dcvSdkDir = 'node_modules/bedrock-agentcore/dist/src/tools/browser/live-view/nice-dcv-web-client-sdk'
+
+const serverPort = parseInt(process.env['PORT'] ?? '3001')
+const clientPort = parseInt(process.env['CLIENT_PORT'] ?? '5173')
 
 export default defineConfig({
   resolve: {
     alias: {
       // DCV SDK bare specifier aliases — required for BrowserLiveView
-      dcv: resolve(dcvSdkDir, 'dcvjs-esm/dcv.js'),
-      'dcv-ui': resolve(dcvSdkDir, 'dcv-ui/dcv-ui.js'),
+      dcv: resolve(__dirname, dcvSdkDir, 'dcvjs-esm/dcv.js'),
+      'dcv-ui': resolve(__dirname, dcvSdkDir, 'dcv-ui/dcv-ui.js'),
     },
     // Force shared deps to resolve from this project's node_modules,
     // not from the vendored SDK path
@@ -34,13 +34,22 @@ export default defineConfig({
   plugins: [
     react(),
     viteStaticCopy({
+      // BrowserLiveView loads the DCV workers and decoders from /nice-dcv-web-client-sdk/dcvjs-esm at runtime
       targets: [
-        { src: resolve(dcvSdkDir, 'dcvjs-esm'), dest: 'nice-dcv-web-client-sdk' },
-        { src: resolve(dcvSdkDir, 'dcv-ui'), dest: 'nice-dcv-web-client-sdk' },
+        {
+          src: `${dcvSdkDir}/dcvjs-esm/**/*`,
+          dest: 'nice-dcv-web-client-sdk',
+          rename: { stripBase: dcvSdkDir.split('/').length },
+        },
       ],
     }),
   ],
+  // The browser talks only to Vite; /api is proxied to the local agent server
   server: {
-    port: 5173,
+    port: clientPort,
+    strictPort: true,
+    proxy: {
+      '/api': `http://127.0.0.1:${serverPort}`,
+    },
   },
 })

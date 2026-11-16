@@ -1,66 +1,85 @@
 import Fastify from 'fastify'
 import { config } from './config.js'
-import { agentState, startSession, runAgent, stopSession } from './agent.js'
+import { agentState, hasSession, startSession, runAgent, stopSession } from './agent.js'
 
-const app = Fastify({ logger: true })
+const app = Fastify({ logger: { level: 'warn' } })
 
-// CORS for Vite dev server
+const clientOrigins = new Set([`http://localhost:${config.client.port}`, `http://127.0.0.1:${config.client.port}`])
+const loopbackHost = /^(localhost|127\.0\.0\.1)(:\d+)?$/
+
+// The API acts with your AWS credentials, so only the local Vite client may call it:
+// foreign Origins (other websites) and non-loopback Host headers (DNS rebinding) are refused
 app.addHook('onRequest', async (request, reply) => {
-  reply.header('Access-Control-Allow-Origin', '*')
-  reply.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-  reply.header('Access-Control-Allow-Headers', 'Content-Type')
-  if (request.method === 'OPTIONS') {
-    reply.status(204).send()
+  const origin = request.headers.origin
+  if (!loopbackHost.test(request.headers.host ?? '') || (origin !== undefined && !clientOrigins.has(origin))) {
+    return reply.code(403).send({ error: 'Forbidden' })
   }
 })
 
-// Start a browser session and return the live view URL
 app.post('/api/start', async () => {
-  if (agentState.liveViewUrl) {
-    return { liveViewUrl: agentState.liveViewUrl }
-  }
   const liveViewUrl = await startSession()
   return { liveViewUrl }
 })
 
-// Run the AI agent with a prompt
-app.post<{ Body: { prompt: string } }>('/api/run-agent', async (request) => {
-  const { prompt } = request.body
+app.post<{ Body: { prompt: string } }>(
+  '/api/run-agent',
+  {
+    schema: {
+      body: {
+        type: 'object',
+        required: ['prompt'],
+        properties: { prompt: { type: 'string', minLength: 1, maxLength: 4000 } },
+      },
+    },
+  },
+  async (request, reply) => {
+    if (!hasSession()) {
+      return reply.code(409).send({ error: 'Start a browser session first' })
+    }
+    if (agentState.status === 'running') {
+      return reply.code(409).send({ error: 'Agent is already running' })
+    }
 
-  if (agentState.status === 'running') {
-    return { error: 'Agent is already running' }
+    // runAgent records its own errors in agentState; the client polls /api/status for progress
+    void runAgent(request.body.prompt)
+    return { status: 'started' }
   }
+)
 
-  // Run agent in background — don't await
-  runAgent(prompt).catch((err) => {
-    console.error('Agent failed:', err)
-  })
-
-  return { status: 'started' }
-})
-
-// Poll agent status and logs
 app.get('/api/status', async () => {
   return {
     status: agentState.status,
     logs: agentState.logs,
     result: agentState.result,
     error: agentState.error,
+    liveViewUrl: agentState.liveViewUrl,
+    region: config.region,
   }
 })
 
-// Stop session and clean up
 app.post('/api/stop', async () => {
   await stopSession()
   return { status: 'stopped' }
 })
 
-// Start server
-const start = async (): Promise<void> => {
+// Stop the browser session on exit so it doesn't keep running (and billing) until its timeout
+async function shutdown(): Promise<void> {
   try {
-    await app.listen({ port: config.server.port, host: '0.0.0.0' })
-    console.log(`\n  Agent server running at http://localhost:${config.server.port}`)
-    console.log('  Waiting for client to connect...\n')
+    await stopSession()
+  } finally {
+    await app.close()
+    process.exit(0)
+  }
+}
+
+process.once('SIGINT', shutdown)
+process.once('SIGTERM', shutdown)
+
+async function start(): Promise<void> {
+  try {
+    await app.listen({ port: config.server.port, host: '127.0.0.1' })
+    console.log(`\n  Agent server running at http://127.0.0.1:${config.server.port}`)
+    console.log(`  Open the app at http://localhost:${config.client.port}\n`)
   } catch (err) {
     app.log.error(err)
     process.exit(1)

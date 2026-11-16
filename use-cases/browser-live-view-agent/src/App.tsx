@@ -1,10 +1,35 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { BrowserLiveView } from 'bedrock-agentcore/browser/live-view'
-import { API_BASE, REMOTE_WIDTH, REMOTE_HEIGHT } from './constants'
+import { REMOTE_WIDTH, REMOTE_HEIGHT } from './constants'
 
 type AgentStatus = 'idle' | 'starting' | 'running' | 'completed' | 'error'
 
-const DEFAULT_PROMPT = 'Go to en.wikipedia.org, search for "Amazon Web Services", and summarize the key information from the article including when it was founded, main services, and market position.'
+interface StatusResponse {
+  status: AgentStatus
+  logs: string[]
+  result: string | null
+  error: string | null
+  liveViewUrl: string | null
+  region: string
+}
+
+const DEFAULT_PROMPT =
+  'Go to en.wikipedia.org, search for "Amazon Web Services", and summarize the key information from the article including when it was founded, main services, and market position.'
+
+async function postJson<T>(path: string, body?: object): Promise<T> {
+  const res = await fetch(path, {
+    method: 'POST',
+    headers: body ? { 'Content-Type': 'application/json' } : undefined,
+    body: body ? JSON.stringify(body) : undefined,
+  })
+  const payload = await res.json()
+  if (!res.ok) throw new Error(payload.message ?? payload.error ?? `Request failed: ${res.status}`)
+  return payload
+}
+
+function errorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err)
+}
 
 export const App: React.FC = () => {
   const [liveViewUrl, setLiveViewUrl] = useState<string | null>(null)
@@ -12,67 +37,83 @@ export const App: React.FC = () => {
   const [logs, setLogs] = useState<string[]>([])
   const [result, setResult] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [region, setRegion] = useState('—')
   const [prompt, setPrompt] = useState(DEFAULT_PROMPT)
   const [connecting, setConnecting] = useState(false)
-  const logEndRef = useRef<HTMLDivElement>(null)
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const logBodyRef = useRef<HTMLDivElement>(null)
+
+  const applyStatus = (data: StatusResponse): void => {
+    setLogs(data.logs)
+    setStatus(data.status)
+    setResult(data.result)
+    setError(data.error)
+    setRegion(data.region)
+  }
+
+  // Pick up a session the server already has (e.g. after a page reload) so it can still be watched and stopped
+  useEffect(() => {
+    const restore = async (): Promise<void> => {
+      try {
+        const res = await fetch('/api/status')
+        const data: StatusResponse = await res.json()
+        applyStatus(data)
+        if (data.liveViewUrl) {
+          const { liveViewUrl: freshUrl } = await postJson<{ liveViewUrl: string }>('/api/start')
+          setLiveViewUrl(freshUrl)
+        }
+      } catch (err) {
+        setError(`Cannot reach the agent server: ${errorMessage(err)}`)
+      }
+    }
+    void restore()
+  }, [])
 
   useEffect(() => {
-    if (status === 'running' || status === 'starting') {
-      pollRef.current = setInterval(async () => {
-        try {
-          const res = await fetch(`${API_BASE}/api/status`)
-          const data = await res.json()
-          setLogs(data.logs || [])
-          setStatus(data.status)
-          if (data.result) setResult(data.result)
-          if (data.error) setError(data.error)
-          if (data.status === 'completed' || data.status === 'error') {
-            if (pollRef.current) clearInterval(pollRef.current)
-          }
-        } catch {
-          // Server not ready yet
-        }
-      }, 1000)
-    }
-    return () => { if (pollRef.current) clearInterval(pollRef.current) }
+    if (status !== 'running' && status !== 'starting') return
+    const poll = setInterval(async () => {
+      try {
+        const res = await fetch('/api/status')
+        applyStatus(await res.json())
+      } catch {
+        // Transient network errors are retried on the next tick
+      }
+    }, 1000)
+    return () => clearInterval(poll)
   }, [status])
 
   useEffect(() => {
-    logEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    // Scroll only the log panel, so the page doesn't jump away from the live view
+    logBodyRef.current?.scrollTo({ top: logBodyRef.current.scrollHeight, behavior: 'smooth' })
   }, [logs])
 
-  const handleLaunch = async () => {
+  const handleLaunch = async (): Promise<void> => {
     try {
       setConnecting(true)
       setError(null)
       setResult(null)
-      setLogs([])
-      const startRes = await fetch(`${API_BASE}/api/start`, { method: 'POST' })
-      const startData = await startRes.json()
-      setLiveViewUrl(startData.liveViewUrl)
-      await new Promise((r) => setTimeout(r, 2000))
+      if (!liveViewUrl) {
+        const { liveViewUrl: newUrl } = await postJson<{ liveViewUrl: string }>('/api/start')
+        setLiveViewUrl(newUrl)
+        // Give the live view a moment to connect so the first navigation is visible
+        await new Promise((resolve) => setTimeout(resolve, 2000))
+      }
+      await postJson('/api/run-agent', { prompt })
       setStatus('running')
-      await fetch(`${API_BASE}/api/run-agent`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt }),
-      })
-    } catch (e: any) {
-      setError(e.message)
+    } catch (err) {
+      setError(errorMessage(err))
       setStatus('error')
     } finally {
       setConnecting(false)
     }
   }
 
-  const handleStop = async () => {
+  const handleStop = async (): Promise<void> => {
     try {
-      await fetch(`${API_BASE}/api/stop`, { method: 'POST' })
+      await postJson('/api/stop')
       setLiveViewUrl(null)
       setStatus('idle')
-    } catch (e: any) {
-      setError(e.message)
+    } catch (err) {
+      setError(errorMessage(err))
     }
   }
 
@@ -124,7 +165,9 @@ export const App: React.FC = () => {
             <div style={s.cardHeader}>
               <span style={s.cardTitle}>Browser Session - Live View</span>
               {liveViewUrl && (
-                <button onClick={handleStop} style={s.stopBtn}>Stop Session</button>
+                <button onClick={handleStop} style={s.stopBtn}>
+                  Stop Session
+                </button>
               )}
             </div>
             <div style={s.viewerContainer}>
@@ -187,7 +230,7 @@ export const App: React.FC = () => {
               <span style={s.cardTitle}>Activity Log</span>
               <span style={s.logBadge}>{logs.length}</span>
             </div>
-            <div style={s.logBody}>
+            <div ref={logBodyRef} style={s.logBody}>
               {logs.length === 0 ? (
                 <p style={s.logEmpty}>Waiting for agent activity...</p>
               ) : (
@@ -198,7 +241,6 @@ export const App: React.FC = () => {
                   </div>
                 ))
               )}
-              <div ref={logEndRef} />
             </div>
           </div>
 
@@ -208,12 +250,14 @@ export const App: React.FC = () => {
               <span style={s.cardTitle}>Session Info</span>
             </div>
             <div style={{ padding: '12px 16px' }}>
-              {([
-                ['Region', 'us-west-2'],
-                ['Viewport', `${REMOTE_WIDTH}\u00D7${REMOTE_HEIGHT}`],
-                ['Protocol', 'DCV / WebSocket'],
-                ['Agent', 'Bedrock Converse API'],
-              ] as const).map(([label, value]) => (
+              {(
+                [
+                  ['Region', region],
+                  ['Viewport', `${REMOTE_WIDTH}\u00D7${REMOTE_HEIGHT}`],
+                  ['Protocol', 'DCV / WebSocket'],
+                  ['Agent', 'Bedrock Converse API'],
+                ] as const
+              ).map(([label, value]) => (
                 <div key={label} style={s.infoRow}>
                   <span style={s.infoLabel}>{label}</span>
                   <span style={s.infoValue}>{value}</span>
@@ -266,12 +310,14 @@ const s: Record<string, React.CSSProperties> = {
   },
   layout: {
     display: 'flex',
+    flexWrap: 'wrap',
     maxWidth: '1440px',
     margin: '0 auto',
     padding: '20px',
     gap: '20px',
   },
-  main: { flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' as const, gap: '16px' },
+  // The large grow factor keeps the sidebar near 330px side by side, and full width once it wraps on small screens
+  main: { flex: '999 1 600px', minWidth: 0, display: 'flex', flexDirection: 'column' as const, gap: '16px' },
   card: {
     background: '#ffffff',
     borderRadius: '10px',
@@ -317,11 +363,12 @@ const s: Record<string, React.CSSProperties> = {
   promptRow: {
     padding: '14px',
     display: 'flex',
+    flexWrap: 'wrap',
     gap: '12px',
     alignItems: 'flex-end',
   },
   promptInput: {
-    flex: 1,
+    flex: '999 1 240px',
     background: '#f8fafc',
     border: '1px solid #e2e8f0',
     borderRadius: '8px',
@@ -334,6 +381,7 @@ const s: Record<string, React.CSSProperties> = {
     lineHeight: 1.5,
   },
   launchBtn: {
+    flex: '1 0 auto',
     padding: '10px 28px',
     fontSize: '13px',
     fontWeight: 700,
@@ -352,8 +400,7 @@ const s: Record<string, React.CSSProperties> = {
     whiteSpace: 'pre-wrap' as const,
   },
   sidebar: {
-    width: '330px',
-    flexShrink: 0,
+    flex: '1 1 330px',
     display: 'flex',
     flexDirection: 'column' as const,
     gap: '16px',
