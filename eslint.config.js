@@ -8,7 +8,7 @@ import globals from 'globals'
 
 export default [
   {
-    ignores: ['**/node_modules/**', '**/dist/**', '**/coverage/**', '**/cdk.out/**', '**/*.jsx'],
+    ignores: ['**/node_modules/**', '**/dist/**', '**/coverage/**', '**/cdk.out/**'],
   },
   eslint.configs.recommended,
   {
@@ -16,6 +16,7 @@ export default [
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: 'module',
+      parserOptions: { ecmaFeatures: { jsx: true } },
       globals: globals.browser,
     },
     rules: {
@@ -26,7 +27,7 @@ export default [
     },
   },
   {
-    files: ['**/*.config.js', '**/postcss.config.js'],
+    files: ['**/*.config.js'],
     languageOptions: {
       globals: globals.node,
     },
