@@ -39,7 +39,7 @@ const app = new BedrockAgentCoreApp({
   },
 })
 
-app.run() // Starts an HTTP server on port 8080
+app.run({ port: parseInt(process.env['PORT'] ?? '8080') })
 ```
 
 With a full agent framework:
@@ -49,15 +49,17 @@ import { Agent, BedrockModel, tool } from '@strands-agents/sdk'
 import { BedrockAgentCoreApp } from 'bedrock-agentcore/runtime'
 import { z } from 'zod'
 
+const region = process.env['AWS_REGION'] ?? 'us-east-1'
+
 const getWeather = tool({
   name: 'getWeather',
   description: 'Gets weather for a city',
   inputSchema: z.object({ city: z.string() }),
-  callback: ({ city }) => `72°F and sunny in ${city}`,
+  callback: ({ city }): string => `72°F and sunny in ${city}`,
 })
 
 const agent = new Agent({
-  model: new BedrockModel({ modelId: 'global.anthropic.claude-haiku-5-5', region: 'us-east-1' }),
+  model: new BedrockModel({ modelId: 'global.anthropic.claude-haiku-5-5', region, maxTokens: 8192 }),
   tools: [getWeather],
 })
 
@@ -78,7 +80,7 @@ const app = new BedrockAgentCoreApp({
   },
 })
 
-app.run()
+app.run({ port: parseInt(process.env['PORT'] ?? '8080') })
 ```
 
 `requestSchema` validates each invocation before it reaches the agent.
@@ -112,12 +114,13 @@ Built-in tools for common agent capabilities.
 ```typescript
 import { CodeInterpreterTools } from 'bedrock-agentcore/experimental/code-interpreter/strands'
 
-const codeInterpreter = new CodeInterpreterTools({ region: 'us-east-1' })
+const codeInterpreter = new CodeInterpreterTools({ region })
 
 const agent = new Agent({
-  model: new BedrockModel({ modelId: 'global.anthropic.claude-haiku-5-5', region: 'us-east-1' }),
+  model: new BedrockModel({ modelId: 'global.anthropic.claude-haiku-5-5', region, maxTokens: 8192 }),
   tools: codeInterpreter.tools,
-  toolExecutor: 'sequential', // the tools share one sandbox session
+  // The tools share one sandbox session, so they run one at a time
+  toolExecutor: 'sequential',
 })
 
 // Agent can now run: "Calculate the standard deviation of [1, 2, 3, 4, 5]"
@@ -131,16 +134,19 @@ const agent = new Agent({
 ```typescript
 import { BrowserTools } from 'bedrock-agentcore/experimental/browser/strands'
 
-const browserTools = new BrowserTools({ region: 'us-east-1' })
+const browserTools = new BrowserTools({ region })
 
 const agent = new Agent({
-  model: new BedrockModel({ modelId: 'global.anthropic.claude-haiku-5-5', region: 'us-east-1' }),
+  model: new BedrockModel({ modelId: 'global.anthropic.claude-haiku-5-5', region, maxTokens: 8192 }),
   tools: browserTools.tools,
-  toolExecutor: 'sequential', // the tools share one browser session
+  // The tools share one browser session, so they run one at a time
+  toolExecutor: 'sequential',
 })
 
 // Agent can now: "Go to news.ycombinator.com and list the top 3 stories"
 // → Starts a browser session on the first tool call, then navigates and reads the page
+
+await browserTools.stopSession() // when the request finishes: the session doesn't end with the runtime session
 ```
 
 → [Browser examples](./primitives/tools/browser/)

@@ -45,8 +45,9 @@ show how the SDK simplifies building and running AI agents, with the TypeScript 
 - **Error handling** — use proper async error handling with try/catch in examples where it adds clarity
 - **No unused variables** — keep code clean; if a parameter is unused, prefix with `_` (e.g., `_context`)
 - **Async/await always** — never use raw Promises (.then/.catch chains); always use async/await
-- **Explicit return types** — give named and exported functions explicit return types; inline callbacks typed by their
-  context (handlers, `tool` callbacks, routes) don't need one
+- **Explicit return types** — give named functions, exported functions and tool callbacks explicit return types;
+  inline callbacks typed by their context (handlers, routes, event listeners) don't need one
+- **Naming** — camelCase for variables, constants and tool names; `node:` specifiers for Node.js built-ins
 
 ## SDK Dependency
 
@@ -72,6 +73,7 @@ different model for its use case.
 - Use `Agent` class for agent orchestration
 - Use `tool()` function for defining tools with Zod schemas
 - Use `agent.stream()` for streaming responses
+- Set `maxTokens` on `BedrockModel` explicitly; without it Strands warns at start-up that its default may change
 - Handle events via async iteration: text arrives as a `modelContentBlockDeltaEvent` with a `textDelta`, wrapped in a
   `modelStreamUpdateEvent`
 - Pass agents in another agent's `tools` for agents-as-tools (multi-agent) patterns
@@ -81,6 +83,7 @@ const agent = new Agent({
   model: new BedrockModel({
     modelId: 'global.anthropic.claude-haiku-5-5',
     region: process.env['AWS_REGION'] ?? 'us-east-1',
+    maxTokens: 8192,
   }),
   tools: [myTool],
 })
@@ -100,6 +103,8 @@ for await (const event of agent.stream(prompt)) {
 
 - **Always use `ToolLoopAgent`** for agentic workflows with tools (not `generateText` with `maxSteps`)
 - Use `instructions` property for system prompts (not `system`)
+- `ToolLoopAgent` keeps no history: to hold a conversation, keep a `messages: ModelMessage[]` array, call
+  `agent.stream({ messages })`, then append `await stream.responseMessages`
 - Pass `credentialProvider: fromNodeProviderChain()` to `createAmazonBedrock`; without it the provider reads only
   credentials from environment variables, which fails with the runtime's IAM role and with SSO profiles
 - Required packages: `@ai-sdk/amazon-bedrock@^5.0.0`, `@aws-sdk/credential-providers@^3.0.0`, `ai@^7.0.0`, `zod@^4.0.0`
@@ -190,6 +195,19 @@ const app = new BedrockAgentCoreApp({
 app.run({ port: parseInt(process.env['PORT'] ?? '8080') })
 ```
 
+### Streamed Events
+
+Samples stream these event shapes, so a client written for one sample works with the others:
+
+| Event     | Data              | When                                                                |
+| --------- | ----------------- | ------------------------------------------------------------------- |
+| `message` | `{ text }`        | A text delta from the model                                         |
+| `tool`    | `{ name, input }` | Before a tool runs; add `toolUseId` when a `tool_result` follows it |
+| `error`   | `{ error }`       | A failure (the SDK's own error events use this shape)               |
+
+Other events use snake_case names and camelCase data keys. Log from a handler with `context.log`, the SDK's
+request-scoped logger, rather than `console.log`.
+
 ### Agent Lifetime
 
 Deployed, each runtime session runs in its own microVM, so an agent created at module level serves a single session.
@@ -198,7 +216,9 @@ Keep one agent per `context.sessionId` (a `Map`) only where a multi-turn convers
 ### Built-in Tools
 
 Code Interpreter and Browser tools share one session per tool instance, so run their calls one at a time:
-`toolExecutor: 'sequential'` (Strands) or `toolCallConcurrency: 1` (Vercel AI SDK).
+`toolExecutor: 'sequential'` (Strands) or `toolCallConcurrency: 1` (Vercel AI SDK). A Browser session isn't tied to the
+runtime session, so stop it when each request finishes. Playwright can't be bundled into a single file, so samples that
+use the Browser deploy as a container (a `Dockerfile` in `app/agent/`).
 
 ### Tool Definitions
 
