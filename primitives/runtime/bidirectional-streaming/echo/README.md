@@ -36,9 +36,9 @@ const app = new BedrockAgentCoreApp({
     },
   },
 
-  websocketHandler: async (socket: WebSocket, context: RequestContext): Promise<void> => {
+  websocketHandler: async (socket, context) => {
     socket.on('message', (data) => {
-      const received = parseMessage(data)
+      const received = parseMessage(String(data))
 
       if (received === undefined) {
         socket.send(JSON.stringify({ type: 'error', message: 'Messages must be JSON' }))

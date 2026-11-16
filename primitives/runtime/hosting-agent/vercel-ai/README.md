@@ -53,9 +53,8 @@ const app = new BedrockAgentCoreApp({
 app.run({ port: parseInt(process.env['PORT'] ?? '8080') })
 ```
 
-The Zod request schema validates entrypoint input. Keep prompts typed as strings and pass only prompt text to the
-agent. `ToolLoopAgent` calls the calculator as often as it needs before answering. `fromNodeProviderChain()` picks up
-the runtime's IAM role when deployed and your local AWS credentials during development.
+`ToolLoopAgent` calls the calculator as often as it needs before answering. `fromNodeProviderChain()` picks up the
+runtime's IAM role when deployed and your local AWS credentials during development.
 
 → [Full source](./app/agent/main.ts)
 

@@ -3,7 +3,7 @@ import { BedrockAgentCoreApp } from 'bedrock-agentcore/runtime'
 import { z } from 'zod'
 
 const startBackgroundTask = tool({
-  name: 'start_background_task',
+  name: 'startBackgroundTask',
   description: 'Start a background task that runs for the given number of seconds',
   inputSchema: z.object({
     duration: z.number().int().min(1).max(3600).default(5).describe('Duration in seconds for the background task'),

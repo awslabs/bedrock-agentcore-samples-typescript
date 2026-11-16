@@ -58,10 +58,15 @@ const app = new BedrockAgentCoreApp({
 app.run({ port: parseInt(process.env['PORT'] ?? '8080') })
 ```
 
-Validate invocation payloads before forwarding them to an agent. Keep text prompts defined as `z.string()` and pass
-only prompt text to the agent.
+`requestSchema` validates each payload before your handler runs, so `request.prompt` is a string by the time it
+reaches the agent. Requests that don't match are rejected. Keep prompts typed as `z.string()` and pass only the prompt
+text to the agent.
 
 The generator function (`async function*`) enables streaming — each `yield` sends an event to the client immediately.
+
+Deployed, each runtime session runs in its own microVM, so an agent created at module level serves a single session.
+Samples where the conversation is the point keep one agent per `context.sessionId`, which also keeps sessions apart
+under `agentcore dev`.
 
 ## The AgentCore Protocol
 
@@ -96,14 +101,25 @@ Install the CLI once:
 npm install -g @aws/agentcore
 ```
 
-Then, from any sample:
+Then, from any sample, run it locally with hot reload:
 
 ```bash
-agentcore dev                          # Run locally with hot reload
+agentcore dev
+```
+
+In a second terminal, invoke it:
+
+```bash
+agentcore invoke --runtime agent --local --payload '{"prompt": "Hello"}'
+```
+
+Deploy it to AgentCore Runtime, invoke it, and clean up:
+
+```bash
 npm install --prefix agentcore/cdk
-agentcore deploy                       # Bundle the agent and deploy it
+agentcore deploy
 agentcore invoke --runtime agent --payload '{"prompt": "Hello"}'
-agentcore remove all --yes && agentcore deploy --yes   # Clean up
+agentcore remove all --yes && agentcore deploy --yes
 ```
 
 ## Invoking a Deployed Agent
@@ -133,11 +149,14 @@ Session IDs must be at least 33 characters; a UUID works. The streamed events ar
 **With fetch (OAuth):**
 
 ```typescript
-const response = await fetch(`${runtimeEndpoint}/invocations`, {
+const url = `https://bedrock-agentcore.${region}.amazonaws.com/runtimes/${encodeURIComponent(runtimeArn)}/invocations?qualifier=DEFAULT`
+
+const response = await fetch(url, {
   method: 'POST',
   headers: {
     Authorization: `Bearer ${token}`,
     'Content-Type': 'application/json',
+    Accept: 'text/event-stream',
     'x-amzn-bedrock-agentcore-runtime-session-id': sessionId,
   },
   body: JSON.stringify({ prompt: 'Hello' }),
@@ -146,7 +165,8 @@ const response = await fetch(`${runtimeEndpoint}/invocations`, {
 
 ### WebSocket
 
-Use `RuntimeClient` from the SDK to generate signed connections:
+Use `RuntimeClient` from the SDK to generate signed connections for the [`ws`](https://github.com/websockets/ws)
+client:
 
 ```typescript
 import { RuntimeClient } from 'bedrock-agentcore/runtime'

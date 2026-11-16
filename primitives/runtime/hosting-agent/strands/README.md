@@ -55,8 +55,8 @@ const app = new BedrockAgentCoreApp({
 app.run({ port: parseInt(process.env['PORT'] ?? '8080') })
 ```
 
-The Zod request schema validates entrypoint input. Keep prompts typed as strings and pass only prompt text to
-Strands. Each `yield` streams a server-sent event to the caller.
+`requestSchema` validates each invocation before it reaches the agent. Each `yield` streams a server-sent event to the
+caller.
 
 → [Full source](./app/agent/main.ts)
 

@@ -75,19 +75,24 @@ const app = new BedrockAgentCoreApp({
 
 ---
 
-## Input Validation
-
-Validate invocation payloads before forwarding them to an agent. Keep the Zod string schema when adapting these
-samples so prompts stay typed as strings.
-
 ## Quick Start
 
 ```bash
 cd strands  # or vercel-ai
+agentcore dev
+```
 
-agentcore dev                          # Run locally
+In a second terminal:
+
+```bash
+agentcore invoke --runtime agent --local --payload '{"prompt": "What is 25 * 4?"}'
+```
+
+Then deploy it and invoke the deployed agent:
+
+```bash
 npm install --prefix agentcore/cdk
-agentcore deploy                       # Deploy to AgentCore Runtime
+agentcore deploy
 agentcore invoke --runtime agent --payload '{"prompt": "What is 25 * 4?"}'
 ```
 
@@ -105,7 +110,7 @@ agentcore invoke --runtime agent --payload '{"prompt": "What is 25 * 4?"}'
 ```
 
 1. The client sends a request to the AgentCore Runtime endpoint
-2. `BedrockAgentCoreApp` validates it and passes it to your handler
+2. `BedrockAgentCoreApp` validates it against `requestSchema` and passes it to your handler
 3. The agent streams its response, calling tools as needed
 4. Each `yield` is sent to the client as a server-sent event
 

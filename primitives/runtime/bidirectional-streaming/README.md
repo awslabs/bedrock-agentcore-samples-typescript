@@ -18,7 +18,8 @@ the `x-amzn-bedrock-agentcore-runtime-session-id` header.
 
 ### Deployed Runtime
 
-Deployed runtimes only accept authenticated WebSocket connections. `RuntimeClient` from the SDK signs them:
+Deployed runtimes only accept authenticated WebSocket connections. `RuntimeClient` from the SDK signs them for the
+[`ws`](https://github.com/websockets/ws) client:
 
 ```typescript
 import { RuntimeClient } from 'bedrock-agentcore/runtime'

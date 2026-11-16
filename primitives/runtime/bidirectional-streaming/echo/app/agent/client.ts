@@ -29,7 +29,7 @@ ws.on('open', () => {
 })
 
 ws.on('message', (data) => {
-  console.log('Received:', data.toString())
+  console.log('Received:', String(data))
 })
 
 ws.on('error', (error) => {

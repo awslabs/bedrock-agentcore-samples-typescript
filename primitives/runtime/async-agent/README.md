@@ -4,7 +4,27 @@ An agent that starts long-running background work and keeps its AgentCore Runtim
 
 → See the [parent README](../README.md) for how AgentCore Runtime works.
 
-## How It Works
+## Prerequisites
+
+- Node.js 22+
+- AWS credentials with access to Amazon Bedrock and AgentCore
+- The [AgentCore CLI](https://github.com/aws/agentcore-cli):
+
+```bash
+npm install -g @aws/agentcore
+```
+
+## Project Structure
+
+```
+async-agent/
+├── app/agent/          # The agent: main.ts, package.json
+└── agentcore/
+    ├── agentcore.json  # Runtime configuration read by the AgentCore CLI
+    └── cdk/            # CDK app the CLI deploys
+```
+
+## The Agent
 
 AgentCore Runtime polls each session's `/ping` endpoint. A session that reports `Healthy` for 15 minutes is stopped; one
 that reports `HealthyBusy` is kept running. `BedrockAgentCoreApp` tracks this for you: register work with
@@ -12,7 +32,7 @@ that reports `HealthyBusy` is kept running. `BedrockAgentCoreApp` tracks this fo
 
 ```typescript
 const startBackgroundTask = tool({
-  name: 'start_background_task',
+  name: 'startBackgroundTask',
   description: 'Start a background task that runs for the given number of seconds',
   inputSchema: z.object({
     duration: z.number().int().min(1).max(3600).default(5).describe('Duration in seconds for the background task'),
@@ -32,16 +52,6 @@ const startBackgroundTask = tool({
 The agent answers immediately while the task keeps running in the background.
 
 → [Full source](./app/agent/main.ts)
-
-## Prerequisites
-
-- Node.js 22+
-- AWS credentials with access to Amazon Bedrock and AgentCore
-- The [AgentCore CLI](https://github.com/aws/agentcore-cli):
-
-```bash
-npm install -g @aws/agentcore
-```
 
 ## Run Locally
 

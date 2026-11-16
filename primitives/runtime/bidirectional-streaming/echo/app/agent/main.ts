@@ -1,9 +1,8 @@
-import { BedrockAgentCoreApp, type RequestContext } from 'bedrock-agentcore/runtime'
-import type { WebSocket } from 'ws'
+import { BedrockAgentCoreApp } from 'bedrock-agentcore/runtime'
 
-function parseMessage(data: WebSocket.RawData): unknown {
+function parseMessage(text: string): unknown {
   try {
-    return JSON.parse(data.toString())
+    return JSON.parse(text)
   } catch {
     return undefined
   }
@@ -16,11 +15,11 @@ const app = new BedrockAgentCoreApp({
     },
   },
 
-  websocketHandler: async (socket: WebSocket, context: RequestContext): Promise<void> => {
+  websocketHandler: async (socket, context) => {
     console.log(`WebSocket connected: ${context.sessionId}`)
 
     socket.on('message', (data) => {
-      const received = parseMessage(data)
+      const received = parseMessage(String(data))
 
       if (received === undefined) {
         socket.send(JSON.stringify({ type: 'error', message: 'Messages must be JSON' }))
@@ -34,10 +33,6 @@ const app = new BedrockAgentCoreApp({
 
     socket.on('close', () => {
       console.log(`WebSocket closed: ${context.sessionId}`)
-    })
-
-    socket.on('error', (error) => {
-      console.error(`WebSocket error: ${error.message}`)
     })
   },
 })
