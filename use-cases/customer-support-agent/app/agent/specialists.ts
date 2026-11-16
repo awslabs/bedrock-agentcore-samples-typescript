@@ -1,8 +1,8 @@
 import { Agent, BedrockModel, tool, type JSONValue } from '@strands-agents/sdk'
 import { z } from 'zod'
 
-const MODEL_ID = 'global.anthropic.claude-haiku-5-5'
-const REGION = process.env['AWS_REGION'] ?? 'us-east-1'
+const modelId = 'global.anthropic.claude-haiku-5-5'
+const region = process.env['AWS_REGION'] ?? 'us-east-1'
 
 const warrantyExpiryBySerial: Record<string, { product: string; expiresAt: string }> = {
   MNO33333333: { product: 'Gaming Console Pro', expiresAt: '2027-12-31' },
@@ -14,7 +14,7 @@ function daysFromToday(days: number): string {
 }
 
 const checkWarranty = tool({
-  name: 'check_warranty',
+  name: 'checkWarranty',
   description: 'Check warranty status for a product by serial number',
   inputSchema: z.object({
     serialNumber: z.string().describe('Product serial number'),
@@ -28,7 +28,7 @@ const checkWarranty = tool({
 })
 
 const getTroubleshootingGuide = tool({
-  name: 'get_troubleshooting_guide',
+  name: 'getTroubleshootingGuide',
   description: 'Get troubleshooting steps for a specific issue',
   inputSchema: z.object({
     product: z.string().describe('Product name'),
@@ -53,7 +53,7 @@ const getTroubleshootingGuide = tool({
 })
 
 const getAvailableSlots = tool({
-  name: 'get_available_slots',
+  name: 'getAvailableSlots',
   description: 'Get available appointment slots',
   inputSchema: z.object({}),
   callback: (): JSONValue => ({
@@ -65,7 +65,7 @@ const getAvailableSlots = tool({
 })
 
 const createAppointment = tool({
-  name: 'create_appointment',
+  name: 'createAppointment',
   description: 'Schedule a support appointment',
   inputSchema: z.object({
     reason: z.string().describe('Reason for appointment'),
@@ -82,33 +82,30 @@ const createAppointment = tool({
 })
 
 export function createSpecialists(): Agent[] {
-  const model = new BedrockModel({ modelId: MODEL_ID, region: REGION })
+  const model = new BedrockModel({ modelId, region })
 
   return [
     new Agent({
-      name: 'warranty_specialist',
+      name: 'warrantySpecialist',
       description: 'Checks warranty status by serial number and answers warranty policy questions.',
       model,
       systemPrompt:
         'You are a warranty specialist. Check warranty status and explain coverage clearly and professionally.',
       tools: [checkWarranty],
-      printer: false,
     }),
     new Agent({
-      name: 'tech_support_specialist',
+      name: 'techSupportSpecialist',
       description: 'Troubleshoots device problems with step-by-step guidance.',
       model,
       systemPrompt: 'You are a technical support specialist. Give step-by-step troubleshooting guidance.',
       tools: [getTroubleshootingGuide],
-      printer: false,
     }),
     new Agent({
-      name: 'scheduling_specialist',
+      name: 'schedulingSpecialist',
       description: 'Lists available slots and books support appointments.',
       model,
       systemPrompt: 'You are a scheduling assistant. Help customers find a slot and book support appointments.',
       tools: [getAvailableSlots, createAppointment],
-      printer: false,
     }),
   ]
 }

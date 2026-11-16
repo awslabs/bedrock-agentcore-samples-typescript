@@ -29,18 +29,18 @@ customer-support-agent/
 
 ## How It Works
 
-| Specialist                | Handles                                            | Tools (sample data)                         |
-| ------------------------- | -------------------------------------------------- | ------------------------------------------- |
-| `warranty_specialist`     | Warranty status by serial number, policy questions | `check_warranty`                            |
-| `tech_support_specialist` | Device problems, step-by-step troubleshooting      | `get_troubleshooting_guide`                 |
-| `scheduling_specialist`   | Finding a free slot, booking a support appointment | `get_available_slots`, `create_appointment` |
+| Specialist              | Handles                                            | Tools (sample data)                      |
+| ----------------------- | -------------------------------------------------- | ---------------------------------------- |
+| `warrantySpecialist`    | Warranty status by serial number, policy questions | `checkWarranty`                          |
+| `techSupportSpecialist` | Device problems, step-by-step troubleshooting      | `getTroubleshootingGuide`                |
+| `schedulingSpecialist`  | Finding a free slot, booking a support appointment | `getAvailableSlots`, `createAppointment` |
 
 Each specialist is a Strands `Agent` with a `name` and a `description`. Agents passed in another agent's `tools` become
 tools, so the orchestrator picks a specialist the way it picks any tool: from its description.
 
 ```typescript
 new Agent({
-  name: 'warranty_specialist',
+  name: 'warrantySpecialist',
   description: 'Checks warranty status by serial number and answers warranty policy questions.',
   model,
   tools: [checkWarranty],
@@ -56,7 +56,7 @@ const agentsBySession = new Map<string, Agent>()
 function getAgent(sessionId: string): Agent {
   let agent = agentsBySession.get(sessionId)
   if (!agent) {
-    agent = new Agent({ model, systemPrompt: SYSTEM_PROMPT, tools: createSpecialists() })
+    agent = new Agent({ model, systemPrompt, tools: createSpecialists() })
     agentsBySession.set(sessionId, agent)
   }
   return agent
