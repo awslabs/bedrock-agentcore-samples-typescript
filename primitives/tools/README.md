@@ -13,36 +13,35 @@ Give agents a secure code sandbox and a cloud browser with Amazon Bedrock AgentC
 import { CodeInterpreterTools } from 'bedrock-agentcore/experimental/code-interpreter/strands'
 
 const codeInterpreter = new CodeInterpreterTools({ region: process.env['AWS_REGION'] ?? 'us-east-1' })
-const agent = new Agent({ model, tools: codeInterpreter.tools })
+const agent = new Agent({ model, tools: codeInterpreter.tools, toolExecutor: 'sequential' })
 ```
 
 The Vercel AI SDK integrations live at `bedrock-agentcore/code-interpreter/vercel-ai` and
-`bedrock-agentcore/browser/vercel-ai`; the Strands integrations are still under `bedrock-agentcore/experimental/`.
+`bedrock-agentcore/browser/vercel-ai`; the Strands integrations are under `bedrock-agentcore/experimental/`.
 
 ## How the Samples Run
 
-Each sample is a local agent server built with `BedrockAgentCoreApp`, which speaks the AgentCore Runtime HTTP
-protocol. The tools themselves run in AWS: a sandbox or browser session starts on the agent's first tool call and is
-reused for the rest of the conversation.
+Each sample is an agent on AgentCore Runtime, built with the [AgentCore CLI](https://github.com/aws/agentcore-cli):
+`agentcore dev` runs it locally, `agentcore deploy` deploys it. A sandbox or browser session starts on the agent's
+first tool call and serves the rest of the runtime session, so a follow-up prompt with the same `--session-id` can use
+what the first one left behind.
 
-```bash
-cd code-interpreter/strands
-npm install
-npm start                    # agent server on http://localhost:8080
+The tools share one session per tools instance, so the samples run tool calls one at a time (`toolExecutor:
+'sequential'` in Strands, `toolCallConcurrency: 1` in the Vercel AI SDK). Parallel first calls would each start a
+session.
+
+The runtime's role can call Bedrock models but not the tools. Each sample's `agentcore/cdk/lib/cdk-stack.ts` grants it
+the AWS-managed Code Interpreter or Browser:
+
+```typescript
+runtime.grant(
+  [
+    'bedrock-agentcore:StartCodeInterpreterSession',
+    'bedrock-agentcore:InvokeCodeInterpreter',
+    'bedrock-agentcore:StopCodeInterpreterSession',
+  ],
+  [`arn:${this.partition}:bedrock-agentcore:${this.region}:aws:code-interpreter/aws.codeinterpreter.v1`]
+)
 ```
 
-In a second terminal, send a prompt with `curl`, or chat with `npm run start:interactive`, a small client for the
-running server:
-
-```bash
-curl -N -X POST http://localhost:8080/invocations \
-  -H "Content-Type: application/json" \
-  -H "Accept: text/event-stream" \
-  -H "x-amzn-bedrock-agentcore-runtime-session-id: test-123" \
-  -d '{"prompt": "Use Python to calculate the first 20 prime numbers and their sum"}'
-```
-
-Each session ID gets its own agent, conversation history and tool session. Stopping the server (Ctrl+C) stops every
-tool session it started.
-
-To host an agent on AgentCore Runtime instead of locally, see the [runtime samples](../runtime/).
+For a Code Interpreter agent with file uploads and charts, see the [data analyzer](../../use-cases/data-analyzer/).

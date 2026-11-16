@@ -1,100 +1,111 @@
 # Code Interpreter (Strands)
 
-A data analysis agent built with [Strands Agents](https://strandsagents.com/) that runs Python in an AgentCore Code
-Interpreter sandbox and saves the charts it makes to your machine.
+A [Strands Agents](https://strandsagents.com/) agent on AgentCore Runtime that runs Python in an AgentCore Code
+Interpreter sandbox.
 
-→ See the [parent README](../README.md) for sandbox capabilities, artifact retrieval and network access.
+→ See the [parent README](../README.md) for what the sandbox provides.
 
 ## Prerequisites
 
 - Node.js 22+
-- AWS credentials allowed to invoke Amazon Bedrock models and use AgentCore Code Interpreter
+- AWS credentials with access to Amazon Bedrock and AgentCore
+- The [AgentCore CLI](https://github.com/aws/agentcore-cli):
+
+```bash
+npm install -g @aws/agentcore
+```
 
 ## Project Structure
 
 ```
 strands/
-├── src/index.ts        # The agent server
-└── src/interactive.ts  # Chat client for the running server
+├── app/agent/          # The agent: main.ts, package.json
+└── agentcore/
+    ├── agentcore.json  # Runtime configuration read by the AgentCore CLI
+    └── cdk/            # CDK app the CLI deploys, with the Code Interpreter grant
 ```
 
 ## The Agent
 
 ```typescript
-function createConversation(): Conversation {
-  const codeInterpreter = new CodeInterpreterTools({ region })
-  const agent = new Agent({
-    model: new BedrockModel({ modelId: 'global.anthropic.claude-haiku-5-5', region }),
-    tools: codeInterpreter.tools,
-    systemPrompt,
-    toolExecutor: 'sequential',
-  })
-  return { agent, codeInterpreter }
-}
+const codeInterpreter = new CodeInterpreterTools({ region })
+
+const agent = new Agent({
+  model: new BedrockModel({ modelId: 'global.anthropic.claude-haiku-5-5', region }),
+  tools: codeInterpreter.tools,
+  systemPrompt:
+    'You are a data analyst. Run Python in the sandbox to answer questions. Variables and files persist between calls.',
+  toolExecutor: 'sequential',
+})
 
 const app = new BedrockAgentCoreApp({
   invocationHandler: {
     requestSchema: z.object({ prompt: z.string() }),
-    process: async function* (request, context) {
-      const { agent, codeInterpreter } = await getConversation(context.sessionId)
-      // stream the agent's text, then copy the sandbox's output/ files to ./output/
+    process: async function* (request) {
+      for await (const event of agent.stream(request.prompt)) {
+        if (event.type === 'beforeToolCallEvent') {
+          yield { event: 'tool', data: { name: event.toolUse.name, input: event.toolUse.input } }
+        }
+        // ...and stream text deltas as message events
+      }
     },
   },
 })
 ```
 
-Each session ID gets its own agent and sandbox. The sandbox starts on the first tool call, and stopping the server
-(Ctrl+C) stops every sandbox it started.
+`codeInterpreter.tools` gives the agent `executeCode`, `executeCommand` and `fileOperations`. The sandbox starts on
+the first tool call and keeps its variables and files for the rest of the session. Each `tool` event shows the code
+the agent runs.
 
-→ [Full source](./src/index.ts)
+→ [Full source](./app/agent/main.ts)
 
 ## Run Locally
 
 ```bash
-npm install
-npm start
+agentcore dev
 ```
 
-The server listens on port 8080 (set `PORT` to change it). In a second terminal:
+The first run installs the agent's dependencies. In a second terminal:
 
 ```bash
-curl -N -X POST http://localhost:8080/invocations \
-  -H "Content-Type: application/json" \
-  -H "Accept: text/event-stream" \
-  -H "x-amzn-bedrock-agentcore-runtime-session-id: test-123" \
-  -d '{"prompt": "Use Python to calculate the first 20 prime numbers and their sum, then create a bar chart of them and save it to output/primes.png"}'
+agentcore invoke --runtime agent --local --session-id fibonacci-demo-session-000000000001 \
+  --payload '{"prompt": "Use Python to compute the first 15 Fibonacci numbers and store them in a variable named fib"}'
+agentcore invoke --runtime agent --local --session-id fibonacci-demo-session-000000000001 \
+  --payload '{"prompt": "Use Python to print the sum of fib and how many of its values are even"}'
 ```
 
+The second prompt reuses `fib` from the sandbox:
+
 ```
-event: message
-data: {"text":"The"}
+event: tool
+data: {"name":"executeCode","input":{"code":"total = sum(fib)\neven_count = sum(1 for x in fib if x % 2 == 0)\nprint(\"Sum:\", total)\nprint(\"Even count:\", even_count)","language":"python"}}
 
 event: message
-data: {"text":" first"}
+data: {"text":"The sum of `fib` is 986, and 5 of its values are even"}
 ...
-event: message
-data: {"text":"\n\n--- Artifacts saved to ./output/: primes.png ---"}
 ```
 
-## Chat Interactively
+Prefer a chat UI? `agentcore dev --mode browser` opens the Agent Inspector.
 
-With the server running, start the chat client in a second terminal. It keeps one session, so the agent remembers
-earlier turns and the sandbox keeps its variables:
+## Deploy
 
 ```bash
-npm run start:interactive
+npm install --prefix agentcore/cdk
+agentcore deploy
+agentcore invoke --runtime agent --session-id fibonacci-demo-session-000000000001 \
+  --payload '{"prompt": "Use Python to compute the first 15 Fibonacci numbers and store them in a variable named fib"}'
+agentcore invoke --runtime agent --session-id fibonacci-demo-session-000000000001 \
+  --payload '{"prompt": "Use Python to print the sum of fib and how many of its values are even"}'
 ```
 
-```
-> Use Python to calculate the first 10 fibonacci numbers and store them in a variable named fib
-I calculated the first 10 Fibonacci numbers in Python and stored them in a list named `fib` ...
+`agentcore/cdk/lib/cdk-stack.ts` lets the runtime's role use the AWS-managed Code Interpreter. Each runtime session
+runs in its own microVM with its own agent and sandbox.
 
-> Create a bar chart of those numbers and save it to output/fib_chart.png
-I saved the bar chart to `output/fib_chart.png`. ...
+## Clean Up
 
---- Artifacts saved to ./output/: fib_chart.png ---
-
-> exit
+```bash
+agentcore remove all --yes
+agentcore deploy --yes
 ```
 
-Set `SERVER_URL` if the server runs elsewhere than `http://localhost:8080`.
+This deletes the deployed stack. Run `git checkout agentcore` to restore the configuration and deploy again.

@@ -1,0 +1,24 @@
+{
+  "name": "BrowserStrands",
+  "version": 2,
+  "managedBy": "CDK",
+  "runtimes": [
+    {
+      "name": "agent",
+      "build": "Container",
+      "entrypoint": "main.js",
+      "codeLocation": "app/agent",
+      "protocol": "HTTP",
+      "dockerfile": "Dockerfile"
+    }
+  ],
+  "memories": [],
+  "knowledgeBases": [],
+  "credentials": [],
+  "evaluators": [],
+  "onlineEvalConfigs": [],
+  "agentCoreGateways": [],
+  "policyEngines": [],
+  "configBundles": [],
+  "harnesses": []
+}
