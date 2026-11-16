@@ -20,7 +20,7 @@ Please read through this document before submitting any issues or pull requests.
 1. Clone the repository and install dependencies:
 
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/awslabs/bedrock-agentcore-samples-typescript.git
    cd bedrock-agentcore-samples-typescript
    npm install
    ```
@@ -45,12 +45,17 @@ Each example should be independently runnable. Samples hosted on AgentCore Runti
 ```bash
 npm install -g @aws/agentcore
 cd primitives/runtime/hosting-agent/strands
+agentcore dev
+```
 
-agentcore dev                          # Run locally
+In a second terminal, invoke the local agent, then deploy it, invoke it on AgentCore Runtime, and clean up:
+
+```bash
+agentcore invoke --runtime agent --local --payload '{"prompt": "What is 25 * 4?"}'
 npm install --prefix agentcore/cdk
-agentcore deploy                       # Deploy to AgentCore Runtime
+agentcore deploy
 agentcore invoke --runtime agent --payload '{"prompt": "What is 25 * 4?"}'
-agentcore remove all --yes && agentcore deploy --yes   # Clean up
+agentcore remove all --yes && agentcore deploy --yes
 ```
 
 CI type-checks every sample, but only running it shows that it works: run and deploy each sample you change.
@@ -121,8 +126,7 @@ primitives/runtime/your-example/
 └── README.md           # Documentation (required)
 ```
 
-A sample that runs locally (such as the tools samples) keeps `src/index.ts`, `package.json` and `tsconfig.json` in
-its folder.
+A use case that runs locally, like the browser live view, keeps its own `server/` and `src/` folders.
 
 ### Code Style
 
@@ -135,54 +139,33 @@ its folder.
 
 ### README Format
 
-Each example README should follow this structure:
+Every sample README has the same sections, in this order, with the same wording for the same steps. Copy the README of
+a sample like [hosting-agent/strands](primitives/runtime/hosting-agent/strands/README.md) and adapt it:
 
 ```markdown
-# Example Title
+# Short Title
 
-One-line description of what this example demonstrates.
+One sentence: what this sample is.
 
-|                         |                        |
-| ----------------------- | ---------------------- |
-| **AgentCore component** | Runtime/Identity/Tools |
-| **Framework**           | Strands/Vercel AI/etc  |
-
-## What This Example Demonstrates
-
-- Key feature 1
-- Key feature 2
-- Key feature 3
+→ See the [parent README](../README.md) for how <the concept> works.
 
 ## Prerequisites
 
-- Node.js 22+
-- AWS credentials with access to Amazon Bedrock and AgentCore
-- The AgentCore CLI: `npm install -g @aws/agentcore`
+## Project Structure
+
+## The Agent
+
+A trimmed snippet of the code that matters, one or two sentences, then → [Full source](./app/agent/main.ts)
 
 ## Run Locally
 
-\`\`\`bash
-agentcore dev
-\`\`\`
-
 ## Deploy
 
-\`\`\`bash
-npm install --prefix agentcore/cdk
-agentcore deploy
-\`\`\`
-
 ## Clean Up
-
-\`\`\`bash
-agentcore remove all --yes
-agentcore deploy --yes
-\`\`\`
-
-## How It Works
-
-Brief explanation of the implementation.
 ```
+
+Use cases may add `## How It Works` after The Agent and `## Configuration` after Deploy. Keep every command one you
+ran, and never put `agentcore dev` and the commands after it in one code block: it keeps running.
 
 ### Documentation Requirements
 

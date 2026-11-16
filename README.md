@@ -12,20 +12,27 @@ Amazon Bedrock AgentCore is a fully managed service for deploying and running AI
 - **Gateway** — Unified MCP layer for agents accessing REST APIs, Lambda functions, and more
 - **Tools** — Built-in Code Interpreter and Browser capabilities
 
+## Prerequisites
+
+- Node.js 22+
+- AWS credentials with access to Amazon Bedrock and AgentCore
+- The [AgentCore CLI](https://github.com/aws/agentcore-cli) (`npm install -g @aws/agentcore`) for samples hosted on
+  AgentCore Runtime
+
 ## The TypeScript SDK
 
 The `bedrock-agentcore` SDK provides the building blocks for TypeScript agents.
 
 ### Runtime
 
-`BedrockAgentCoreApp` wraps any agent framework in an HTTP server that follows the AgentCore Runtime protocol—handling request parsing, streaming responses, and session management for seamless deployment:
+`BedrockAgentCoreApp` wraps any agent framework in an HTTP server that follows the AgentCore Runtime protocol—handling request parsing, streaming responses, and session management:
 
 ```typescript
 import { BedrockAgentCoreApp } from 'bedrock-agentcore/runtime'
 
 const app = new BedrockAgentCoreApp({
   invocationHandler: {
-    process: async function* (request, context) {
+    process: async function* (request) {
       // Your agent logic here
       yield { event: 'message', data: { text: 'Hello!' } }
     },
@@ -57,7 +64,7 @@ const agent = new Agent({
 const app = new BedrockAgentCoreApp({
   invocationHandler: {
     requestSchema: z.object({ prompt: z.string() }),
-    process: async function* (request, context) {
+    process: async function* (request) {
       for await (const event of agent.stream(request.prompt)) {
         if (
           event.type === 'modelStreamUpdateEvent' &&
@@ -74,8 +81,7 @@ const app = new BedrockAgentCoreApp({
 app.run()
 ```
 
-Use `requestSchema` to validate agent entrypoint input. Keep text prompts defined as `z.string()` and pass only prompt
-text to the agent.
+`requestSchema` validates each invocation before it reaches the agent.
 
 Every runtime sample is an [AgentCore CLI](https://github.com/aws/agentcore-cli) project, so trying one takes a few
 commands:
@@ -83,10 +89,15 @@ commands:
 ```bash
 npm install -g @aws/agentcore
 cd primitives/runtime/hosting-agent/strands
+agentcore dev
+```
 
-agentcore dev                          # Run locally with hot reload
+In a second terminal, invoke it locally, then deploy it to AgentCore Runtime:
+
+```bash
+agentcore invoke --runtime agent --local --payload '{"prompt": "What is 25 * 4?"}'
 npm install --prefix agentcore/cdk
-agentcore deploy                       # Deploy to AgentCore Runtime
+agentcore deploy
 agentcore invoke --runtime agent --payload '{"prompt": "What is 25 * 4?"}'
 ```
 
@@ -96,7 +107,7 @@ agentcore invoke --runtime agent --payload '{"prompt": "What is 25 * 4?"}'
 
 Built-in tools for common agent capabilities.
 
-**Code Interpreter** — Execute Python, JavaScript, or shell commands in a secure sandbox:
+**Code Interpreter** — Run Python, JavaScript, TypeScript and shell commands in a secure sandbox:
 
 ```typescript
 import { CodeInterpreterTools } from 'bedrock-agentcore/experimental/code-interpreter/strands'
@@ -154,13 +165,6 @@ const agent = new Agent({
 │   └── browser-live-view-agent/      # Browser agent with a live view
 └── .github/                          # GitHub workflows and templates
 ```
-
-## Prerequisites
-
-- Node.js 22+
-- AWS credentials with access to Amazon Bedrock and AgentCore
-- The [AgentCore CLI](https://github.com/aws/agentcore-cli) (`npm install -g @aws/agentcore`) for samples hosted on
-  AgentCore Runtime
 
 ## Related Resources
 

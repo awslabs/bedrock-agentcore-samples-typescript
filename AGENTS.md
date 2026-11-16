@@ -2,25 +2,22 @@
 
 ## Project Overview
 
-This is an examples and samples repository for the **Amazon Bedrock AgentCore TypeScript SDK**. The primary goal is to demonstrate how the AgentCore SDK simplifies AI agent development across various TypeScript agent frameworks, including:
+This is the samples repository for the **Amazon Bedrock AgentCore TypeScript SDK** (`bedrock-agentcore`). Its goal is to
+show how the SDK simplifies building and running AI agents, with the TypeScript agent frameworks it integrates with:
 
 - Strands Agents SDK
 - Vercel AI SDK
-- Mastra AI SDK
-- OpenAI Agents SDK
-- Other TypeScript agent frameworks
 
-### Key Use Cases Covered
+### Capabilities Covered
 
-This repository demonstrates the following AgentCore capabilities:
-
-- **Hosting an agent** — Deploy agents using the AgentCore Runtime
-- **Streaming responses** — Real-time response streaming from agents
+- **Hosting an agent** — Deploy an agent to AgentCore Runtime and stream its responses
 - **Bidirectional streaming** — WebSocket-based two-way communication
-- **Async long-running agents** — Handle long-running tasks asynchronously
-- **Framework integrations** — Strands and Vercel AI SDK integration examples
-- **Inbound authentication** — Authenticate and authorize incoming requests to agents
-- **Outbound authentication** — Securely access external services from agents
+- **Async long-running agents** — Keep a session alive while background work runs
+- **Inbound authentication** — Accept only callers with a valid JWT
+- **Outbound authentication** — Let an agent call external services with OAuth (3LO)
+- **Code Interpreter** — Run code in a secure sandbox
+- **Browser** — Drive a cloud browser session
+- **Use cases** — Complete applications that combine these
 
 ## Core Principles
 
@@ -48,7 +45,8 @@ This repository demonstrates the following AgentCore capabilities:
 - **Error handling** — use proper async error handling with try/catch in examples where it adds clarity
 - **No unused variables** — keep code clean; if a parameter is unused, prefix with `_` (e.g., `_context`)
 - **Async/await always** — never use raw Promises (.then/.catch chains); always use async/await
-- **Explicit return types** — always provide explicit return types for functions
+- **Explicit return types** — give named and exported functions explicit return types; inline callbacks typed by their
+  context (handlers, `tool` callbacks, routes) don't need one
 
 ## SDK Dependency
 
@@ -102,7 +100,9 @@ for await (const event of agent.stream(prompt)) {
 
 - **Always use `ToolLoopAgent`** for agentic workflows with tools (not `generateText` with `maxSteps`)
 - Use `instructions` property for system prompts (not `system`)
-- Required packages: `@ai-sdk/amazon-bedrock@^5.0.0`, `ai@^7.0.0`, `zod@^4.0.0`
+- Pass `credentialProvider: fromNodeProviderChain()` to `createAmazonBedrock`; without it the provider reads only
+  credentials from environment variables, which fails with the runtime's IAM role and with SSO profiles
+- Required packages: `@ai-sdk/amazon-bedrock@^5.0.0`, `@aws-sdk/credential-providers@^3.0.0`, `ai@^7.0.0`, `zod@^4.0.0`
 
 ### Other Frameworks
 
@@ -119,7 +119,6 @@ Focused examples demonstrating individual AgentCore capabilities:
 
 - **`primitives/runtime/`** — Core runtime features
   - Hosting agents with Strands and Vercel AI SDK
-  - Streaming responses
   - Bidirectional streaming (WebSocket)
   - Async long-running agents
 - **`primitives/identity/`** — Authentication and authorization
@@ -132,29 +131,22 @@ Each primitive example is self-contained and demonstrates a single concept clear
 
 ### Use Cases
 
-Complete, end-to-end examples that combine multiple primitives into production-ready applications. These demonstrate how to build real-world agents by composing runtime, identity, and tool capabilities together.
+Complete, end-to-end applications that combine several primitives, such as a multi-agent customer support agent and a
+data analyzer with a web app. Use cases may have more dependencies than primitives, but the same bar for simplicity.
 
-Examples include customer support agents, data analyzers, and other practical applications.
-
-```
-├── primitives/
-│   ├── runtime/          # Runtime primitives (hosting, streaming, async)
-│   ├── identity/         # Auth primitives (inbound, outbound)
-│   └── tools/            # Code Interpreter and Browser
-├── use-cases/           # End-to-end examples combining primitives
-└── .github/             # GitHub-specific configuration
-```
+The full tree is in [README.md](README.md#repository-structure).
 
 ## File Naming and Organization
 
 - Use kebab-case for directory names (e.g., `code-interpreter`, `customer-support-agent`)
 - Use kebab-case for multi-word file names
-- Samples hosted on AgentCore Runtime are [AgentCore CLI](https://github.com/aws/agentcore-cli) projects, laid out as
-  `agentcore create` and `agentcore add runtime --language typescript` generate them:
+- Every primitive, and every use case hosted on AgentCore Runtime, is an [AgentCore CLI](https://github.com/aws/agentcore-cli)
+  project, laid out as `agentcore create` and `agentcore add runtime --language typescript` generate it:
   - `app/agent/main.ts` — the entry point (the CLI requires this name), with its own `package.json` and `tsconfig.json`
   - `agentcore/agentcore.json` — the project configuration; let the CLI write it
-  - `agentcore/cdk/` — the CDK app the CLI deploys; add a sample's extra AWS resources in `lib/cdk-stack.ts`
-- Samples that run locally (tools, local apps) use `src/index.ts` as the entry point
+  - `agentcore/cdk/` — the CDK app the CLI deploys; add a sample's extra AWS resources in `lib/cdk-stack.ts`, and leave
+    the other generated files as the CLI writes them
+- A use case that runs locally (the browser live view) keeps a `server/` and `src/` layout
 - Keep examples focused and in separate directories
 
 ## Dependencies
@@ -167,7 +159,7 @@ Examples include customer support agents, data analyzers, and other practical ap
 ## Security and Best Practices
 
 - Never hardcode credentials — use environment variables or AWS SDK credential chain
-- Demonstrate proper error handling in production-ready examples
+- Handle the errors a reader would hit, without hiding the concept the sample shows
 - Use secure defaults (e.g., string input validation with Zod schemas)
 - Follow AWS security best practices
 
@@ -189,7 +181,7 @@ All runtime examples should use the `BedrockAgentCoreApp` wrapper:
 const app = new BedrockAgentCoreApp({
   invocationHandler: {
     requestSchema: z.object({ prompt: z.string() }),
-    process: async function* (request, context) {
+    process: async function* (request) {
       // Agent logic here
     },
   },
@@ -198,9 +190,19 @@ const app = new BedrockAgentCoreApp({
 app.run({ port: parseInt(process.env['PORT'] ?? '8080') })
 ```
 
+### Agent Lifetime
+
+Deployed, each runtime session runs in its own microVM, so an agent created at module level serves a single session.
+Keep one agent per `context.sessionId` (a `Map`) only where a multi-turn conversation is the point of the sample.
+
+### Built-in Tools
+
+Code Interpreter and Browser tools share one session per tool instance, so run their calls one at a time:
+`toolExecutor: 'sequential'` (Strands) or `toolCallConcurrency: 1` (Vercel AI SDK).
+
 ### Tool Definitions
 
-Use Zod for input schemas and provide clear descriptions:
+Use Zod for input schemas, camelCase tool names, and clear descriptions:
 
 ```typescript
 const myTool = tool({
@@ -229,12 +231,7 @@ const myTool = tool({
 
 1. Check if a similar example already exists
 2. Place in the appropriate directory (primitives vs use-cases)
-3. Create a comprehensive README with:
-   - Clear title and description
-   - Prerequisites section
-   - Step-by-step setup instructions
-   - Code explanation (if needed)
-   - How to run the example
+3. Write its README in the shared format from [CONTRIBUTING.md](CONTRIBUTING.md#readme-format)
 4. Ensure parent READMEs reference the new example
 5. Test the example from scratch in a clean environment
 6. Run validation: `npm run validate`

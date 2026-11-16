@@ -1,7 +1,7 @@
 {
-  "name": "amazon-bedrock-agentcore-samples-typescript",
+  "name": "bedrock-agentcore-samples-typescript",
   "version": "0.1.0",
-  "description": "Examples and tutorials for AWS Bedrock AgentCore TypeScript SDK",
+  "description": "Samples for the Amazon Bedrock AgentCore TypeScript SDK",
   "private": true,
   "type": "module",
   "scripts": {
@@ -37,10 +37,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/awslabs/amazon-bedrock-agentcore-samples-typescript.git"
+    "url": "https://github.com/awslabs/bedrock-agentcore-samples-typescript.git"
   },
   "bugs": {
-    "url": "https://github.com/awslabs/amazon-bedrock-agentcore-samples-typescript/issues"
+    "url": "https://github.com/awslabs/bedrock-agentcore-samples-typescript/issues"
   },
-  "homepage": "https://github.com/awslabs/amazon-bedrock-agentcore-samples-typescript#readme"
+  "homepage": "https://github.com/awslabs/bedrock-agentcore-samples-typescript#readme"
 }

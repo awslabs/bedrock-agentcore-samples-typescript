@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
-  - name: AWS Bedrock Documentation
-    url: https://docs.aws.amazon.com/bedrock/latest/userguide/agentcore.html
-    about: Official AWS Bedrock AgentCore documentation
+  - name: Amazon Bedrock AgentCore documentation
+    url: https://docs.aws.amazon.com/bedrock-agentcore/
+    about: Official Amazon Bedrock AgentCore documentation
   - name: Security Vulnerabilities
     url: https://aws.amazon.com/security/vulnerability-reporting/
     about: Report security issues (do not open public issues)
