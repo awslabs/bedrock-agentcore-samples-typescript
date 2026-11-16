@@ -35,7 +35,8 @@ const browserTools = new BrowserTools({ region: config.region, identifier: confi
 const browser = browserTools.getClient()
 
 const agent = new Agent({
-  model: new BedrockModel({ modelId: config.modelId, region: config.region }),
+  model: new BedrockModel({ modelId: config.modelId, region: config.region, maxTokens: 8192 }),
+  systemPrompt,
   // screenshot is left out: it can write files on this machine, and the live view already shows the page
   tools: [
     browserTools.navigate,
@@ -45,8 +46,7 @@ const agent = new Agent({
     browserTools.getHtml,
     browserTools.evaluate,
   ],
-  systemPrompt,
-  // The tools share one browser session, so they must run one at a time
+  // The tools share one browser session, so they run one at a time
   toolExecutor: 'sequential',
 })
 

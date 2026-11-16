@@ -7,8 +7,7 @@ A local web app where you watch an AI agent browse the web in an AgentCore Brows
 ## Prerequisites
 
 - Node.js 22+
-- AWS credentials with access to Amazon Bedrock and AgentCore Browser
-- Access to the model in Amazon Bedrock (default `global.anthropic.claude-haiku-5-5`)
+- AWS credentials with access to Amazon Bedrock and AgentCore
 
 ## Project Structure
 
@@ -32,7 +31,8 @@ const browserTools = new BrowserTools({ region })
 const browser = browserTools.getClient()
 
 const agent = new Agent({
-  model: new BedrockModel({ modelId: 'global.anthropic.claude-haiku-5-5', region }),
+  model: new BedrockModel({ modelId: 'global.anthropic.claude-haiku-5-5', region, maxTokens: 8192 }),
+  systemPrompt,
   tools: [
     browserTools.navigate,
     browserTools.click,
@@ -41,7 +41,7 @@ const agent = new Agent({
     browserTools.getHtml,
     browserTools.evaluate,
   ],
-  systemPrompt,
+  // The tools share one browser session, so they run one at a time
   toolExecutor: 'sequential',
 })
 
@@ -90,7 +90,6 @@ than the Vite client. Your browser talks only to Vite, which passes `/api` on to
 
 ```bash
 npm install
-export AWS_REGION=us-east-1
 npm run dev
 ```
 

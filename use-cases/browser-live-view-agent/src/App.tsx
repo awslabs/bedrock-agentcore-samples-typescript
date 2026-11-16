@@ -24,7 +24,7 @@ interface StatusResponse {
   viewport: Viewport
 }
 
-const DEFAULT_PROMPT =
+const defaultPrompt =
   'Go to en.wikipedia.org, search for "Amazon Web Services", and summarize the key information from the article including when it was founded, main services, and market position.'
 
 async function postJson<T>(path: string, body?: object): Promise<T> {
@@ -55,7 +55,7 @@ export const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null)
   const [region, setRegion] = useState('—')
   const [viewport, setViewport] = useState<Viewport | null>(null)
-  const [prompt, setPrompt] = useState(DEFAULT_PROMPT)
+  const [prompt, setPrompt] = useState(defaultPrompt)
   const [connecting, setConnecting] = useState(false)
   const logBodyRef = useRef<HTMLDivElement>(null)
 

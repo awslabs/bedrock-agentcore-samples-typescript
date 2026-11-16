@@ -3,6 +3,6 @@ export const config = {
   modelId: process.env['BEDROCK_MODEL_ID'] ?? 'global.anthropic.claude-haiku-5-5',
   browserIdentifier: process.env['BROWSER_IDENTIFIER'] ?? 'aws.browser.v1',
   viewport: { width: 1920, height: 1080 },
-  serverPort: Number(process.env['PORT'] ?? '3001'),
-  clientPort: Number(process.env['CLIENT_PORT'] ?? '5173'),
+  serverPort: parseInt(process.env['PORT'] ?? '3001'),
+  clientPort: parseInt(process.env['CLIENT_PORT'] ?? '5173'),
 }
