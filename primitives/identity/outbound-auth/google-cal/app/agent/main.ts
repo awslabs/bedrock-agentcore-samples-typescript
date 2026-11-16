@@ -69,20 +69,21 @@ const getCalendar = tool({
 })
 
 // One agent per runtime session: a Strands agent keeps the conversation and runs one invocation at a time.
-const agents = new Map<string, Agent>()
+const agentsBySession = new Map<string, Agent>()
 
-function agentForSession(sessionId: string): Agent {
-  let agent = agents.get(sessionId)
+function getAgent(sessionId: string): Agent {
+  let agent = agentsBySession.get(sessionId)
   if (!agent) {
     agent = new Agent({
       model: new BedrockModel({
         modelId: 'global.anthropic.claude-haiku-5-5',
         region: process.env['AWS_REGION'] ?? 'us-east-1',
+        maxTokens: 8192,
       }),
-      tools: [getCalendar],
       systemPrompt: 'You are a helpful calendar assistant. Use the getCalendar tool to fetch events.',
+      tools: [getCalendar],
     })
-    agents.set(sessionId, agent)
+    agentsBySession.set(sessionId, agent)
   }
   return agent
 }
@@ -99,7 +100,7 @@ const app = new BedrockAgentCoreApp({
         return
       }
 
-      for await (const event of agentForSession(context.sessionId).stream(request.prompt)) {
+      for await (const event of getAgent(context.sessionId).stream(request.prompt)) {
         if (event.type === 'toolStreamUpdateEvent') {
           yield { event: 'auth_url', data: event.event.data }
         }

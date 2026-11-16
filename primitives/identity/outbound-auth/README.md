@@ -9,7 +9,7 @@ function that calls the service, and the SDK passes it a token from the Token Va
 import { withAccessToken } from 'bedrock-agentcore/identity'
 
 const listEvents = withAccessToken({
-  providerName: 'google-cal',
+  providerName: process.env['CREDENTIAL_GOOGLE_CAL_NAME'] ?? 'google-cal',
   scopes: ['https://www.googleapis.com/auth/calendar.readonly'],
   authFlow: 'USER_FEDERATION',
   onAuthUrl: (url) => console.log(`Ask the user to open ${url}`),
@@ -21,7 +21,8 @@ const listEvents = withAccessToken({
 })
 ```
 
-The Token Vault keeps each user's tokens and refreshes them, so the user consents only once.
+`agentcore deploy` sets `CREDENTIAL_<NAME>_NAME` to the deployed provider's name. The Token Vault keeps each user's
+tokens and refreshes them, so the user consents only once.
 
 ## Auth Flows
 
@@ -38,7 +39,9 @@ For services that use API keys, `withApiKey` passes the key from the Token Vault
 ```typescript
 import { withApiKey } from 'bedrock-agentcore/identity'
 
-const getWeather = withApiKey({ providerName: 'weather-api' })(async (city: string, apiKey: string) => {
+const getWeather = withApiKey({
+  providerName: process.env['CREDENTIAL_WEATHER_API_NAME'] ?? 'weather-api',
+})(async (city: string, apiKey: string) => {
   const response = await fetch(`https://api.example.com/weather/${city}`, { headers: { 'X-API-Key': apiKey } })
   return response.json()
 })
@@ -54,6 +57,6 @@ const getWeather = withApiKey({ providerName: 'weather-api' })(async (city: stri
 
 ## Samples
 
-| Sample                      | Auth flow         | Description                                   |
-| --------------------------- | ----------------- | --------------------------------------------- |
-| [google-cal](./google-cal/) | `USER_FEDERATION` | Read a user's Google Calendar on their behalf |
+| Sample                      | What it shows                                                |
+| --------------------------- | ------------------------------------------------------------ |
+| [google-cal](./google-cal/) | An agent that reads a user's Google Calendar on their behalf |

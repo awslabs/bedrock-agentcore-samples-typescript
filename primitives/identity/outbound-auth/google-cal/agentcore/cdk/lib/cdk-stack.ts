@@ -9,11 +9,7 @@ export interface AgentCoreStackProps extends StackProps {
   application: AgentCoreApplicationProps
 }
 
-/**
- * The stack the AgentCore CLI deploys: the runtime declared in agentcore/agentcore.json, a Cognito
- * user pool for the web app's users, and a JWT authorizer on the runtime that only accepts that pool's
- * access tokens. The JWT tells AgentCore Identity which user's Google token to use.
- */
+/** Adds a Cognito user pool for the web app's users and a JWT authorizer that only accepts their tokens. */
 export class AgentCoreStack extends Stack {
   public readonly application: AgentCoreApplication
 
@@ -21,8 +17,8 @@ export class AgentCoreStack extends Stack {
     super(scope, id, props)
     this.application = new AgentCoreApplication(this, 'Application', props.application)
 
-    // After `agentcore remove all` there is no runtime, and an empty stack tells the CLI to delete it.
     const runtime = this.application.runtimes.get('agent')
+    // After `agentcore remove all` there is no runtime, and an empty stack lets the CLI delete it
     if (!runtime) return
 
     const userPool = new cognito.UserPool(this, 'UserPool', {

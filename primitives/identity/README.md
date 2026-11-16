@@ -13,7 +13,7 @@ caller ── token ──▶ AgentCore Runtime ──▶ your agent ── toke
 
 ## Samples
 
-| Folder                            | Sample                                    | What it shows                                |
-| --------------------------------- | ----------------------------------------- | -------------------------------------------- |
-| [inbound-auth](./inbound-auth/)   | [cognito](./inbound-auth/cognito/)        | An agent only Cognito users can call         |
-| [outbound-auth](./outbound-auth/) | [google-cal](./outbound-auth/google-cal/) | An agent that reads a user's Google Calendar |
+| Sample                            | What it shows                                                                 |
+| --------------------------------- | ----------------------------------------------------------------------------- |
+| [inbound-auth](./inbound-auth/)   | Control who can call your agent                                               |
+| [outbound-auth](./outbound-auth/) | Let your agent call external services with credentials it never stores itself |

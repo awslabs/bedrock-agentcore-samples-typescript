@@ -8,6 +8,8 @@ An agent behind a JWT authorizer that only accepts access tokens from an Amazon 
 
 - Node.js 22+
 - AWS credentials with access to Amazon Bedrock, AgentCore and Cognito
+- The AWS CLI, configured for the region you deploy to
+- OpenSSL, to generate the test user's password
 - The [AgentCore CLI](https://github.com/aws/agentcore-cli):
 
 ```bash
@@ -42,10 +44,12 @@ function usernameFromAuthorization(authorization: string | undefined): string {
 }
 
 process: async function* (request, context) {
-  console.log(`Invoked by ${usernameFromAuthorization(context.headers['authorization'])}`)
-  // ...stream the agent's answer
+  context.log.info(`Invoked by ${usernameFromAuthorization(context.headers['authorization'])}`)
+  // ...yield text deltas as message events
 }
 ```
+
+`context.log` is the SDK's request-scoped logger: each line carries the request's ID.
 
 → [Full source](./app/agent/main.ts)
 
@@ -79,7 +83,7 @@ The first run installs the agent's dependencies. In a second terminal:
 agentcore invoke --runtime agent --local --payload '{"prompt": "What is 25 * 4?"}'
 ```
 
-The local server doesn't check tokens, so the agent logs `Invoked by anonymous`.
+The local server doesn't check tokens, so the `agentcore dev` output shows `"msg":"Invoked by anonymous"`.
 
 ## Deploy
 
@@ -109,8 +113,13 @@ Invoke the agent with the token:
 agentcore invoke --runtime agent --bearer-token "$TOKEN" --payload '{"prompt": "What is 25 * 4?"}'
 ```
 
-The runtime's log shows `Invoked by testuser`. The token is valid for an hour; run the `initiate-auth` line again for a
-new one.
+The runtime's log shows `Invoked by testuser`:
+
+```bash
+agentcore logs runtime --name agent --since 5m
+```
+
+The token is valid for an hour; run the `initiate-auth` line again for a new one.
 
 ## Clean Up
 
@@ -119,5 +128,4 @@ agentcore remove all --yes
 agentcore deploy --yes
 ```
 
-This deletes the deployed stack, with the user pool and its users. Run `git checkout agentcore` to restore the
-configuration and deploy again.
+This deletes the deployed stack. Run `git checkout -- agentcore` to restore the configuration and deploy again.

@@ -8,6 +8,6 @@ provider's OIDC discovery URL, and rejects the request before it reaches your co
 
 ## Samples
 
-| Sample                | Identity provider | Description                                                |
-| --------------------- | ----------------- | ---------------------------------------------------------- |
-| [cognito](./cognito/) | Amazon Cognito    | One `agentcore deploy` creates the user pool and the agent |
+| Sample                | What it shows                                                             |
+| --------------------- | ------------------------------------------------------------------------- |
+| [cognito](./cognito/) | An agent that only accepts access tokens from an Amazon Cognito user pool |

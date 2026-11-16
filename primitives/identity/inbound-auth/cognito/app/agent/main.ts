@@ -28,6 +28,7 @@ const agent = new Agent({
   model: new BedrockModel({
     modelId: 'global.anthropic.claude-haiku-5-5',
     region: process.env['AWS_REGION'] ?? 'us-east-1',
+    maxTokens: 8192,
   }),
   tools: [calculator],
 })
@@ -49,7 +50,7 @@ const app = new BedrockAgentCoreApp({
   invocationHandler: {
     requestSchema: z.object({ prompt: z.string() }),
     process: async function* (request, context) {
-      console.log(`Invoked by ${usernameFromAuthorization(context.headers['authorization'])}`)
+      context.log.info(`Invoked by ${usernameFromAuthorization(context.headers['authorization'])}`)
 
       for await (const event of agent.stream(request.prompt)) {
         if (
