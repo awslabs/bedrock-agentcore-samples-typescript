@@ -1,294 +1,193 @@
 # Outbound Authentication with Google Calendar (3LO)
 
-Access Google Calendar on behalf of users using Three-Legged OAuth with automatic token management.
+An agent that reads a user's Google Calendar on their behalf, with three-legged OAuth (3LO) and the AgentCore Identity
+Token Vault keeping each user's Google token.
 
-## Overview
-
-This sample demonstrates **outbound authentication** using Three-Legged OAuth (3LO) to access Google Calendar on behalf of users. The key features:
-
-- **Automatic token injection** via `withAccessToken` - tokens managed per-user in AgentCore's Token Vault
-- **First call** triggers OAuth flow, **subsequent calls** use cached tokens
-- **Automatic refresh** - expired tokens are refreshed transparently
-- **Session binding** ensures only the user who started OAuth can complete it
+→ See the [parent README](../README.md) for the outbound auth flow types.
 
 ## How It Works
 
-The `withAccessToken` wrapper handles all OAuth complexity:
-
-```typescript
-const fetchCalendar = withAccessToken({
-  providerName: 'google-cal-provider',
-  scopes: ['https://www.googleapis.com/auth/calendar.readonly'],
-  authFlow: 'USER_FEDERATION',
-  callbackUrl: 'http://localhost:9090/oauth2/callback',
-  onAuthUrl: (url) => {
-    /* redirect user here */
-  },
-})(async (maxResults, token) => {
-  // token is automatically injected - just use it
-  return fetch('https://www.googleapis.com/calendar/v3/...', {
-    headers: { Authorization: `Bearer ${token}` },
-  })
-})
+```
+Browser ── Cognito token ──▶ web app ── JWT ──▶ AgentCore Runtime (JWT authorizer) ──▶ agent
+   ▲                           │                                                       │
+   │                           │ CompleteResourceTokenAuth            withAccessToken  │
+   └──── Google consent ───────┴──────────────▶ AgentCore Identity ◀───────────────────┘
 ```
 
-**Token lifecycle:**
-
-1. First call → no token found → `onAuthUrl` fires with OAuth URL
-2. User completes OAuth → token stored in AgentCore Token Vault
-3. Subsequent calls → token auto-injected, no OAuth needed
-4. Token expires → automatic refresh using stored refresh token
-
-## Architecture
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                     WEB APP (web-app.ts)                        │
-│                                                                 │
-│   POST /api/chat              GET /oauth2/callback              │
-│   ─────────────               ────────────────────              │
-│   1. Validate JWT             1. Read session cookie            │
-│   2. Extract userId           2. Get userId from session        │
-│   3. Store in session         3. Call CompleteResourceTokenAuth │
-│   4. Invoke Runtime with         with sessionUri + userId       │
-│      User-Id header           4. Redirect to success page       │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-                    │
-                    │ Invokes with X-Amzn-Bedrock-AgentCore-Runtime-User-Id
-                    ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                     AGENTCORE RUNTIME                           │
-│                                                                 │
-│   • Runs agent.ts                                               │
-│   • withAccessToken triggers 3LO flow                           │
-│   • Returns auth URL if no token cached                         │
-│   • Returns calendar data if token exists                       │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-```
+1. The user signs in with Cognito and chats through the local web app, which calls the runtime with their JWT.
+2. The agent's `getCalendar` tool asks AgentCore Identity for that user's Google token. The first time there is none,
+   so Identity returns an authorization URL, which the agent streams to the web app.
+3. The user consents at Google. Google redirects to AgentCore, which redirects to the web app's `/oauth2/callback`.
+4. The web app calls `CompleteResourceTokenAuth` with the JWT of the user who started the flow (session binding), and
+   the tool, still waiting, receives the token and reads the calendar. Later calls get the stored token right away.
 
 ## Prerequisites
 
-- Node.js 20+
-- AWS credentials configured
-- [AgentCore Starter Toolkit](https://github.com/aws/bedrock-agentcore-starter-toolkit):
+- Node.js 22+
+- AWS credentials with access to Amazon Bedrock, AgentCore and Cognito
+- The [AgentCore CLI](https://github.com/aws/agentcore-cli):
 
 ```bash
-pip install bedrock-agentcore-starter-toolkit
+npm install -g @aws/agentcore
 ```
 
-## Setup
+- A Google Cloud project with the Google Calendar API enabled and an OAuth client (see below)
 
-> **Note:** Replace `us-east-1` with your AWS region in all commands below.
+## Project Structure
 
-### 1. Deploy Cognito (for JWT authentication)
-
-```bash
-cd cdk
-npm install
-npx cdk deploy
-cd ..  # Return to google-cal directory
+```
+google-cal/
+├── app/agent/                # The agent: main.ts, package.json
+├── agentcore/
+│   ├── agentcore.json        # Runtime (and, once added, credential) configuration
+│   └── cdk/lib/cdk-stack.ts  # Adds the Cognito user pool and the runtime's JWT authorizer
+└── web-app/                  # Local web app: server.ts, public/index.html
 ```
 
-Note the outputs (save these for later):
+## The Agent
 
-- **DiscoveryUrl**: Use in step 5 (`agentcore configure`)
-- **ClientId**: Use in step 5 and when getting tokens
+`withAccessToken` fetches the user's Google token from the Token Vault and passes it to `listUpcomingEvents`. Until the
+user has consented it calls `onAuthUrl` and keeps waiting, so the tool yields the URL as a stream event:
 
-### 2. Create Google OAuth Credentials
+```typescript
+callback: async function* ({ maxResults }): AsyncGenerator<{ authUrl: string }, CalendarEvent[], never> {
+  let resolveAuthUrl: (url: string) => void = () => {}
+  const authUrl = new Promise<string>((resolve) => {
+    resolveAuthUrl = resolve
+  })
 
-1. Go to [Google Cloud Console](https://console.cloud.google.com)
-2. Create a new project or select existing
-3. Enable **Google Calendar API**:
-   - Go to **APIs & Services > Library**
-   - Search "Google Calendar API" and enable it
-4. Configure OAuth consent screen:
-   - Go to **APIs & Services > OAuth consent screen**
-   - Enter an app name
-   - Select "External" user type (appears after naming)
-   - Fill in required fields (support email, developer email)
-   - Click through the remaining steps
-5. Add test users (required while app is in testing mode):
-   - Go to **APIs & Services > OAuth consent screen**
-   - Click on **Audience** (left sidebar)
-   - Under **Test users**, click **+ Add Users**
-   - Enter the Google email address(es) you'll use to authorize
-   - Click **Save**
+  const events = withAccessToken({
+    providerName: PROVIDER_NAME,
+    scopes: ['https://www.googleapis.com/auth/calendar.readonly'],
+    authFlow: 'USER_FEDERATION',
+    callbackUrl: CALLBACK_URL,
+    customParameters: { access_type: 'offline', prompt: 'consent' },
+    onAuthUrl: resolveAuthUrl,
+  })(listUpcomingEvents)(maxResults)
 
-   > **Note:** Google OAuth apps start in "Testing" mode. Only users added here can authorize. You'll get a "403: access_denied" error if you try to authorize with an email not in the test users list.
-
-6. Create credentials:
-   - Go to **APIs & Services > Credentials**
-   - Click **Create Credentials > OAuth client ID**
-   - Select "Web application"
-   - Give it a name (e.g., "AgentCore Calendar")
-   - Click **Create**
-   - Note your **Client ID** and **Client Secret**
-   - Leave redirect URIs empty for now (we'll add it in the next step)
-
-### 3. Create AgentCore Credential Provider
-
-```bash
-# Replace us-east-1 with your region!
-RESPONSE=$(aws bedrock-agentcore-control create-oauth2-credential-provider \
-  --region us-east-1 \
-  --name "google-cal-provider" \
-  --credential-provider-vendor "GoogleOauth2" \
-  --oauth2-provider-config-input '{
-    "googleOauth2ProviderConfig": {
-      "clientId": "YOUR_GOOGLE_CLIENT_ID",
-      "clientSecret": "YOUR_GOOGLE_CLIENT_SECRET"
-    }
-  }' \
-  --output json)
-
-# Extract and display the callback URL
-AGENTCORE_CALLBACK_URL=$(echo $RESPONSE | jq -r '.callbackUrl')
-echo "AgentCore Callback URL: $AGENTCORE_CALLBACK_URL"
-echo ""
-echo ">>> ADD THIS URL TO GOOGLE OAUTH REDIRECT URIs <<<"
+  const first = await Promise.race([events, authUrl])
+  if (typeof first === 'string') {
+    yield { authUrl: first }
+  }
+  return await events
+},
 ```
 
-**Important:** Copy the `callbackUrl` from the response and add it to your Google OAuth app:
+The handler forwards it as an `auth_url` event next to the text:
 
-1. Go back to Google Cloud Console > APIs & Services > Credentials
-2. Click on your OAuth 2.0 Client ID to edit it
-3. Under "Authorized redirect URIs", click **Add URI**
-4. Paste the AgentCore callback URL
-5. Click **Save**
-
-### 4. Install Dependencies
-
-From the `google-cal` directory (not `cdk`):
-
-```bash
-npm install
+```typescript
+for await (const event of agentForSession(context.sessionId).stream(request.prompt)) {
+  if (event.type === 'toolStreamUpdateEvent') {
+    yield { event: 'auth_url', data: event.event.data }
+  }
+  // ...text deltas as `message` events
+}
 ```
 
-### 5. Configure the Agent
+→ [Full source](./app/agent/main.ts)
+
+## Set Up Google
+
+1. In the [Google Cloud Console](https://console.cloud.google.com), enable the **Google Calendar API**
+   (**APIs & Services → Library**).
+2. Configure the **OAuth consent screen** as **External**, and under **Audience → Test users** add the Google accounts
+   you'll sign in with. Apps in testing mode reject everyone else with `403: access_denied`.
+3. Create an **OAuth client ID** of type **Web application** (**APIs & Services → Credentials**). Leave the redirect URIs
+   empty for now and note the client ID and secret.
+
+## Deploy
+
+Add the Google OAuth client as an AgentCore Identity credential provider. The CLI keeps the client ID in
+`agentcore.json` and the secret, read from stdin, encrypted in `agentcore/.env.local`:
 
 ```bash
-agentcore configure
+read -rsp 'Google client secret: ' GOOGLE_CLIENT_SECRET
+printf '%s' "$GOOGLE_CLIENT_SECRET" | agentcore add credentials oauth --name google-cal --vendor GoogleOauth2 \
+  --provider-configuration '{"googleOauth2ProviderConfig": {"clientId": "<your-client-id>.apps.googleusercontent.com"}}' \
+  --client-secret -
 ```
 
-When prompted:
-
-- **Entrypoint**: `agent.ts`
-- **Agent name**: e.g., `google-cal-agent`
-- **Memory**: Enter `s` to skip
-- **Authentication**: Select **JWT authentication**
-  - **Discovery URL**: The `DiscoveryUrl` from step 1
-  - **Audience** (if prompted): The `ClientId` from step 1
-
-### 6. Deploy to Create Workload Identity
+Deploy the runtime, the Cognito user pool and the credential provider:
 
 ```bash
+npm install --prefix agentcore/cdk
 agentcore deploy
 ```
 
-### 7. Update Workload Identity with Callback URL
+The deploy grants the runtime access to the provider and sets `CREDENTIAL_GOOGLE_CAL_NAME`, which the agent reads.
 
-After deployment, update the workload identity to allow your local callback URL.
-
-First, find your workload identity name:
+Then connect the redirects. Add AgentCore's callback URL to your Google OAuth client's **Authorized redirect URIs**:
 
 ```bash
-# Replace us-east-1 with your region!
-aws bedrock-agentcore-control list-workload-identities --region us-east-1
+aws bedrock-agentcore-control get-oauth2-credential-provider --name OutboundAuthGoogleCal_default_google-cal \
+  --query callbackUrl --output text
 ```
 
-Look for one starting with your agent name (e.g., `googlecalagent-I5Hnqn2z5x`).
-
-Then update it with the callback URL:
+And allow the web app's callback on the runtime's workload identity:
 
 ```bash
-# Replace us-east-1 with your region!
-# Replace WORKLOAD_NAME with the name from the list above
-aws bedrock-agentcore-control update-workload-identity \
-  --region us-east-1 \
-  --name "WORKLOAD_NAME" \
-  --allowed-resource-oauth2-return-urls '["http://localhost:9090/oauth2/callback"]'
+STACK=AgentCore-OutboundAuthGoogleCal-default
+output() { aws cloudformation describe-stacks --stack-name $STACK --query "Stacks[0].Outputs[?OutputKey=='$1'].OutputValue" --output text; }
+aws bedrock-agentcore-control update-workload-identity --name "$(output WorkloadIdentityName)" \
+  --allowed-resource-oauth2-return-urls http://localhost:9090/oauth2/callback
 ```
 
-## Local Development
+### Create a user
 
-Run all commands from the `google-cal` directory.
-
-The web app runs locally but calls the **deployed** AgentCore Runtime in AWS. This is required because the deployed runtime has the workload identity that injects the access token needed for 3LO OAuth.
-
-### Terminal 1: Start Web App
+Create a Cognito user with a random password, and keep the password for the web app:
 
 ```bash
-npm run dev:webapp
+POOL_ID=$(output UserPoolId)
+PASSWORD="$(openssl rand -base64 24)Aa1!"
+aws cognito-idp admin-create-user --user-pool-id $POOL_ID --username testuser --message-action SUPPRESS > /dev/null
+aws cognito-idp admin-set-user-password --user-pool-id $POOL_ID --username testuser --password "$PASSWORD" --permanent
+echo "$PASSWORD"
 ```
 
-You should see (note it detects the deployed runtime from `.bedrock_agentcore.yaml`):
+## Run the Web App
 
-```
-[webapp] Web App with Session Management Started
-[webapp] Listening on http://localhost:9090
+The web app runs on your machine and calls the deployed runtime. It reads the runtime's URL and the Cognito client ID
+from the stack's outputs (in `AWS_REGION`, default `us-east-1`):
 
-[webapp] Frontend: http://localhost:9090
-[webapp] API endpoint: POST http://localhost:9090/api/chat
-[webapp] OAuth callback: http://localhost:9090/oauth2/callback
-
-[webapp] Using DEPLOYED runtime:
-[webapp]   Region: eu-west-1
-[webapp]   ARN: arn:aws:bedrock-agentcore:eu-west-1:...
+```bash
+npm install --prefix web-app
+npm run dev --prefix web-app
 ```
 
-### Using the Web UI
+Open http://localhost:9090, enter the password and click **Get Token**, then ask "What's on my calendar?". The first
+time, an authorization link appears: sign in with a Google test user, and the answer arrives once you've consented.
+After that the agent reads the calendar straight away.
 
-Open http://localhost:9090 in your browser. The UI comes preconfigured with the Cognito Client ID and sample user credentials from the CDK stack.
+To try the runtime without the web app, get a token and invoke it; the stream starts with the `auth_url` event:
 
-**First time flow:**
+```bash
+TOKEN=$(aws cognito-idp initiate-auth --client-id "$(output UserPoolClientId)" --auth-flow USER_PASSWORD_AUTH \
+  --auth-parameters "USERNAME=testuser,PASSWORD=$PASSWORD" --query AuthenticationResult.AccessToken --output text)
+agentcore invoke --runtime agent --bearer-token "$TOKEN" --payload '{"prompt": "What is on my calendar?"}'
+```
 
-1. Click "Get Token" to authenticate with Cognito
-2. Send a message like "What events do I have on my calendar?"
-3. An authorization URL will appear - click it to authorize Google Calendar access
-4. Sign in with Google and grant access
-5. Return to the web app - the agent will automatically receive your calendar data
+## Run Locally
 
-**Subsequent requests:**
+```bash
+agentcore dev
+agentcore invoke --runtime agent --local --payload '{"prompt": "What is on my calendar?"}'
+```
 
-- Token is cached in AgentCore Token Vault
-- No authorization needed - agent accesses calendar immediately
+Locally the agent starts, but answers with an error event: the workload access token that `withAccessToken` needs is
+only issued to the deployed runtime, for a JWT-authenticated user.
 
-## Session Binding Security
+## Session Binding
 
-Session binding ties each OAuth flow to the user who initiated it. When a user calls `/api/chat`, the web app stores their identity in a session cookie. When the OAuth callback arrives after Google authorization, the web app verifies that the same user is completing the flow.
-
-**Why this matters:**
-
-Without session binding, an attacker could:
-
-1. Start an OAuth flow and get an authorization URL
-2. Send the URL to a victim via email
-3. Victim clicks and authorizes (thinking it's legit)
-4. Attacker's agent now has victim's calendar access
-
-With session binding:
-
-1. The callback checks if the user who completed OAuth is the same user who started it
-2. Uses the session cookie to verify identity
-3. Attacker can't use victim's authorization
+The web app stores the signed-in user's JWT in a session cookie when they chat, and `/oauth2/callback` completes the
+flow with that JWT. AgentCore Identity only completes it if that is the user the authorization URL was issued for, so
+a URL sent to someone else can't link their Google account to the sender's agent.
 
 ## Clean Up
 
-From the `google-cal` directory:
-
 ```bash
-# 1. Destroy AgentCore Runtime
-agentcore destroy
-
-# 2. Destroy Cognito stack
-cd cdk
-npx cdk destroy
-cd ..
-
-# 3. Delete credential provider (replace region!)
-aws bedrock-agentcore-control delete-oauth2-credential-provider \
-  --region us-east-1 \
-  --name "google-cal-provider"
+agentcore remove all --yes
+agentcore deploy --yes
 ```
+
+This deletes the stack (with the user pool and its users) and the credential provider. Run `git checkout agentcore` to
+restore the configuration, and delete the OAuth client in the Google Cloud Console if you no longer need it.

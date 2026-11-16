@@ -94,7 +94,7 @@ const callWeatherApi = withApiKey({
 
 ## Key Concepts
 
-**Credential Provider** — Configured in AgentCore with your OAuth client credentials. Defines which external service (Google, Slack, etc.) and what scopes are available.
+**Credential Provider** — Configured in AgentCore with your OAuth client credentials. Defines which external service (Google, Slack, etc.) and what scopes are available. Add one to a project with `agentcore add credentials`; `agentcore deploy` creates it.
 
 **Workload Identity** — Your agent's identity in AgentCore. Links your agent to credential providers and defines allowed callback URLs.
 

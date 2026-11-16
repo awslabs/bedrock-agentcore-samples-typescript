@@ -125,21 +125,21 @@
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
       <div>
         <label for="clientId">Client ID</label>
-        <input type="text" id="clientId" placeholder="From CDK output">
+        <input type="text" id="clientId" placeholder="UserPoolClientId stack output">
       </div>
       <div>
         <label for="region">Region</label>
-        <input type="text" id="region" value="eu-west-1">
+        <input type="text" id="region" value="us-east-1">
       </div>
     </div>
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
       <div>
         <label for="username">Username</label>
-        <input type="text" id="username" value="user@example.com">
+        <input type="text" id="username" value="testuser">
       </div>
       <div>
         <label for="password">Password</label>
-        <input type="password" id="password" value="password">
+        <input type="password" id="password">
       </div>
     </div>
     <button onclick="getToken()">Get Token</button>
@@ -163,7 +163,7 @@
       <strong>Authorization Required</strong>
       <p>Click the link below to authorize access to your Google Calendar:</p>
       <a id="authUrl" href="#" target="_blank"></a>
-      <p class="hint">After authorizing, come back and send your message again.</p>
+      <p class="hint">After you authorize, the agent continues on its own.</p>
     </div>
   </div>
 
@@ -177,7 +177,7 @@
 
     // Load config from server and saved values from localStorage
     window.onload = async function() {
-      // Fetch config from server (reads from .bedrock_agentcore.yaml)
+      // Fetch config from server (reads the deployed stack's outputs)
       try {
         const response = await fetch('/api/config');
         const config = await response.json();
@@ -187,13 +187,13 @@
         console.log('Could not fetch config, using defaults');
       }
 
-      // Override with localStorage if user has saved different values
+      // Fall back to values saved in localStorage when the server has none
       const savedClientId = localStorage.getItem('clientId');
-      const savedRegion = localStorage.getItem('region');
       const savedToken = localStorage.getItem('token');
 
-      if (savedClientId) document.getElementById('clientId').value = savedClientId;
-      if (savedRegion) document.getElementById('region').value = savedRegion;
+      if (savedClientId && !document.getElementById('clientId').value) {
+        document.getElementById('clientId').value = savedClientId;
+      }
       if (savedToken) {
         document.getElementById('token').value = savedToken;
         currentToken = savedToken;
