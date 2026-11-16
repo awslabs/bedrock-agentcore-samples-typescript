@@ -32,22 +32,13 @@ export default [
     },
   },
   {
-    files: ['**/*.ts'],
+    files: ['**/*.ts', '**/*.tsx'],
     languageOptions: {
       parser: tsparser,
       parserOptions: {
         ecmaVersion: 2022,
         sourceType: 'module',
-      },
-      globals: {
-        process: 'readonly',
-        console: 'readonly',
-        globalThis: 'readonly',
-        setTimeout: 'readonly',
-        clearTimeout: 'readonly',
-        setInterval: 'readonly',
-        clearInterval: 'readonly',
-        Buffer: 'readonly',
+        ecmaFeatures: { jsx: true },
       },
     },
     plugins: {
@@ -55,6 +46,8 @@ export default [
     },
     rules: {
       ...tseslint.configs.recommended.rules,
+      // TypeScript reports undefined names itself, with the right globals for Node.js and the browser
+      'no-undef': 'off',
       '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
       '@typescript-eslint/explicit-function-return-type': 'off',
