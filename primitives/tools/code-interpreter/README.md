@@ -1,10 +1,17 @@
 # Code Interpreter
 
-Build AI agents that execute code in a secure sandbox using AgentCore's Code Interpreter.
+Build agents that run code in a secure sandbox with AgentCore Code Interpreter.
+
+→ See the [parent README](../README.md) for how the tools samples run.
+
+| Sample                    | Framework     | Import                                                    |
+| ------------------------- | ------------- | --------------------------------------------------------- |
+| [strands](./strands/)     | Strands       | `bedrock-agentcore/experimental/code-interpreter/strands` |
+| [vercel-ai](./vercel-ai/) | Vercel AI SDK | `bedrock-agentcore/code-interpreter/vercel-ai`            |
 
 ## Sandbox Capabilities
 
-The Code Interpreter provides three tools:
+`codeInterpreter.tools` gives the agent three tools:
 
 | Tool             | Description                           |
 | ---------------- | ------------------------------------- |
@@ -14,21 +21,52 @@ The Code Interpreter provides three tools:
 
 **Pre-installed libraries:** pandas, numpy, matplotlib, seaborn, scipy, scikit-learn
 
-**Session persistence:** Variables and files persist across tool invocations within a session. Sessions timeout after 15 minutes of inactivity (max 8 hours).
+**Session persistence:** Variables and files persist across tool calls within a sandbox session. A session times out
+after 15 minutes by default (up to 8 hours); the samples then start the conversation over with a new sandbox.
+
+**Sequential tool calls:** The samples run tool calls one at a time (`toolExecutor: 'sequential'` in Strands,
+`toolCallConcurrency: 1` in the Vercel AI SDK). The sandbox starts on the first call, and parallel first calls would
+each start one.
+
+## Artifact Retrieval
+
+The agent is told to save what it creates (charts, reports) to `output/` in the sandbox. After every turn in which the
+agent used the sandbox, the samples copy those files to `./output/` on your machine:
+
+```typescript
+const client = codeInterpreter.getClient()
+const listing = await client.executeCommand({ command: "find output -maxdepth 1 -type f -printf '%f\\n'" })
+
+for (const file of listing.split(/\r?\n/).filter(Boolean)) {
+  // Binary files come back as JSON with a base64 blob, text files as their contents
+  const content = await client.readFiles({ paths: [`output/${file}`] })
+  fs.writeFileSync(path.join('output', file), decodeFile(content))
+}
+```
 
 ## Network Access
 
-Every AWS account has access to a default Code Interpreter (`aws.codeinterpreter.v1`). This default environment runs in **SANDBOX** mode with no internet access and no execution role attached, meaning no external network or S3 access.
+Every AWS account has a default Code Interpreter, `aws.codeinterpreter.v1`. It runs in **SANDBOX** mode: no internet
+access and no execution role, so no external network or S3 access.
 
-If you need to download data from public URLs, access external APIs, or connect to internal resources, create a custom Code Interpreter with `PUBLIC` or `VPC` network mode:
+To download data from public URLs, call external APIs or reach internal resources, create your own Code Interpreter
+with `PUBLIC` or `VPC` network mode:
 
 ```bash
-aws bedrock-agentcore create-code-interpreter \
-  --region <region> \
-  --name "my-code-interpreter" \
+aws bedrock-agentcore-control create-code-interpreter \
+  --region us-east-1 \
+  --name "public_code_interpreter" \
   --description "Code Interpreter with public internet access" \
-  --network-configuration '{"networkMode": "PUBLIC"}' \
-  --execution-role-arn "arn:aws:iam::<account-id>:role/<execution-role>"
+  --network-configuration '{"networkMode": "PUBLIC"}'
+```
+
+```json
+{
+  "codeInterpreterId": "public_code_interpreter-<suffix>",
+  "codeInterpreterArn": "arn:aws:bedrock-agentcore:us-east-1:<account-id>:code-interpreter-custom/public_code_interpreter-<suffix>",
+  "createdAt": "2026-11-16T15:10:50.358006+00:00",
+  "status": "READY"
+}
 ```
 
 **Network modes:**
@@ -37,62 +75,19 @@ aws bedrock-agentcore create-code-interpreter \
 - `PUBLIC` – Can access public internet URLs
 - `VPC` – Access resources within a specific VPC
 
-**Execution role:** Determines AWS access permissions, including which S3 buckets the agent can read from or write to.
+Add `--execution-role-arn` to give the sandbox AWS permissions, such as which S3 buckets it can read from or write to.
 
-The response contains the `codeInterpreterId`:
-
-```json
-{
-  "codeInterpreterArn": "arn:aws:bedrock-agentcore:<region>:<account-id>:code-interpreter/<id>",
-  "codeInterpreterId": "<id>",
-  "createdAt": "2024-01-15T10:30:00Z",
-  "status": "ACTIVE"
-}
-```
-
-Pass this identifier when creating the tools:
+Pass the `codeInterpreterId` when creating the tools:
 
 ```typescript
 const codeInterpreter = new CodeInterpreterTools({
-  region: '<region>',
-  identifier: '<id>', // Your codeInterpreterId
+  region: process.env['AWS_REGION'] ?? 'us-east-1',
+  identifier: 'public_code_interpreter-<suffix>',
 })
 ```
 
-## Quick Start
+Delete it when you no longer need it:
 
 ```bash
-cd strands  # or vercel-ai
-npm install
-npm start                    # HTTP server on :8080
-npm run start:interactive    # Interactive shell
+aws bedrock-agentcore-control delete-code-interpreter --region us-east-1 --code-interpreter-id <codeInterpreterId>
 ```
-
-### Test
-
-```bash
-curl -X POST http://localhost:8080/invocations \
-  -H "Content-Type: application/json" \
-  -H "Accept: text/event-stream" \
-  -H "x-amzn-bedrock-agentcore-runtime-session-id: test-123" \
-  -d '{"prompt": "Calculate the first 20 prime numbers and create a bar chart"}'
-```
-
-## Artifact Retrieval
-
-These samples automatically retrieve artifacts after each request. The agent is instructed to save outputs to `output/` in the sandbox, and the sample code downloads them locally:
-
-```typescript
-// After agent completes, retrieve artifacts from sandbox
-const client = codeInterpreter.getClient()
-const listing = await client.executeCommand({ command: 'ls -1 output/' })
-
-for (const file of listing.split('\n').filter(Boolean)) {
-  const content = await client.readFiles({ paths: [`output/${file}`] })
-  // Binary files (images, PDFs) are returned as base64
-  const buffer = Buffer.from(JSON.parse(content).blob, 'base64')
-  fs.writeFileSync(`./output/${file}`, buffer)
-}
-```
-
-Generated files are saved to `./output/` in your local directory

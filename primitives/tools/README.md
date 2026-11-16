@@ -1,92 +1,48 @@
 # AgentCore Tools
 
-Amazon Bedrock AgentCore provides built-in tools to extend agent capabilities.
+Give agents a secure code sandbox and a cloud browser with Amazon Bedrock AgentCore's built-in tools.
 
-## Code Interpreter
+| Tool                                    | What the agent gets                                                   | Samples                                                                                 |
+| --------------------------------------- | --------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| [Code Interpreter](./code-interpreter/) | Run Python, JavaScript or TypeScript and shell commands               | [Strands](./code-interpreter/strands/) · [Vercel AI SDK](./code-interpreter/vercel-ai/) |
+| [Browser](./browser/)                   | Navigate, click, type, read pages and take screenshots via Playwright | [Strands](./browser/strands/) · [Vercel AI SDK](./browser/vercel-ai/)                   |
 
-The Code Interpreter tool allows agents to execute code in a secure sandbox environment. Use it for:
+`bedrock-agentcore` ships both tools ready-made for each framework. With Strands:
 
-- Data analysis and visualization
-- File processing
-- Mathematical calculations
-- Running scripts
+```typescript
+import { CodeInterpreterTools } from 'bedrock-agentcore/experimental/code-interpreter/strands'
 
-**Features:**
-
-- Session persistence — variables and files remain available across invocations
-- Artifact retrieval — generated files (charts, reports) are automatically saved locally
-- Pre-installed libraries — pandas, numpy, matplotlib, seaborn, scipy, scikit-learn
-
-**Example prompt:**
-
-```
-Create a bar chart of fibonacci numbers 1-10 and save it
+const codeInterpreter = new CodeInterpreterTools({ region: process.env['AWS_REGION'] ?? 'us-east-1' })
+const agent = new Agent({ model, tools: codeInterpreter.tools })
 ```
 
-[Code Interpreter Examples →](./code-interpreter/)
+The Vercel AI SDK integrations live at `bedrock-agentcore/code-interpreter/vercel-ai` and
+`bedrock-agentcore/browser/vercel-ai`; the Strands integrations are still under `bedrock-agentcore/experimental/`.
 
-## Browser Tool
+## How the Samples Run
 
-The Browser tool enables agents to navigate websites and interact with web pages. Use it for:
-
-- Web scraping and data extraction
-- Form filling and automation
-- E-commerce workflows
-- Research and information gathering
-
-**Features:**
-
-- Live View URL — watch the browser in real-time and take control for human handoff
-- Session persistence — browser state maintained across invocations
-
-**Example prompt:**
-
-```
-Add milk, eggs, and butter to my willys.se cart
-```
-
-[Browser Examples →](./browser/)
-
-## Quick Start
-
-Each example includes two run modes:
+Each sample is a local agent server built with `BedrockAgentCoreApp`, which speaks the AgentCore Runtime HTTP
+protocol. The tools themselves run in AWS: a sandbox or browser session starts on the agent's first tool call and is
+reused for the rest of the conversation.
 
 ```bash
 cd code-interpreter/strands
 npm install
-
-# Server mode - HTTP server on :8080
-npm start
-
-# Interactive mode - Readline REPL for multi-turn conversations
-npm run start:interactive
+npm start                    # agent server on http://localhost:8080
 ```
 
-**Server mode test:**
+In a second terminal, send a prompt with `curl`, or chat with `npm run start:interactive`, a small client for the
+running server:
 
 ```bash
-curl -X POST http://localhost:8080/invocations \
+curl -N -X POST http://localhost:8080/invocations \
   -H "Content-Type: application/json" \
   -H "Accept: text/event-stream" \
-  -H "x-amzn-bedrock-agentcore-runtime-session-id: test" \
-  -d '{"prompt": "Calculate the first 10 fibonacci numbers"}'
+  -H "x-amzn-bedrock-agentcore-runtime-session-id: test-123" \
+  -d '{"prompt": "Use Python to calculate the first 20 prime numbers and their sum"}'
 ```
 
-## How It Works
+Each session ID gets its own agent, conversation history and tool session. Stopping the server (Ctrl+C) stops every
+tool session it started.
 
-These samples use `BedrockAgentCoreApp` which creates an HTTP server following the AgentCore Runtime protocol. The same code runs locally for development and deploys to AWS without changes.
-
-For full deployment setup with Docker and CloudFormation, see [runtime examples](../runtime/).
-
-## Network Access (Code Interpreter)
-
-By default, Code Interpreter sandboxes have no network access. To enable it:
-
-```typescript
-const codeInterpreter = new CodeInterpreterTools({
-  region: 'us-east-1',
-  networkConfiguration: {
-    enableInternetAccess: true,
-  },
-})
-```
+To host an agent on AgentCore Runtime instead of locally, see the [runtime samples](../runtime/).

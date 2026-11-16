@@ -1,10 +1,10 @@
 /* global fetch, TextDecoder */
-import * as readline from 'readline'
+import * as readline from 'readline/promises'
 
-const SERVER_URL = process.env['SERVER_URL'] || 'http://localhost:8080'
+const SERVER_URL = process.env['SERVER_URL'] ?? 'http://localhost:8080'
 const SESSION_ID = `session-${Date.now()}`
 
-async function sendPrompt(prompt: string) {
+async function sendPrompt(prompt: string): Promise<void> {
   const response = await fetch(`${SERVER_URL}/invocations`, {
     method: 'POST',
     headers: {
@@ -31,32 +31,29 @@ async function sendPrompt(prompt: string) {
 
     buffer += decoder.decode(value, { stream: true })
     const lines = buffer.split('\n')
-    buffer = lines.pop() || ''
+    buffer = lines.pop() ?? ''
 
     for (const line of lines) {
-      if (line.startsWith('data: ')) {
-        try {
-          const data = JSON.parse(line.slice(6))
-          if (data.text) {
-            process.stdout.write(data.text)
-          }
-        } catch {
-          // Skip non-JSON data lines
-        }
+      if (!line.startsWith('data: ')) continue
+      try {
+        const data = JSON.parse(line.slice(6))
+        if (data.text) process.stdout.write(data.text)
+        if (data.error) process.stderr.write(`\nError: ${data.error}`)
+      } catch {
+        // Skip non-JSON data lines
       }
     }
   }
 }
 
-async function main() {
+async function main(): Promise<void> {
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
-  const ask = (q: string) => new Promise<string>((resolve) => rl.question(q, resolve))
 
-  console.log('Browser Shopping Agent (type "exit" to quit)')
+  console.log('Browser Agent (type "exit" to quit)')
   console.log(`Connecting to ${SERVER_URL} with session ${SESSION_ID}\n`)
 
   while (true) {
-    const prompt = await ask('> ')
+    const prompt = await rl.question('> ')
     if (prompt.toLowerCase() === 'exit') break
     if (!prompt.trim()) continue
 

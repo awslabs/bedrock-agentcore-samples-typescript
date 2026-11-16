@@ -1,19 +1,24 @@
 {
   "name": "code-interpreter-strands",
   "version": "1.0.0",
+  "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
+    "build": "tsc --noEmit",
     "start": "tsx src/index.ts",
     "start:interactive": "tsx src/interactive.ts"
   },
   "dependencies": {
-    "@strands-agents/sdk": "^0.1.0",
-    "bedrock-agentcore": "^0.2.0",
-    "tsx": "^4.19.0",
-    "zod": "^4.0.0"
+    "@strands-agents/sdk": "^1.25.0",
+    "bedrock-agentcore": "^0.4.7",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
-    "@types/node": "^22.0.0",
-    "typescript": "^5.7.0"
+    "@types/node": "^22.20.5",
+    "tsx": "^4.23.15",
+    "typescript": "~6.0.3"
   }
 }
