@@ -1,39 +1,62 @@
 import { useState } from 'react'
+import type { AgentEvent, UploadFile } from '../types'
+
+interface StreamOptions {
+  endpoint: string
+  prompt: string
+  files: UploadFile[]
+  sessionId: string
+  getAccessToken?: () => Promise<string | null>
+  onEvent: (event: AgentEvent) => void
+}
+
+interface Streaming {
+  streamMessage: (options: StreamOptions) => Promise<void>
+  isStreaming: boolean
+}
 
 // One server-sent event: "event: tool\ndata: {...}". Other lines (keep-alive comments) are ignored.
-function parseEvent(rawEvent) {
+function parseEvent(rawEvent: string): AgentEvent | null {
   let type = 'message'
-  const dataLines = []
+  const dataLines: string[] = []
   for (const line of rawEvent.split('\n')) {
     if (line.startsWith('event:')) type = line.slice(6).trim()
     if (line.startsWith('data:')) dataLines.push(line.slice(5).trimStart())
   }
   if (dataLines.length === 0) return null
   try {
-    return { type, data: JSON.parse(dataLines.join('\n')) }
+    const data: unknown = JSON.parse(dataLines.join('\n'))
+    return { type, data } as AgentEvent
   } catch {
     console.error(`Could not parse "${type}" event:`, rawEvent)
     return null
   }
 }
 
-async function readErrorMessage(response) {
+async function readErrorMessage(response: Response): Promise<string> {
   const body = await response.text()
   try {
-    const parsed = JSON.parse(body)
+    const parsed: { error?: string; message?: string } = JSON.parse(body)
     return parsed.error ?? parsed.message ?? body
   } catch {
     return body || response.statusText
   }
 }
 
-export default function useStreaming() {
+export default function useStreaming(): Streaming {
   const [isStreaming, setIsStreaming] = useState(false)
 
-  const streamMessage = async ({ endpoint, prompt, files, sessionId, getAccessToken, onEvent }) => {
+  const streamMessage = async ({
+    endpoint,
+    prompt,
+    files,
+    sessionId,
+    getAccessToken,
+    onEvent,
+  }: StreamOptions): Promise<void> => {
     setIsStreaming(true)
     try {
-      const headers = {
+      const headers: Record<string, string> = {
         'Content-Type': 'application/json',
         Accept: 'text/event-stream',
         'X-Amzn-Bedrock-AgentCore-Runtime-Session-Id': sessionId,
@@ -49,6 +72,7 @@ export default function useStreaming() {
       if (!response.ok) {
         throw new Error(`The agent returned ${response.status}: ${await readErrorMessage(response)}`)
       }
+      if (!response.body) throw new Error('The agent returned an empty response')
 
       const reader = response.body.getReader()
       const decoder = new TextDecoder()
@@ -61,11 +85,11 @@ export default function useStreaming() {
         // Events end with a blank line and can be split across network chunks: keep the unfinished one for later.
         buffer += decoder.decode(value, { stream: true }).replaceAll('\r', '')
         const rawEvents = buffer.split('\n\n')
-        buffer = rawEvents.pop()
+        buffer = rawEvents.pop() ?? ''
 
         for (const rawEvent of rawEvents) {
           const event = parseEvent(rawEvent)
-          if (event) onEvent(event.type, event.data)
+          if (event) onEvent(event)
         }
       }
     } finally {

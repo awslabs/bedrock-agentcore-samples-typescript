@@ -1,25 +1,32 @@
-import { useId, useState } from 'react'
+import { useId, useState, type ReactElement } from 'react'
+import type { ToolStep } from '../types'
 
-const languages = { python: 'Python', javascript: 'JavaScript', typescript: 'TypeScript' }
+interface ParsedOutput {
+  printed: string
+  error: string | null
+  traceback?: string
+}
 
-function stepLabel({ name, input }) {
-  if (name === 'executeCode') return languages[input.language] ?? 'code'
+const languages: Record<string, string> = { python: 'Python', javascript: 'JavaScript', typescript: 'TypeScript' }
+
+function stepLabel({ name, input }: ToolStep): string {
+  if (name === 'executeCode') return languages[input.language ?? 'python'] ?? 'code'
   if (name === 'executeCommand') return 'a shell command'
   if (name === 'fileOperations') return 'file operations'
   return name
 }
 
-function stepSource({ name, input }) {
-  if (name === 'executeCode') return input.code
-  if (name === 'executeCommand') return input.command
+function stepSource({ name, input }: ToolStep): string {
+  if (name === 'executeCode') return input.code ?? ''
+  if (name === 'executeCommand') return input.command ?? ''
   return JSON.stringify(input, null, 2)
 }
 
 // Code Interpreter returns failed runs as text with status "success": an SDK "Error: …" or a Python exception.
 // IPython prints a traceback after a line of dashes; what comes before it is the code's own output.
-function parseOutput({ status, output = '' }) {
+function parseOutput({ status, output = '' }: ToolStep): ParsedOutput {
   const text = output.trim()
-  const lastLine = text.split('\n').at(-1)
+  const lastLine = text.split('\n').at(-1) ?? ''
   const failed = status === 'error' || text.startsWith('Error:') || /^[A-Z]\w*(Error|Exception)\b/.test(lastLine)
   const tracebackStart = text.search(/^-{20,}\n.*Traceback \(most recent call last\)/m)
   if (!failed || tracebackStart === -1) return { printed: text, error: failed ? lastLine : null }
@@ -30,7 +37,7 @@ function parseOutput({ status, output = '' }) {
   }
 }
 
-function Step({ step }) {
+function Step({ step }: { step: ToolStep }): ReactElement {
   const { printed, error, traceback } = parseOutput(step)
   const isDone = step.output !== undefined
 
@@ -59,7 +66,12 @@ function Step({ step }) {
   )
 }
 
-export default function ToolSteps({ steps, isStreaming }) {
+interface ToolStepsProps {
+  steps: ToolStep[]
+  isStreaming: boolean
+}
+
+export default function ToolSteps({ steps, isStreaming }: ToolStepsProps): ReactElement {
   const [isOpen, setIsOpen] = useState(false)
   const panelId = useId()
 

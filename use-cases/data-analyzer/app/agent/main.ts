@@ -1,6 +1,6 @@
 import { Agent, BedrockModel } from '@strands-agents/sdk'
-import { BedrockAgentCoreApp } from 'bedrock-agentcore/runtime'
 import { CodeInterpreterTools } from 'bedrock-agentcore/experimental/code-interpreter/strands'
+import { BedrockAgentCoreApp } from 'bedrock-agentcore/runtime'
 import { GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import { z } from 'zod'
@@ -31,15 +31,15 @@ const requestSchema = z.object({
     .optional(),
 })
 
-const systemPrompt = `You are a data analyst. You write and run Python code in a secure sandbox to answer questions about the
-user's data and to create charts, reports and processed files.
+const systemPrompt = `You are a data analyst. You write and run Python code in a secure sandbox to answer questions
+about the user's data and to create charts, reports and processed files.
 
 - Uploaded files are in the "uploads/" directory.
 - Save every file the user should see (charts, reports, processed data) to "outputs/". Create it first with
   os.makedirs('outputs', exist_ok=True). Use unique, descriptive file names and never overwrite a file.
 - Save charts as PNG unless the user asks for another format. Use matplotlib and make them clear and good-looking.
-- Pre-installed libraries: pandas, numpy, matplotlib, seaborn, plotly, scipy, scikit-learn, openpyxl, xlrd. The sandbox has no internet
-  access, so don't install packages or fetch URLs.
+- Pre-installed libraries: pandas, numpy, matplotlib, seaborn, plotly, scipy, scikit-learn, openpyxl, xlrd. The sandbox
+  has no internet access, so don't install packages or fetch URLs.
 - Variables and files persist between turns. Use print() to see results.
 - Your readers are not engineers: answer briefly and clearly, without code or technical detail unless asked.
 - The files you save in "outputs/" are shown to the user automatically below your answer. Never mention file names or
@@ -82,10 +82,11 @@ function getSession(sessionId: string): Session {
   })
   const session: Session = {
     agent: new Agent({
-      model: new BedrockModel({ modelId: 'global.anthropic.claude-haiku-5-5', region }),
-      tools: codeInterpreter.tools,
-      toolExecutor: 'sequential',
+      model: new BedrockModel({ modelId: 'global.anthropic.claude-haiku-5-5', region, maxTokens: 8192 }),
       systemPrompt,
+      tools: codeInterpreter.tools,
+      // The tools share one sandbox session, so they run one at a time
+      toolExecutor: 'sequential',
     }),
     codeInterpreter,
     publishedArtifacts: new Set(),
@@ -146,6 +147,10 @@ const app = new BedrockAgentCoreApp({
       }
 
       for await (const event of session.agent.stream(prompt)) {
+        if (event.type === 'beforeToolCallEvent') {
+          const { toolUseId, name, input } = event.toolUse
+          yield { event: 'tool', data: { toolUseId, name, input } }
+        }
         if (
           event.type === 'modelStreamUpdateEvent' &&
           event.event.type === 'modelContentBlockDeltaEvent' &&
@@ -153,13 +158,11 @@ const app = new BedrockAgentCoreApp({
         ) {
           yield { event: 'message', data: { text: event.event.delta.text } }
         }
-        if (event.type === 'beforeToolCallEvent') {
-          const { toolUseId, name, input } = event.toolUse
-          yield { event: 'tool', data: { toolUseId, name, input } }
-        }
         if (event.type === 'afterToolCallEvent') {
           const { toolUseId, status } = event.result
-          const content = event.result.content.map((block) => ('text' in block ? block.text : JSON.stringify(block)))
+          const content = event.result.content.map((block) =>
+            block.type === 'textBlock' ? block.text : JSON.stringify(block)
+          )
           yield { event: 'tool_result', data: { toolUseId, status, content: content.join('\n') } }
         }
       }

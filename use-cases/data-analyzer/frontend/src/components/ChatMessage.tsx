@@ -1,11 +1,13 @@
-import ReactMarkdown from 'react-markdown'
+import type { ReactElement } from 'react'
+import ReactMarkdown, { type Components, type Options } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import type { ArtifactFile, Message } from '../types'
 import ToolSteps from './ToolSteps'
 
 // Models write "~$900K" for "about", which GFM would otherwise read as strikethrough.
-const remarkPlugins = [[remarkGfm, { singleTilde: false }]]
+const remarkPlugins: Options['remarkPlugins'] = [[remarkGfm, { singleTilde: false }]]
 
-const markdownComponents = {
+const markdownComponents: Components = {
   table: ({ node: _node, ...props }) => (
     <div className="overflow-x-auto">
       <table {...props} />
@@ -13,11 +15,11 @@ const markdownComponents = {
   ),
 }
 
-function fileExtension(name) {
-  return name.includes('.') ? name.split('.').pop().toUpperCase() : 'FILE'
+function fileExtension(name: string): string {
+  return name.includes('.') ? name.slice(name.lastIndexOf('.') + 1).toUpperCase() : 'FILE'
 }
 
-function OpenIcon() {
+function OpenIcon(): ReactElement {
   return (
     <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
       <path
@@ -30,7 +32,7 @@ function OpenIcon() {
   )
 }
 
-function Artifact({ artifact }) {
+function Artifact({ artifact }: { artifact: ArtifactFile }): ReactElement {
   if (artifact.mimeType.startsWith('image/')) {
     return (
       <figure className="rounded-xl border border-gray-200 overflow-hidden">
@@ -71,7 +73,7 @@ function Artifact({ artifact }) {
   )
 }
 
-function UserMessage({ message }) {
+function UserMessage({ message }: { message: Extract<Message, { role: 'user' }> }): ReactElement {
   return (
     <div className="flex flex-col items-end gap-1.5">
       {message.files.length > 0 && (
@@ -94,7 +96,7 @@ function UserMessage({ message }) {
   )
 }
 
-function Status({ label }) {
+function Status({ label }: { label: string }): ReactElement {
   return (
     <div className="flex items-center gap-2 text-sm text-gray-500" role="status">
       <span className="h-3.5 w-3.5 rounded-full border-2 border-gray-300 border-t-emerald-600 animate-spin" />
@@ -103,13 +105,18 @@ function Status({ label }) {
   )
 }
 
-export default function ChatMessage({ message, isStreaming = false }) {
+interface ChatMessageProps {
+  message: Message
+  isStreaming?: boolean
+}
+
+export default function ChatMessage({ message, isStreaming = false }: ChatMessageProps): ReactElement {
   if (message.role === 'user') return <UserMessage message={message} />
 
   const lastBlock = message.blocks.at(-1)
   const isWriting = lastBlock?.type === 'text'
   const isRunningStep = lastBlock?.type === 'steps' && lastBlock.steps.some((step) => step.output === undefined)
-  let status = null
+  let status: string | null = null
   if (isStreaming && message.preparingFiles) status = 'Preparing files…'
   else if (isStreaming && !isWriting && !isRunningStep) status = 'Thinking…'
 

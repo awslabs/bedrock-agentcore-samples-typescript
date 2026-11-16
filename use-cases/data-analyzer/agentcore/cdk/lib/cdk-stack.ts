@@ -11,9 +11,8 @@ export interface AgentCoreStackProps extends StackProps {
 }
 
 /**
- * The stack the AgentCore CLI deploys: the runtime from agentcore/agentcore.json, a Cognito user pool that signs in
- * the web frontend and authorizes its calls to the runtime, a sandboxed Code Interpreter, and a private bucket for
- * the files the agent creates.
+ * Adds a Cognito user pool that signs in the web app and authorizes its calls to the runtime, a sandboxed Code
+ * Interpreter, and a private bucket for the files the agent creates.
  */
 export class AgentCoreStack extends Stack {
   public readonly application: AgentCoreApplication
@@ -22,8 +21,8 @@ export class AgentCoreStack extends Stack {
     super(scope, id, props)
     this.application = new AgentCoreApplication(this, 'Application', props.application)
 
-    // After `agentcore remove all` the project has no runtime and the stack must be empty so the CLI can delete it.
     const runtime = this.application.runtimes.get('agent')
+    // After `agentcore remove all` there is no runtime, and an empty stack lets the CLI delete it
     if (!runtime) return
 
     const frontendUrl = process.env['FRONTEND_URL'] ?? 'http://localhost:3000'

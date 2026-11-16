@@ -1,27 +1,35 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, type ChangeEvent, type DragEvent, type FormEvent, type ReactElement } from 'react'
+import type { UploadFile } from '../types'
 
 const allowedExtensions = ['.csv', '.xlsx', '.xls', '.json', '.txt']
 const maxFiles = 5
 const maxFileSizeMb = 10
 const maxFileSizeBytes = maxFileSizeMb * 1024 * 1024
 
+type SelectedFile = (UploadFile & { valid: true }) | { name: string; valid: false; error: 'type' | 'size' }
+
+interface ChatInputProps {
+  onSend: (prompt: string, files: UploadFile[]) => void
+  disabled: boolean
+}
+
 // The agent accepts only plain file names, so replace anything else (brackets, accents, ...) with underscores.
-function toSafeFileName(filename) {
+function toSafeFileName(filename: string): string {
   return filename.replace(/[^\w .-]/g, '_').replace(/^[^\w]+/, '')
 }
 
-function isValidFileType(filename) {
+function isValidFileType(filename: string): boolean {
   const ext = filename.toLowerCase().slice(filename.lastIndexOf('.'))
   return allowedExtensions.includes(ext)
 }
 
-export default function ChatInput({ onSend, disabled }) {
+export default function ChatInput({ onSend, disabled }: ChatInputProps): ReactElement {
   const [input, setInput] = useState('')
-  const [selectedFiles, setSelectedFiles] = useState([])
+  const [selectedFiles, setSelectedFiles] = useState<SelectedFile[]>([])
   const [isDragging, setIsDragging] = useState(false)
-  const fileInputRef = useRef(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const processFiles = (files) => {
+  const processFiles = (files: FileList): void => {
     Array.from(files)
       .slice(0, maxFiles - selectedFiles.length)
       .forEach((file) => {
@@ -33,7 +41,6 @@ export default function ChatInput({ onSend, disabled }) {
             ...prev,
             {
               name: file.name,
-              content: null,
               valid: false,
               error: !validType ? 'type' : 'size',
             },
@@ -43,14 +50,14 @@ export default function ChatInput({ onSend, disabled }) {
 
         const reader = new FileReader()
         reader.onload = () => {
-          const base64 = reader.result.split(',')[1]
+          const base64 = (reader.result as string).split(',')[1]
           setSelectedFiles((prev) => [...prev, { name: toSafeFileName(file.name), content: base64, valid: true }])
         }
         reader.readAsDataURL(file)
       })
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: FormEvent<HTMLFormElement>): void => {
     e.preventDefault()
     if (!input.trim() || disabled) return
 
@@ -61,27 +68,27 @@ export default function ChatInput({ onSend, disabled }) {
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
-  const handleFileSelect = (e) => {
+  const handleFileSelect = (e: ChangeEvent<HTMLInputElement>): void => {
     if (e.target.files?.length) processFiles(e.target.files)
   }
 
-  const handleDragOver = (e) => {
+  const handleDragOver = (e: DragEvent<HTMLDivElement>): void => {
     e.preventDefault()
     setIsDragging(true)
   }
 
-  const handleDragLeave = (e) => {
+  const handleDragLeave = (e: DragEvent<HTMLDivElement>): void => {
     e.preventDefault()
     setIsDragging(false)
   }
 
-  const handleDrop = (e) => {
+  const handleDrop = (e: DragEvent<HTMLDivElement>): void => {
     e.preventDefault()
     setIsDragging(false)
     if (e.dataTransfer.files?.length) processFiles(e.dataTransfer.files)
   }
 
-  const removeFile = (index) => {
+  const removeFile = (index: number): void => {
     setSelectedFiles((prev) => prev.filter((_, i) => i !== index))
     if (fileInputRef.current) fileInputRef.current.value = ''
   }

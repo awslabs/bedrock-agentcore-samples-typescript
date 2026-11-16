@@ -9,6 +9,9 @@ files, streaming answers and showing the code it ran and the charts it created.
 
 - Node.js 22+
 - AWS credentials with access to Amazon Bedrock, AgentCore, Cognito and S3
+- The AWS CLI, configured for the region you deploy to
+- [jq](https://jqlang.org/)
+- OpenSSL, to generate the test user's password
 - The [AgentCore CLI](https://github.com/aws/agentcore-cli):
 
 ```bash
@@ -23,7 +26,7 @@ data-analyzer/
 ├── agentcore/
 │   ├── agentcore.json  # Runtime configuration read by the AgentCore CLI
 │   └── cdk/            # CDK app the CLI deploys, plus Cognito, Code Interpreter and S3
-├── frontend/           # React + Vite web app
+├── frontend/           # React + Vite web app in TypeScript
 └── data/               # sample_sales_data.csv to try it with
 ```
 
@@ -37,8 +40,13 @@ const app = new BedrockAgentCoreApp({
       const session = getSession(context.sessionId)
       if (request.files?.length) await writeUploads(session, request.files)
 
-      for await (const event of session.agent.stream(prompt)) {
-        // text deltas → 'message', tool calls → 'tool' and 'tool_result'
+      for await (const event of session.agent.stream(request.prompt)) {
+        if (event.type === 'beforeToolCallEvent') {
+          const { toolUseId, name, input } = event.toolUse
+          yield { event: 'tool', data: { toolUseId, name, input } }
+        }
+        // ...yield text deltas as message events
+        // ...yield tool outputs as tool_result events
       }
 
       for (const name of await listNewArtifacts(session)) {
@@ -51,6 +59,7 @@ const app = new BedrockAgentCoreApp({
 ```
 
 Each runtime session gets its own agent and Code Interpreter sandbox, so follow-up questions can use earlier results.
+`tool` events carry the `toolUseId` so the web app can pair each with its `tool_result`, which holds the code's output.
 The request is `{ "prompt": string, "files"?: [{ "name": string, "content": base64 }] }`, with up to 5 files of 10 MB
 each (about 70 MB as base64, within the runtime's 100 MB payload limit).
 
@@ -125,8 +134,7 @@ npm install --prefix agentcore/cdk
 agentcore deploy
 ```
 
-The user pool has no self sign-up. Create a user with a generated password (the AWS CLI must use the region you
-deployed to):
+The user pool has no self sign-up. Create a user with a generated password:
 
 ```bash
 STACK=AgentCore-DataAnalyzer-default
@@ -182,14 +190,14 @@ CODE_INTERPRETER_ID=<CodeInterpreterId output>
 
 ## Clean Up
 
+The runtime, Code Interpreter and Bedrock are billed per use; see
+[AgentCore pricing](https://aws.amazon.com/bedrock/agentcore/pricing/) and
+[Bedrock pricing](https://aws.amazon.com/bedrock/pricing/). Removing the stack also deletes the user pool, its users
+and the bucket with its files:
+
 ```bash
 agentcore remove all --yes
 agentcore deploy --yes
 ```
 
-This deletes the deployed stack, including the user pool, its users and the bucket with its files. Run
-`git checkout agentcore` to restore the configuration and deploy again.
-
-The runtime, Code Interpreter and Bedrock are billed per use; see
-[AgentCore pricing](https://aws.amazon.com/bedrock/agentcore/pricing/) and
-[Bedrock pricing](https://aws.amazon.com/bedrock/pricing/).
+This deletes the deployed stack. Run `git checkout -- agentcore` to restore the configuration and deploy again.

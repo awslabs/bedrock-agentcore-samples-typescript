@@ -1,14 +1,15 @@
+import type { ReactElement, ReactNode } from 'react'
 import useAuth from './hooks/useAuth'
 import Chat from './pages/Chat'
 
 const runtimeUrl = import.meta.env.VITE_RUNTIME_URL
 const localEndpoint = '/api/invocations'
 
-function FullScreenMessage({ children }) {
+function FullScreenMessage({ children }: { children: ReactNode }): ReactElement {
   return <div className="flex items-center justify-center min-h-dvh bg-white px-6">{children}</div>
 }
 
-export default function App() {
+export default function App(): ReactElement {
   const isDeployed = Boolean(runtimeUrl)
   const { status, error, getAccessToken, signIn, signOut } = useAuth(isDeployed)
 
