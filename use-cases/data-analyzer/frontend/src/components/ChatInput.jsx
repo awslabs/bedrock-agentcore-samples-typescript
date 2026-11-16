@@ -1,9 +1,9 @@
 import { useState, useRef } from 'react'
 
-const ALLOWED_EXTENSIONS = ['.csv', '.xlsx', '.xls', '.json', '.txt']
-const MAX_FILES = 5
-const MAX_FILE_SIZE_MB = 10
-const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024
+const allowedExtensions = ['.csv', '.xlsx', '.xls', '.json', '.txt']
+const maxFiles = 5
+const maxFileSizeMb = 10
+const maxFileSizeBytes = maxFileSizeMb * 1024 * 1024
 
 // The agent accepts only plain file names, so replace anything else (brackets, accents, ...) with underscores.
 function toSafeFileName(filename) {
@@ -12,7 +12,7 @@ function toSafeFileName(filename) {
 
 function isValidFileType(filename) {
   const ext = filename.toLowerCase().slice(filename.lastIndexOf('.'))
-  return ALLOWED_EXTENSIONS.includes(ext)
+  return allowedExtensions.includes(ext)
 }
 
 export default function ChatInput({ onSend, disabled }) {
@@ -23,10 +23,10 @@ export default function ChatInput({ onSend, disabled }) {
 
   const processFiles = (files) => {
     Array.from(files)
-      .slice(0, MAX_FILES - selectedFiles.length)
+      .slice(0, maxFiles - selectedFiles.length)
       .forEach((file) => {
         const validType = isValidFileType(file.name)
-        const validSize = file.size <= MAX_FILE_SIZE_BYTES
+        const validSize = file.size <= maxFileSizeBytes
 
         if (!validType || !validSize) {
           setSelectedFiles((prev) => [
@@ -54,19 +54,11 @@ export default function ChatInput({ onSend, disabled }) {
     e.preventDefault()
     if (!input.trim() || disabled) return
 
-    // Only send valid files
     const validFiles = selectedFiles.filter((f) => f.valid)
     onSend(input, validFiles)
     setInput('')
     setSelectedFiles([])
     if (fileInputRef.current) fileInputRef.current.value = ''
-  }
-
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      handleSubmit(e)
-    }
   }
 
   const handleFileSelect = (e) => {
@@ -96,133 +88,95 @@ export default function ChatInput({ onSend, disabled }) {
 
   return (
     <div
-      className={`px-4 sm:px-6 pt-3 sm:pt-4 pb-4 sm:pb-8 transition-all ${isDragging ? 'bg-emerald-50 border-2 border-dashed border-emerald-400 rounded-lg' : ''}`}
+      className="px-3 sm:px-6 pt-2 pb-3 sm:pb-6"
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
-      {selectedFiles.length > 0 && (
-        <div className="mb-3 flex flex-wrap gap-2">
-          {selectedFiles.map((file, index) => (
-            <div
-              key={index}
-              className={`group relative flex items-center gap-1.5 text-sm rounded-full px-3 py-1.5 ${
-                file.valid ? 'text-gray-600 bg-gray-100' : 'text-red-600 bg-red-50 border border-red-200'
-              }`}
-            >
-              <svg
-                className={`w-3.5 h-3.5 ${file.valid ? 'text-emerald-600' : 'text-red-500'}`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+      <form
+        onSubmit={handleSubmit}
+        className={`rounded-2xl border bg-white shadow-xs transition-colors focus-within:border-gray-400 ${
+          isDragging ? 'border-emerald-500 bg-emerald-50' : 'border-gray-300'
+        }`}
+      >
+        {selectedFiles.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 px-3 pt-3">
+            {selectedFiles.map((file, index) => (
+              <span
+                key={index}
+                className={`inline-flex items-center gap-1.5 rounded-lg border py-1 pl-2.5 pr-1 text-xs ${
+                  file.valid ? 'border-gray-200 text-gray-700' : 'border-red-200 bg-red-50 text-red-700'
+                }`}
               >
-                {file.valid ? (
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  />
-                ) : (
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                  />
+                <span className="max-w-40 truncate">{file.name}</span>
+                {!file.valid && (
+                  <span className="font-medium">
+                    {file.error === 'size' ? `over ${maxFileSizeMb} MB` : 'unsupported type'}
+                  </span>
                 )}
-              </svg>
-              <span className="max-w-32 truncate">{file.name}</span>
-              <button
-                type="button"
-                onClick={() => removeFile(index)}
-                className={`ml-0.5 ${file.valid ? 'text-gray-400 hover:text-gray-600' : 'text-red-400 hover:text-red-600'}`}
-              >
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-              {!file.valid && (
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                  {file.error === 'size'
-                    ? `File too large. Max size: ${MAX_FILE_SIZE_MB}MB`
-                    : `Unsupported file type. Use: ${ALLOWED_EXTENSIONS.join(', ')}`}
-                </div>
-              )}
-            </div>
-          ))}
+                <button
+                  type="button"
+                  onClick={() => removeFile(index)}
+                  aria-label={`Remove ${file.name}`}
+                  className="rounded-sm p-0.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-emerald-500"
+                >
+                  <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+        <div className="flex items-center gap-1 p-1.5">
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileSelect}
+            accept={allowedExtensions.join(',')}
+            multiple
+            className="hidden"
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={selectedFiles.length >= maxFiles}
+            aria-label="Attach files"
+            title={
+              selectedFiles.length >= maxFiles
+                ? `Up to ${maxFiles} files per message`
+                : `Attach up to ${maxFiles} files of ${maxFileSizeMb} MB`
+            }
+            className="shrink-0 grid place-items-center h-10 w-10 rounded-xl text-gray-500 hover:bg-gray-100 hover:text-gray-800 transition-colors disabled:opacity-40 disabled:hover:bg-transparent focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-emerald-500"
+          >
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
+              />
+            </svg>
+          </button>
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Ask about your data…"
+            aria-label="Message"
+            className="flex-1 min-w-0 bg-transparent px-1.5 py-2 text-base text-gray-900 placeholder:text-gray-400 focus:outline-hidden"
+          />
+          <button
+            type="submit"
+            disabled={disabled || !input.trim()}
+            aria-label="Send"
+            className="shrink-0 grid place-items-center h-10 w-10 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 active:scale-[0.97] transition-[transform,background-color] duration-150 ease-out disabled:bg-gray-100 disabled:text-gray-400 disabled:active:scale-100 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
+          >
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19V5m0 0l-6 6m6-6l6 6" />
+            </svg>
+          </button>
         </div>
-      )}
-      <form onSubmit={handleSubmit} className="flex gap-2 sm:gap-3">
-        <input
-          type="file"
-          ref={fileInputRef}
-          onChange={handleFileSelect}
-          accept=".csv,.xlsx,.xls,.json,.txt"
-          multiple
-          className="hidden"
-        />
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={disabled || selectedFiles.length >= MAX_FILES}
-          className="flex-shrink-0 bg-gray-100 hover:bg-gray-200 text-gray-600 px-3 sm:px-4 py-3 rounded-full
-                   disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-          title={selectedFiles.length >= MAX_FILES ? `Up to ${MAX_FILES} files per message` : 'Upload file'}
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
-            />
-          </svg>
-        </button>
-        <input
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          disabled={disabled}
-          placeholder={disabled ? 'Agent is thinking...' : 'Type your message...'}
-          className="flex-1 min-w-0 bg-white text-gray-900 rounded-full px-4 sm:px-5 py-3 border border-gray-300
-                   focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200
-                   disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-50 placeholder-gray-400
-                   transition-all"
-        />
-        <button
-          type="submit"
-          disabled={disabled || !input.trim()}
-          className="bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-700 hover:to-teal-600
-                   flex-shrink-0 text-white px-5 sm:px-8 py-3 rounded-full font-medium shadow-md hover:shadow-lg
-                   disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-md
-                   transition-all duration-200"
-        >
-          {disabled ? (
-            <span className="flex items-center gap-2">
-              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                  fill="none"
-                />
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                />
-              </svg>
-              <span className="hidden sm:inline">Thinking...</span>
-            </span>
-          ) : (
-            'Send'
-          )}
-        </button>
       </form>
     </div>
   )

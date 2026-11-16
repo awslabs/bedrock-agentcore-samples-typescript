@@ -10,81 +10,61 @@ export default function Chat({ endpoint, getAccessToken, onSignOut }) {
   const [currentMessage, setCurrentMessage] = useState(null)
   const [sessionId] = useState(() => crypto.randomUUID())
 
-  const messagesEndRef = useRef(null)
-  const chatContainerRef = useRef(null)
+  const scrollContainerRef = useRef(null)
+  const contentRef = useRef(null)
+  const followOutput = useRef(true)
 
+  // Stay at the bottom while text streams in and charts load, unless the reader has scrolled up.
   useEffect(() => {
-    scrollToBottomIfNeeded()
-  }, [messages, currentMessage])
+    const container = scrollContainerRef.current
+    const observer = new ResizeObserver(() => {
+      if (followOutput.current) container.scrollTop = container.scrollHeight
+    })
+    observer.observe(contentRef.current)
+    return () => observer.disconnect()
+  }, [])
 
-  const isNearBottom = () => {
-    if (!chatContainerRef.current) return true
-    const { scrollTop, scrollHeight, clientHeight } = chatContainerRef.current
-    return scrollHeight - scrollTop - clientHeight < 100
-  }
-
-  const scrollToBottomIfNeeded = () => {
-    if (isNearBottom()) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-    }
-  }
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  const handleScroll = () => {
+    const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current
+    followOutput.current = scrollHeight - scrollTop - clientHeight < 80
   }
 
   const handleSend = async (prompt, files = []) => {
-    const userMessage = {
-      role: 'user',
-      content: prompt,
-      files: files.length > 0 ? files.map((f) => f.name) : undefined,
-      timestamp: new Date().toISOString(),
-    }
-    setMessages((prev) => [...prev, userMessage])
-    setTimeout(() => scrollToBottom(), 100)
+    followOutput.current = true
+    setMessages((prev) => [...prev, { role: 'user', content: prompt, files: files.map((file) => file.name) }])
 
-    const assistantMessage = { role: 'assistant', contentBlocks: [], timestamp: new Date().toISOString() }
-    setCurrentMessage(assistantMessage)
-
+    // Consecutive tool calls are grouped into one "steps" block, so the answer isn't broken up by the agent's work.
     const blocks = []
-    const render = () => setCurrentMessage((prev) => ({ ...prev, contentBlocks: [...blocks] }))
-    const removeUploadingBlock = () => {
-      const index = blocks.findIndex((b) => b.type === 'uploading')
-      if (index !== -1) blocks.splice(index, 1)
-    }
+    let preparingFiles = false
+    const render = () => setCurrentMessage({ role: 'assistant', blocks: [...blocks], preparingFiles })
+    render()
 
     const handleEvent = (eventType, data) => {
+      const lastBlock = blocks.at(-1)
       switch (eventType) {
-        case 'message': {
-          const lastBlock = blocks[blocks.length - 1]
-          if (lastBlock?.type === 'text') {
-            blocks[blocks.length - 1] = { ...lastBlock, content: lastBlock.content + data.text }
-          } else {
-            blocks.push({ type: 'text', content: data.text })
-          }
+        case 'message':
+          if (lastBlock?.type === 'text') lastBlock.text += data.text
+          else blocks.push({ type: 'text', text: data.text })
+          break
+        case 'tool': {
+          const step = { id: data.toolUseId, name: data.name, input: data.input }
+          if (lastBlock?.type === 'steps') lastBlock.steps.push(step)
+          else blocks.push({ type: 'steps', steps: [step] })
           break
         }
-        case 'tool':
-          blocks.push({ type: 'tool', toolBlock: { name: data.name, input: data.input, toolUseId: data.toolUseId } })
-          break
         case 'tool_result': {
-          const index = blocks.findIndex((b) => b.type === 'tool' && b.toolBlock.toolUseId === data.toolUseId)
-          if (index !== -1) {
-            const toolBlock = { ...blocks[index].toolBlock, result: data.content, status: data.status }
-            blocks[index] = { type: 'tool', toolBlock }
-          }
+          const step = blocks.flatMap((block) => block.steps ?? []).find((s) => s.id === data.toolUseId)
+          if (step) Object.assign(step, { status: data.status, output: data.content })
           break
         }
         case 'uploading':
-          blocks.push({ type: 'uploading' })
+          preparingFiles = true
           break
         case 'artifact':
-          removeUploadingBlock()
-          blocks.push({ type: 'artifact', artifact: { name: data.name, url: data.url, mimeType: data.mimeType } })
+          blocks.push({ type: 'artifact', name: data.name, url: data.url, mimeType: data.mimeType })
           break
         case 'error':
-          removeUploadingBlock()
-          blocks.push({ type: 'error', content: data.error })
+          blocks.push({ type: 'error', message: data.error })
           break
       }
       render()
@@ -94,69 +74,63 @@ export default function Chat({ endpoint, getAccessToken, onSignOut }) {
       await streamMessage({ endpoint, prompt, files, sessionId, getAccessToken, onEvent: handleEvent })
     } catch (err) {
       console.error('Streaming error:', err)
-      blocks.push({ type: 'error', content: err.message })
+      blocks.push({ type: 'error', message: err.message })
     }
-    removeUploadingBlock()
-    setMessages((prev) => [...prev, { ...assistantMessage, contentBlocks: [...blocks] }])
+    if (blocks.length > 0) setMessages((prev) => [...prev, { role: 'assistant', blocks }])
     setCurrentMessage(null)
   }
 
   return (
-    <div className="flex flex-col h-dvh bg-gradient-to-br from-gray-50 to-gray-100">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 shadow-sm flex-shrink-0">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
-          <div className="flex items-center justify-between gap-4">
-            <div className="min-w-0">
-              <h1 className="text-lg sm:text-xl font-bold text-gray-900">Data Analyzer</h1>
-              <p className="hidden sm:block text-sm text-gray-600">
-                Analyze data in a secure sandbox using AgentCore Code Interpreter
-              </p>
-            </div>
-            <div className="flex items-center gap-4 flex-shrink-0">
-              <span className="text-xs font-medium text-gray-500 bg-gray-100 rounded-full px-2.5 py-1">
-                {onSignOut ? 'AgentCore Runtime' : 'Local agent'}
-              </span>
-              {onSignOut && (
-                <button onClick={onSignOut} className="text-sm text-gray-600 hover:text-gray-900 transition-colors">
-                  Sign out
-                </button>
-              )}
-            </div>
+    <div className="flex flex-col h-dvh bg-white">
+      <header className="shrink-0 border-b border-gray-200">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
+          <div className="min-w-0 flex items-baseline gap-3">
+            <h1 className="text-base font-semibold text-gray-900">Data Analyzer</h1>
+            <p className="hidden sm:block text-sm text-gray-500 truncate">
+              Python in an AgentCore Code Interpreter sandbox
+            </p>
+          </div>
+          <div className="flex items-center gap-3 shrink-0">
+            <span className="text-xs font-medium text-gray-600 bg-gray-100 rounded-full px-2.5 py-1">
+              {onSignOut ? 'AgentCore Runtime' : 'Local agent'}
+            </span>
+            {onSignOut && (
+              <button
+                onClick={onSignOut}
+                className="text-sm text-gray-600 hover:text-gray-900 rounded-md px-2 py-1 transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-emerald-500"
+              >
+                Sign out
+              </button>
+            )}
           </div>
         </div>
-      </div>
+      </header>
 
-      {/* Chat Area */}
-      <div ref={chatContainerRef} className="flex-1 overflow-y-auto">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-4">
+      <main ref={scrollContainerRef} onScroll={handleScroll} className="flex-1 overflow-y-auto">
+        <div ref={contentRef} className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-8">
           {messages.length === 0 && !currentMessage && (
-            <div className="text-center py-12">
-              <div className="text-6xl mb-4">📊</div>
-              <h2 className="text-2xl font-semibold text-gray-900 mb-2">Data Analyzer</h2>
-              <p className="text-gray-600 max-w-md mx-auto">
-                Upload a CSV, Excel, JSON or text file and ask a question. The agent analyzes it in an isolated sandbox
-                using AgentCore Code Interpreter.
+            <div className="pt-16 sm:pt-24 text-center">
+              <h2 className="text-2xl font-semibold tracking-tight text-gray-900">What would you like to know?</h2>
+              <p className="mt-3 text-gray-600 max-w-md mx-auto leading-relaxed">
+                Attach a CSV, Excel, JSON or text file and ask a question. The agent answers by running Python in an
+                isolated AgentCore Code Interpreter sandbox.
               </p>
             </div>
           )}
 
-          {messages.map((msg, index) => (
-            <ChatMessage key={index} message={msg} isStreaming={false} />
+          {messages.map((message, index) => (
+            <ChatMessage key={index} message={message} />
           ))}
 
-          {currentMessage && <ChatMessage message={currentMessage} isStreaming={isStreaming} />}
-
-          <div ref={messagesEndRef} />
+          {currentMessage && <ChatMessage message={currentMessage} isStreaming />}
         </div>
-      </div>
+      </main>
 
-      {/* Input Area */}
-      <div className="flex-shrink-0 bg-white border-t border-gray-200 shadow-lg">
-        <div className="max-w-5xl mx-auto">
+      <footer className="shrink-0">
+        <div className="max-w-3xl mx-auto">
           <ChatInput onSend={handleSend} disabled={isStreaming} />
         </div>
-      </div>
+      </footer>
     </div>
   )
 }

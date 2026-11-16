@@ -1,10 +1,18 @@
 import { useState } from 'react'
 
-function parseEventData(eventType, data) {
+// One server-sent event: "event: tool\ndata: {...}". Other lines (keep-alive comments) are ignored.
+function parseEvent(rawEvent) {
+  let type = 'message'
+  const dataLines = []
+  for (const line of rawEvent.split('\n')) {
+    if (line.startsWith('event:')) type = line.slice(6).trim()
+    if (line.startsWith('data:')) dataLines.push(line.slice(5).trimStart())
+  }
+  if (dataLines.length === 0) return null
   try {
-    return JSON.parse(data)
+    return { type, data: JSON.parse(dataLines.join('\n')) }
   } catch {
-    console.error(`Could not parse "${eventType}" event:`, data)
+    console.error(`Could not parse "${type}" event:`, rawEvent)
     return null
   }
 }
@@ -45,32 +53,19 @@ export default function useStreaming() {
       const reader = response.body.getReader()
       const decoder = new TextDecoder()
       let buffer = ''
-      // An event's lines can arrive in different network chunks, so its state lives outside the read loop.
-      let eventType = 'message'
-      let dataLines = []
 
       while (true) {
         const { done, value } = await reader.read()
         if (done) break
 
-        buffer += decoder.decode(value, { stream: true })
-        const lines = buffer.split('\n')
-        buffer = lines.pop() ?? ''
+        // Events end with a blank line and can be split across network chunks: keep the unfinished one for later.
+        buffer += decoder.decode(value, { stream: true }).replaceAll('\r', '')
+        const rawEvents = buffer.split('\n\n')
+        buffer = rawEvents.pop()
 
-        for (const rawLine of lines) {
-          const line = rawLine.replace(/\r$/, '')
-          if (line === '') {
-            if (dataLines.length > 0) {
-              const data = parseEventData(eventType, dataLines.join('\n'))
-              if (data) onEvent(eventType, data)
-            }
-            eventType = 'message'
-            dataLines = []
-          } else if (line.startsWith('event:')) {
-            eventType = line.slice(6).trim()
-          } else if (line.startsWith('data:')) {
-            dataLines.push(line.slice(5).trimStart())
-          }
+        for (const rawEvent of rawEvents) {
+          const event = parseEvent(rawEvent)
+          if (event) onEvent(event.type, event.data)
         }
       }
     } finally {

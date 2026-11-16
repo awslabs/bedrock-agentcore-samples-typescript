@@ -37,7 +37,7 @@ export class AgentCoreStack extends Stack {
       cognitoDomain: { domainPrefix: `data-analyzer-${this.account}` },
       managedLoginVersion: cognito.ManagedLoginVersion.NEWER_MANAGED_LOGIN,
     })
-    const webClient = userPool.addClient('WebClient', {
+    const client = userPool.addClient('WebClient', {
       generateSecret: false,
       oAuth: {
         flows: { authorizationCodeGrant: true },
@@ -48,7 +48,7 @@ export class AgentCoreStack extends Stack {
     })
     new cognito.CfnManagedLoginBranding(this, 'ManagedLoginBranding', {
       userPoolId: userPool.userPoolId,
-      clientId: webClient.userPoolClientId,
+      clientId: client.userPoolClientId,
       useCognitoProvidedValues: true,
     })
 
@@ -58,7 +58,7 @@ export class AgentCoreStack extends Stack {
     cfnRuntime.authorizerConfiguration = {
       customJwtAuthorizer: {
         discoveryUrl: `${userPool.userPoolProviderUrl}/.well-known/openid-configuration`,
-        allowedClients: [webClient.userPoolClientId],
+        allowedClients: [client.userPoolClientId],
       },
     }
 
@@ -80,10 +80,10 @@ export class AgentCoreStack extends Stack {
     artifactBucket.grantRead(runtime)
     runtime.addEnvironmentVariable('ARTIFACT_BUCKET', artifactBucket.bucketName)
 
+    new CfnOutput(this, 'UserPoolId', { value: userPool.userPoolId })
+    new CfnOutput(this, 'ClientId', { value: client.userPoolClientId })
     new CfnOutput(this, 'RuntimeUrl', { value: runtime.invocationUrl })
     new CfnOutput(this, 'CognitoDomain', { value: domain.baseUrl() })
-    new CfnOutput(this, 'WebClientId', { value: webClient.userPoolClientId })
-    new CfnOutput(this, 'UserPoolId', { value: userPool.userPoolId })
     new CfnOutput(this, 'CodeInterpreterId', { value: codeInterpreter.codeInterpreterId })
     new CfnOutput(this, 'ArtifactBucketName', { value: artifactBucket.bucketName })
   }

@@ -1,141 +1,155 @@
-import ToolTag from './ToolTag'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import ToolSteps from './ToolSteps'
 
-export default function ChatMessage({ message, isStreaming }) {
-  const isUser = message.role === 'user'
+// Models write "~$900K" for "about", which GFM would otherwise read as strikethrough.
+const remarkPlugins = [[remarkGfm, { singleTilde: false }]]
+
+const markdownComponents = {
+  table: ({ node: _node, ...props }) => (
+    <div className="overflow-x-auto">
+      <table {...props} />
+    </div>
+  ),
+}
+
+function fileExtension(name) {
+  return name.includes('.') ? name.split('.').pop().toUpperCase() : 'FILE'
+}
+
+function OpenIcon() {
+  return (
+    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+      />
+    </svg>
+  )
+}
+
+function Artifact({ artifact }) {
+  if (artifact.mimeType.startsWith('image/')) {
+    return (
+      <figure className="rounded-xl border border-gray-200 overflow-hidden">
+        <a href={artifact.url} target="_blank" rel="noopener noreferrer" className="block bg-white">
+          <img src={artifact.url} alt={artifact.name} className="w-full h-auto" />
+        </a>
+        <figcaption className="flex items-center justify-between gap-3 border-t border-gray-200 bg-gray-50 pl-3.5 pr-2 py-1.5 text-xs text-gray-500">
+          <span className="truncate">{artifact.name}</span>
+          <a
+            href={artifact.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="shrink-0 inline-flex items-center gap-1.5 rounded-md px-2 py-1 font-medium text-gray-600 hover:bg-gray-200/60 hover:text-gray-900 transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-emerald-500"
+          >
+            <OpenIcon />
+            Open
+          </a>
+        </figcaption>
+      </figure>
+    )
+  }
 
   return (
-    <div className={`flex w-full ${isUser ? 'justify-end' : 'justify-start'}`}>
-      <div
-        className={`max-w-[85%] rounded-2xl px-4 py-2.5 ${
-          isUser
-            ? 'bg-emerald-600 text-white rounded-br-none shadow-md'
-            : 'bg-white text-gray-800 rounded-bl-none border border-gray-200 shadow-sm'
-        }`}
-      >
-        {/* Content */}
-        <div className="text-sm leading-relaxed">
-          {/* Render ordered content blocks for assistant */}
-          {!isUser && message.contentBlocks && message.contentBlocks.length > 0 ? (
-            <div className="space-y-2">
-              {message.contentBlocks.map((block, index) => {
-                if (block.type === 'text') {
-                  const isLastBlock = index === message.contentBlocks.length - 1
-                  return (
-                    <div
-                      key={`text-${index}`}
-                      className="prose prose-sm max-w-none prose-p:my-1 prose-headings:my-2 prose-table:my-2"
-                    >
-                      {/* Model output can echo image URLs planted in the analysed data; charts arrive as artifacts. */}
-                      <ReactMarkdown remarkPlugins={[remarkGfm]} disallowedElements={['img']}>
-                        {block.content}
-                      </ReactMarkdown>
-                      {isStreaming && isLastBlock && (
-                        <span className="inline-block ml-0.5 text-emerald-600 animate-cursor-blink">▋</span>
-                      )}
-                    </div>
-                  )
-                } else if (block.type === 'tool') {
-                  return <ToolTag key={`tool-${block.toolBlock.toolUseId}`} toolBlock={block.toolBlock} />
-                } else if (block.type === 'uploading') {
-                  return (
-                    <div key={`uploading-${index}`} className="my-2 flex items-center gap-2 text-sm text-gray-500">
-                      <svg className="animate-spin h-4 w-4 text-emerald-600" viewBox="0 0 24 24">
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                          fill="none"
-                        />
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                        />
-                      </svg>
-                      <span>Preparing artifacts...</span>
-                    </div>
-                  )
-                } else if (block.type === 'artifact') {
-                  if (block.artifact.mimeType.startsWith('image/')) {
-                    return (
-                      <div key={`artifact-${index}`} className="my-2">
-                        <img
-                          src={block.artifact.url}
-                          alt={block.artifact.name}
-                          className="max-w-full rounded-lg shadow-md"
-                        />
-                      </div>
-                    )
-                  }
-                  return (
-                    <div key={`artifact-${index}`} className="my-2">
-                      <a
-                        href={block.artifact.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors max-w-full"
-                      >
-                        <span>📄</span>
-                        <span className="text-sm text-gray-700 truncate">{block.artifact.name}</span>
-                      </a>
-                    </div>
-                  )
-                } else if (block.type === 'error') {
-                  return (
-                    <div
-                      key={`error-${index}`}
-                      className="my-2 px-3 py-2 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg break-words"
-                    >
-                      {block.content}
-                    </div>
-                  )
-                }
-                return null
-              })}
-            </div>
-          ) : (
-            <>
-              {isUser ? (
-                <div className="whitespace-pre-wrap break-words">{message.content}</div>
-              ) : (
-                <div className="flex items-center gap-2 text-gray-500">
-                  <span className="animate-pulse">Thinking…</span>
-                </div>
-              )}
-              {message.files?.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  {message.files.map((filename, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center gap-1 text-xs bg-emerald-700/50 text-emerald-100 rounded-full px-2 py-0.5"
-                    >
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                        />
-                      </svg>
-                      <span className="max-w-48 truncate">{filename}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </>
-          )}
-        </div>
+    <a
+      href={artifact.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex items-center gap-3 rounded-xl border border-gray-200 px-3.5 py-3 hover:bg-gray-50 transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-emerald-500"
+    >
+      <span className="shrink-0 grid place-items-center h-9 w-9 rounded-lg bg-emerald-50 text-[10px] font-semibold tracking-wide text-emerald-700">
+        {fileExtension(artifact.name)}
+      </span>
+      <span className="min-w-0 flex-1 truncate text-sm font-medium text-gray-800">{artifact.name}</span>
+      <span className="shrink-0 text-gray-400">
+        <OpenIcon />
+      </span>
+    </a>
+  )
+}
 
-        {/* Timestamp */}
-        <div className={`text-[10px] mt-1.5 ${isUser ? 'text-emerald-100' : 'text-gray-400'}`}>
-          {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+function UserMessage({ message }) {
+  return (
+    <div className="flex flex-col items-end gap-1.5">
+      {message.files.length > 0 && (
+        <div className="flex flex-wrap justify-end gap-1.5">
+          {message.files.map((fileName, index) => (
+            <span
+              key={index}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-2.5 py-1 text-xs text-gray-600"
+            >
+              <span className="font-semibold text-emerald-700">{fileExtension(fileName)}</span>
+              <span className="max-w-48 truncate">{fileName}</span>
+            </span>
+          ))}
         </div>
+      )}
+      <div className="max-w-[85%] rounded-2xl rounded-br-md bg-gray-100 px-4 py-2.5 text-[15px] leading-relaxed text-gray-900 whitespace-pre-wrap break-words">
+        {message.content}
       </div>
+    </div>
+  )
+}
+
+function Status({ label }) {
+  return (
+    <div className="flex items-center gap-2 text-sm text-gray-500" role="status">
+      <span className="h-3.5 w-3.5 rounded-full border-2 border-gray-300 border-t-emerald-600 animate-spin" />
+      {label}
+    </div>
+  )
+}
+
+export default function ChatMessage({ message, isStreaming = false }) {
+  if (message.role === 'user') return <UserMessage message={message} />
+
+  const lastBlock = message.blocks.at(-1)
+  const isWriting = lastBlock?.type === 'text'
+  const isRunningStep = lastBlock?.type === 'steps' && lastBlock.steps.some((step) => step.output === undefined)
+  let status = null
+  if (isStreaming && message.preparingFiles) status = 'Preparing files…'
+  else if (isStreaming && !isWriting && !isRunningStep) status = 'Thinking…'
+
+  return (
+    <div className="space-y-4">
+      {message.blocks.map((block, index) => {
+        if (block.type === 'text') {
+          return (
+            <div
+              key={index}
+              className="prose prose-gray max-w-none text-[15px] leading-relaxed prose-p:my-2 prose-headings:mt-5 prose-headings:mb-2 prose-li:my-0.5 prose-table:my-3 prose-th:text-left prose-code:rounded-sm prose-code:bg-gray-100 prose-code:px-1 prose-code:py-0.5 prose-code:text-[0.875em] prose-code:font-medium prose-code:before:content-none prose-code:after:content-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0"
+            >
+              {/* Model output can echo image URLs planted in the analysed data; charts arrive as artifacts. */}
+              <ReactMarkdown remarkPlugins={remarkPlugins} components={markdownComponents} disallowedElements={['img']}>
+                {block.text}
+              </ReactMarkdown>
+            </div>
+          )
+        }
+        if (block.type === 'steps') {
+          return <ToolSteps key={index} steps={block.steps} isStreaming={isStreaming} />
+        }
+        if (block.type === 'artifact') {
+          return <Artifact key={index} artifact={block} />
+        }
+        if (block.type === 'error') {
+          return (
+            <div
+              key={index}
+              role="alert"
+              className="rounded-xl border border-red-200 bg-red-50 px-3.5 py-3 text-sm text-red-800 break-words"
+            >
+              <p className="font-medium">Something went wrong</p>
+              <p className="mt-0.5 text-red-700">{block.message}</p>
+            </div>
+          )
+        }
+        return null
+      })}
+      {status && <Status label={status} />}
     </div>
   )
 }

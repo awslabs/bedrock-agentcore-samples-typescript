@@ -9,8 +9,11 @@ const region = process.env['AWS_REGION'] ?? 'us-east-1'
 const artifactBucket = process.env['ARTIFACT_BUCKET']
 const codeInterpreterId = process.env['CODE_INTERPRETER_ID']
 
-// Uploads travel base64-encoded in the JSON body, so allow more than Fastify's 1 MB default.
-const maxRequestBytes = 20 * 1024 * 1024
+const maxFiles = 5
+const maxFileBytes = 10 * 1024 * 1024
+// Files travel base64-encoded in the JSON body (a third larger); AgentCore Runtime accepts payloads up to 100 MB.
+const maxBase64Length = Math.ceil(maxFileBytes / 3) * 4
+const maxRequestBytes = maxFiles * maxBase64Length + 1024 * 1024
 
 const requestSchema = z.object({
   prompt: z.string().min(1),
@@ -21,10 +24,10 @@ const requestSchema = z.object({
           .string()
           .max(100)
           .regex(/^[\w][\w .-]*$/, 'File names may contain only letters, digits, spaces, dots, dashes and underscores'),
-        content: z.base64(),
+        content: z.base64().max(maxBase64Length, 'Files may be up to 10 MB'),
       })
     )
-    .max(5)
+    .max(maxFiles)
     .optional(),
 })
 
@@ -81,6 +84,7 @@ function getSession(sessionId: string): Session {
     agent: new Agent({
       model: new BedrockModel({ modelId: 'global.anthropic.claude-haiku-5-5', region }),
       tools: codeInterpreter.tools,
+      toolExecutor: 'sequential',
       systemPrompt,
     }),
     codeInterpreter,
@@ -97,9 +101,10 @@ async function writeUploads(session: Session, files: { name: string; content: st
     files: files.map((file) => ({ path: `uploads/${file.name}.b64`, content: file.content })),
   })
   if (written.startsWith('Error')) throw new Error(`Could not upload files: ${written}`)
-  await client.executeCommand({
+  const decodeErrors = await client.executeCommand({
     command: 'cd uploads && for f in *.b64; do base64 -d "$f" > "${f%.b64}" && rm "$f"; done',
   })
+  if (decodeErrors.trim()) throw new Error(`Could not upload files: ${decodeErrors.trim()}`)
 }
 
 async function publishArtifact(session: Session, sessionId: string, fileName: string): Promise<string> {
@@ -119,10 +124,12 @@ async function publishArtifact(session: Session, sessionId: string, fileName: st
 
 async function listNewArtifacts(session: Session): Promise<string[]> {
   const listing = await session.codeInterpreter.getClient().executeCommand({ command: 'ls -1 outputs 2>/dev/null' })
+  const isImage = (name: string): boolean => mimeTypeOf(name).startsWith('image/')
   return listing
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter((name) => /^[\w][\w .-]*$/.test(name) && !session.publishedArtifacts.has(name))
+    .sort((a, b) => Number(isImage(b)) - Number(isImage(a)))
 }
 
 const app = new BedrockAgentCoreApp({
@@ -180,6 +187,7 @@ const app = new BedrockAgentCoreApp({
   },
 })
 
+// An active sandbox session blocks deleting the Code Interpreter, so `agentcore remove` could fail until it times out.
 async function stopSandboxes(): Promise<void> {
   await Promise.allSettled([...sessions.values()].map((session) => session.codeInterpreter.stopSession()))
   process.exit(0)

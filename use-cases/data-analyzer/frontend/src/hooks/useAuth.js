@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 
-const COGNITO_DOMAIN = import.meta.env.VITE_COGNITO_DOMAIN
-const CLIENT_ID = import.meta.env.VITE_CLIENT_ID
-const REDIRECT_URI = `${window.location.origin}/callback`
-const PENDING_SIGN_IN_KEY = 'data-analyzer-pending-sign-in'
+const cognitoDomain = import.meta.env.VITE_COGNITO_DOMAIN
+const clientId = import.meta.env.VITE_CLIENT_ID
+const redirectUri = `${window.location.origin}/callback`
+const pendingSignInKey = 'data-analyzer-pending-sign-in'
 
 function base64UrlEncode(bytes) {
   return btoa(String.fromCharCode(...new Uint8Array(bytes)))
@@ -20,25 +20,25 @@ function randomString() {
 async function redirectToSignIn() {
   const verifier = randomString()
   const state = randomString()
-  sessionStorage.setItem(PENDING_SIGN_IN_KEY, JSON.stringify({ verifier, state }))
+  sessionStorage.setItem(pendingSignInKey, JSON.stringify({ verifier, state }))
   const challenge = base64UrlEncode(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier)))
   const params = new URLSearchParams({
-    client_id: CLIENT_ID,
+    client_id: clientId,
     response_type: 'code',
     scope: 'openid email profile',
-    redirect_uri: REDIRECT_URI,
+    redirect_uri: redirectUri,
     state,
     code_challenge: challenge,
     code_challenge_method: 'S256',
   })
-  window.location.assign(`${COGNITO_DOMAIN}/oauth2/authorize?${params}`)
+  window.location.assign(`${cognitoDomain}/oauth2/authorize?${params}`)
 }
 
 async function requestTokens(grant) {
-  const response = await fetch(`${COGNITO_DOMAIN}/oauth2/token`, {
+  const response = await fetch(`${cognitoDomain}/oauth2/token`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({ client_id: CLIENT_ID, ...grant }),
+    body: new URLSearchParams({ client_id: clientId, ...grant }),
   })
   if (!response.ok) throw new Error(`Sign-in failed: ${await response.text()}`)
   const tokens = await response.json()
@@ -50,15 +50,15 @@ async function requestTokens(grant) {
 }
 
 async function exchangeCode(params) {
-  const pending = JSON.parse(sessionStorage.getItem(PENDING_SIGN_IN_KEY) ?? 'null')
-  sessionStorage.removeItem(PENDING_SIGN_IN_KEY)
+  const pending = JSON.parse(sessionStorage.getItem(pendingSignInKey) ?? 'null')
+  sessionStorage.removeItem(pendingSignInKey)
   if (!pending || params.get('state') !== pending.state) {
     throw new Error('This sign-in response does not belong to this browser tab. Please sign in again.')
   }
   return requestTokens({
     grant_type: 'authorization_code',
     code: params.get('code'),
-    redirect_uri: REDIRECT_URI,
+    redirect_uri: redirectUri,
     code_verifier: pending.verifier,
   })
 }
@@ -124,8 +124,8 @@ export default function useAuth(enabled) {
 
   const signOut = () => {
     tokens.current = null
-    const params = new URLSearchParams({ client_id: CLIENT_ID, logout_uri: window.location.origin })
-    window.location.assign(`${COGNITO_DOMAIN}/logout?${params}`)
+    const params = new URLSearchParams({ client_id: clientId, logout_uri: window.location.origin })
+    window.location.assign(`${cognitoDomain}/logout?${params}`)
   }
 
   return { status, error, getAccessToken, signIn, signOut }
