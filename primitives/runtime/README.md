@@ -121,12 +121,14 @@ AgentCore supports two authentication methods:
 aws bedrock-agentcore invoke-agent-runtime \
   --agent-runtime-arn "<runtime-arn>" \
   --runtime-session-id "$(uuidgen)" \
+  --content-type application/json \
+  --accept text/event-stream \
   --cli-binary-format raw-in-base64-out \
-  --payload '{"prompt": "Hello"}' \
+  --payload '{"prompt": "What is 25 * 4?"}' \
   response.txt
 ```
 
-Session IDs must be at least 33 characters; a UUID works.
+Session IDs must be at least 33 characters; a UUID works. The streamed events are written to `response.txt`.
 
 **With fetch (OAuth):**
 
