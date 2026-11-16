@@ -1,6 +1,6 @@
 import { AgentCoreApplication, type AgentCoreApplicationProps } from '@aws/agentcore-cdk'
 import { CfnOutput, RemovalPolicy, Stack, type StackProps } from 'aws-cdk-lib'
-import { CfnRuntime } from 'aws-cdk-lib/aws-bedrockagentcore'
+import * as agentcore from 'aws-cdk-lib/aws-bedrockagentcore'
 import * as cognito from 'aws-cdk-lib/aws-cognito'
 import { Construct } from 'constructs'
 
@@ -22,29 +22,29 @@ export class AgentCoreStack extends Stack {
     this.application = new AgentCoreApplication(this, 'Application', props.application)
 
     // After `agentcore remove all` there is no runtime, and an empty stack tells the CLI to delete it.
-    const agent = this.application.runtimes.get('agent')
-    if (!agent) return
+    const runtime = this.application.runtimes.get('agent')
+    if (!runtime) return
 
     const userPool = new cognito.UserPool(this, 'UserPool', {
       selfSignUpEnabled: false,
       removalPolicy: RemovalPolicy.DESTROY,
     })
-    const userPoolClient = userPool.addClient('Client', { authFlows: { userPassword: true } })
+    const client = userPool.addClient('Client', { authFlows: { userPassword: true } })
 
-    // agentcore.json only takes literal URLs, and the pool's id is known only at deploy time,
+    // agentcore.json only takes literal URLs, and the pool exists only at deploy time,
     // so the authorizer is set on the underlying CloudFormation resource instead.
-    const runtime = agent.resource.node.defaultChild as CfnRuntime
-    runtime.authorizerConfiguration = {
+    const cfnRuntime = runtime.resource.node.defaultChild as agentcore.CfnRuntime
+    cfnRuntime.authorizerConfiguration = {
       customJwtAuthorizer: {
-        discoveryUrl: `https://cognito-idp.${this.region}.amazonaws.com/${userPool.userPoolId}/.well-known/openid-configuration`,
-        allowedClients: [userPoolClient.userPoolClientId],
+        discoveryUrl: `${userPool.userPoolProviderUrl}/.well-known/openid-configuration`,
+        allowedClients: [client.userPoolClientId],
       },
     }
 
     new CfnOutput(this, 'UserPoolId', { value: userPool.userPoolId })
-    new CfnOutput(this, 'UserPoolClientId', { value: userPoolClient.userPoolClientId })
-    new CfnOutput(this, 'InvocationUrl', { value: agent.invocationUrl })
+    new CfnOutput(this, 'ClientId', { value: client.userPoolClientId })
+    new CfnOutput(this, 'RuntimeUrl', { value: runtime.invocationUrl })
     // AgentCore names a runtime's workload identity after the runtime's id.
-    new CfnOutput(this, 'WorkloadIdentityName', { value: agent.runtimeId })
+    new CfnOutput(this, 'WorkloadIdentityName', { value: runtime.runtimeId })
   }
 }

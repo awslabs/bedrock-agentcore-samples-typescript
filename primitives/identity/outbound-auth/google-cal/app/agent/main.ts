@@ -4,8 +4,8 @@ import { BedrockAgentCoreApp } from 'bedrock-agentcore/runtime'
 import { z } from 'zod'
 
 // `agentcore deploy` sets CREDENTIAL_GOOGLE_CAL_NAME to the provider created by `agentcore add credentials`.
-const PROVIDER_NAME = process.env['CREDENTIAL_GOOGLE_CAL_NAME'] ?? 'google-cal'
-const CALLBACK_URL = process.env['CALLBACK_URL'] ?? 'http://localhost:9090/oauth2/callback'
+const providerName = process.env['CREDENTIAL_GOOGLE_CAL_NAME'] ?? 'google-cal'
+const callbackUrl = 'http://localhost:9090/oauth2/callback'
 
 interface GoogleCalendarEvent {
   summary?: string
@@ -52,10 +52,10 @@ const getCalendar = tool({
     })
 
     const events = withAccessToken({
-      providerName: PROVIDER_NAME,
+      providerName,
       scopes: ['https://www.googleapis.com/auth/calendar.readonly'],
       authFlow: 'USER_FEDERATION',
-      callbackUrl: CALLBACK_URL,
+      callbackUrl,
       customParameters: { access_type: 'offline', prompt: 'consent' },
       onAuthUrl: resolveAuthUrl,
     })(listUpcomingEvents)(maxResults)
@@ -94,7 +94,7 @@ const app = new BedrockAgentCoreApp({
       if (!context.workloadAccessToken) {
         yield {
           event: 'error',
-          data: { message: 'No workload access token: invoke the deployed runtime with a user JWT.' },
+          data: { error: 'No workload access token: invoke the deployed runtime with a user JWT.' },
         }
         return
       }

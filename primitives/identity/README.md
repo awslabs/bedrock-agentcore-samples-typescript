@@ -1,33 +1,19 @@
 # AgentCore Identity
 
-Amazon Bedrock AgentCore Identity provides secure credential management for AI agents.
+Amazon Bedrock AgentCore Identity handles authentication in both directions:
 
-## What is AgentCore Identity?
-
-AgentCore Identity handles authentication in both directions:
-
-- **Inbound auth** — Verifying who is calling your agent
-- **Outbound auth** — Your agent securely accessing external services
+- **Inbound**: who may call your agent. AgentCore Runtime checks each caller's token before your code runs.
+- **Outbound**: how your agent calls other services. AgentCore keeps the OAuth tokens and API keys, and the SDK passes
+  them to your code.
 
 ```
-                    ┌─────────────────────────────────┐
-                    │       AgentCore Identity        │
-                    │                                 │
-   Inbound          │  ┌───────────────────────────┐  │          Outbound
-   ─────────────────┼──│  Credential Management    │──┼─────────────────
-   (verify caller)  │  │  - Token validation       │  │  (access external)
-                    │  │  - OAuth flows            │  │
-                    │  │  - API key management     │  │
-                    │  └───────────────────────────┘  │
-                    └─────────────────────────────────┘
+caller ── token ──▶ AgentCore Runtime ──▶ your agent ── token from the Token Vault ──▶ external service
+          inbound                                       outbound
 ```
 
 ## Samples
 
-### [inbound-auth](./inbound-auth/)
-
-Authenticate clients calling your agent.
-
-### [outbound-auth](./outbound-auth/)
-
-Your agent accessing external services on behalf of users.
+| Folder                            | Sample                                    | What it shows                                |
+| --------------------------------- | ----------------------------------------- | -------------------------------------------- |
+| [inbound-auth](./inbound-auth/)   | [cognito](./inbound-auth/cognito/)        | An agent only Cognito users can call         |
+| [outbound-auth](./outbound-auth/) | [google-cal](./outbound-auth/google-cal/) | An agent that reads a user's Google Calendar |

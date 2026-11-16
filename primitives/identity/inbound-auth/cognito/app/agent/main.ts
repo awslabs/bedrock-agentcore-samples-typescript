@@ -32,12 +32,17 @@ const agent = new Agent({
   tools: [calculator],
 })
 
-// AgentCore Runtime has already verified the token's signature, issuer and client, so reading its claims is safe.
+// Deployed, AgentCore Runtime has already verified the token, so reading its claims is safe.
+// Under `agentcore dev` nothing checks the header, so it may not be a JWT at all.
 function usernameFromAuthorization(authorization: string | undefined): string {
   const payload = authorization?.split('.')[1]
   if (!payload) return 'anonymous'
-  const claims = JSON.parse(Buffer.from(payload, 'base64url').toString()) as { username?: string }
-  return claims.username ?? 'unknown'
+  try {
+    const claims = JSON.parse(Buffer.from(payload, 'base64url').toString()) as { username?: string }
+    return claims.username ?? 'unknown'
+  } catch {
+    return 'unknown'
+  }
 }
 
 const app = new BedrockAgentCoreApp({
