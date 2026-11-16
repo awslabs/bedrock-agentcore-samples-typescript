@@ -28,6 +28,7 @@ const agent = new Agent({
   model: new BedrockModel({
     modelId: 'global.anthropic.claude-haiku-5-5',
     region: process.env['AWS_REGION'] ?? 'us-east-1',
+    maxTokens: 8192,
   }),
   tools: [calculator],
 })

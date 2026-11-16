@@ -26,7 +26,7 @@ echo/
     └── cdk/            # CDK app the CLI deploys
 ```
 
-## The Server
+## The Agent
 
 ```typescript
 const app = new BedrockAgentCoreApp({
@@ -41,7 +41,7 @@ const app = new BedrockAgentCoreApp({
       const received = parseMessage(String(data))
 
       if (received === undefined) {
-        socket.send(JSON.stringify({ type: 'error', message: 'Messages must be JSON' }))
+        socket.send(JSON.stringify({ type: 'error', error: 'Messages must be JSON' }))
         return
       }
 
@@ -64,7 +64,7 @@ session.
 agentcore dev
 ```
 
-The first run installs the dependencies. In a second terminal, send two messages with the included client:
+The first run installs the agent's dependencies. In a second terminal, send two messages with the included client:
 
 ```bash
 npm run client --prefix app/agent -- ws://localhost:8080/ws
@@ -73,7 +73,7 @@ npm run client --prefix app/agent -- ws://localhost:8080/ws
 ```
 Connected
 Received: {"type":"echo","sessionId":"f8b9063e-...","received":{"message":"hello"},"timestamp":"..."}
-Received: {"type":"error","message":"Messages must be JSON"}
+Received: {"type":"error","error":"Messages must be JSON"}
 Closed
 ```
 
@@ -99,4 +99,4 @@ agentcore remove all --yes
 agentcore deploy --yes
 ```
 
-This deletes the deployed stack. Run `git checkout agentcore` to restore the configuration and deploy again.
+This deletes the deployed stack. Run `git checkout -- agentcore` to restore the configuration and deploy again.

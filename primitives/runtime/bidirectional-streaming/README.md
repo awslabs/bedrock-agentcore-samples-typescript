@@ -4,10 +4,9 @@ Real-time, full-duplex communication over WebSocket connections: client and agen
 
 ## Samples
 
-### [echo](./echo/)
-
-A WebSocket server that echoes every JSON message back, with a client that connects locally or to the deployed
-runtime.
+| Sample          | What it shows                                                              |
+| --------------- | -------------------------------------------------------------------------- |
+| [echo](./echo/) | A WebSocket echo server: the smallest example of full-duplex communication |
 
 ## Local vs Deployed
 

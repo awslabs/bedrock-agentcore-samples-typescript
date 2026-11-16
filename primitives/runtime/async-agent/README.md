@@ -1,4 +1,4 @@
-# Async Agent (Strands)
+# Async Agent
 
 An agent that starts long-running background work and keeps its AgentCore Runtime session alive until the work is done.
 
@@ -38,7 +38,7 @@ const startBackgroundTask = tool({
     duration: z.number().int().min(1).max(3600).default(5).describe('Duration in seconds for the background task'),
   }),
   callback: ({ duration }): string => {
-    const taskId = app.addAsyncTask('background_processing', { duration })
+    const taskId = app.addAsyncTask('backgroundTask', { duration })
 
     setTimeout(() => {
       app.completeAsyncTask(taskId)
@@ -93,4 +93,4 @@ agentcore remove all --yes
 agentcore deploy --yes
 ```
 
-This deletes the deployed stack. Run `git checkout agentcore` to restore the configuration and deploy again.
+This deletes the deployed stack. Run `git checkout -- agentcore` to restore the configuration and deploy again.

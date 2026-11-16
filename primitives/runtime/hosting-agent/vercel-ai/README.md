@@ -37,15 +37,19 @@ const agent = new ToolLoopAgent({
   tools: { calculator },
 })
 
+const messages: ModelMessage[] = []
+
 const app = new BedrockAgentCoreApp({
   invocationHandler: {
     requestSchema: z.object({ prompt: z.string() }),
     process: async function* (request) {
-      const stream = await agent.stream({ prompt: request.prompt })
+      messages.push({ role: 'user', content: request.prompt })
+      const stream = await agent.stream({ messages })
 
       for await (const chunk of stream.textStream) {
         yield { event: 'message', data: { text: chunk } }
       }
+      messages.push(...(await stream.responseMessages))
     },
   },
 })
@@ -53,8 +57,9 @@ const app = new BedrockAgentCoreApp({
 app.run({ port: parseInt(process.env['PORT'] ?? '8080') })
 ```
 
-`ToolLoopAgent` calls the calculator as often as it needs before answering. `fromNodeProviderChain()` picks up the
-runtime's IAM role when deployed and your local AWS credentials during development.
+`ToolLoopAgent` calls the calculator as often as it needs before answering. It keeps no history, so `messages` holds
+the conversation. `fromNodeProviderChain()` picks up the runtime's IAM role when deployed and your local AWS
+credentials during development.
 
 → [Full source](./app/agent/main.ts)
 
@@ -90,4 +95,4 @@ agentcore remove all --yes
 agentcore deploy --yes
 ```
 
-This deletes the deployed stack. Run `git checkout agentcore` to restore the configuration and deploy again.
+This deletes the deployed stack. Run `git checkout -- agentcore` to restore the configuration and deploy again.

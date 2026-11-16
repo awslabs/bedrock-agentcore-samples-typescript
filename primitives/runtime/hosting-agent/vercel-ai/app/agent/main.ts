@@ -1,4 +1,4 @@
-import { ToolLoopAgent, tool } from 'ai'
+import { ToolLoopAgent, tool, type ModelMessage } from 'ai'
 import { createAmazonBedrock } from '@ai-sdk/amazon-bedrock'
 import { fromNodeProviderChain } from '@aws-sdk/credential-providers'
 import { BedrockAgentCoreApp } from 'bedrock-agentcore/runtime'
@@ -16,16 +16,16 @@ const calculator = tool({
     a: z.number(),
     b: z.number(),
   }),
-  execute: async ({ operation, a, b }): Promise<{ result: number }> => {
+  execute: async ({ operation, a, b }): Promise<number> => {
     switch (operation) {
       case 'add':
-        return { result: a + b }
+        return a + b
       case 'subtract':
-        return { result: a - b }
+        return a - b
       case 'multiply':
-        return { result: a * b }
+        return a * b
       case 'divide':
-        return { result: a / b }
+        return a / b
     }
   },
 })
@@ -35,15 +35,19 @@ const agent = new ToolLoopAgent({
   tools: { calculator },
 })
 
+const messages: ModelMessage[] = []
+
 const app = new BedrockAgentCoreApp({
   invocationHandler: {
     requestSchema: z.object({ prompt: z.string() }),
     process: async function* (request) {
-      const stream = await agent.stream({ prompt: request.prompt })
+      messages.push({ role: 'user', content: request.prompt })
+      const stream = await agent.stream({ messages })
 
       for await (const chunk of stream.textStream) {
         yield { event: 'message', data: { text: chunk } }
       }
+      messages.push(...(await stream.responseMessages))
     },
   },
 })

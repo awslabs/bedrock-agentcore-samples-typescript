@@ -16,13 +16,13 @@ const app = new BedrockAgentCoreApp({
   },
 
   websocketHandler: async (socket, context) => {
-    console.log(`WebSocket connected: ${context.sessionId}`)
+    context.log.info(`WebSocket connected: ${context.sessionId}`)
 
     socket.on('message', (data) => {
       const received = parseMessage(String(data))
 
       if (received === undefined) {
-        socket.send(JSON.stringify({ type: 'error', message: 'Messages must be JSON' }))
+        socket.send(JSON.stringify({ type: 'error', error: 'Messages must be JSON' }))
         return
       }
 
@@ -32,7 +32,7 @@ const app = new BedrockAgentCoreApp({
     })
 
     socket.on('close', () => {
-      console.log(`WebSocket closed: ${context.sessionId}`)
+      context.log.info(`WebSocket closed: ${context.sessionId}`)
     })
   },
 })

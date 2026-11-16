@@ -185,14 +185,8 @@ See [bidirectional streaming](./bidirectional-streaming/) for OAuth connections 
 
 ## Samples
 
-### [hosting-agent](./hosting-agent/)
-
-Deploy an AI agent that responds to prompts with tool use. Implementations for Strands Agents SDK and Vercel AI SDK.
-
-### [bidirectional-streaming](./bidirectional-streaming/)
-
-Full-duplex WebSocket communication for real-time applications.
-
-### [async-agent](./async-agent/)
-
-Long-running background tasks with automatic health status tracking.
+| Sample                                                | What it shows                                                            |
+| ----------------------------------------------------- | ------------------------------------------------------------------------ |
+| [hosting-agent](./hosting-agent/)                     | An agent with a calculator tool, in Strands Agents and the Vercel AI SDK |
+| [bidirectional-streaming](./bidirectional-streaming/) | Full-duplex communication over WebSocket connections                     |
+| [async-agent](./async-agent/)                         | An agent that keeps its session alive while background work runs         |

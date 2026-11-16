@@ -9,7 +9,7 @@ const startBackgroundTask = tool({
     duration: z.number().int().min(1).max(3600).default(5).describe('Duration in seconds for the background task'),
   }),
   callback: ({ duration }): string => {
-    const taskId = app.addAsyncTask('background_processing', { duration })
+    const taskId = app.addAsyncTask('backgroundTask', { duration })
 
     setTimeout(() => {
       app.completeAsyncTask(taskId)
@@ -23,6 +23,7 @@ const agent = new Agent({
   model: new BedrockModel({
     modelId: 'global.anthropic.claude-haiku-5-5',
     region: process.env['AWS_REGION'] ?? 'us-east-1',
+    maxTokens: 8192,
   }),
   tools: [startBackgroundTask],
 })

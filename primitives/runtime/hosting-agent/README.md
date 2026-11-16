@@ -10,17 +10,23 @@ back.
 - Tool use (a calculator the agent can call)
 - Request validation with Zod schemas
 
-## Choose Your Framework
+## Samples
 
-### [Strands Agents](./strands/)
+| Sample                    | What it shows                                 |
+| ------------------------- | --------------------------------------------- |
+| [strands](./strands/)     | A Strands Agents agent with a calculator tool |
+| [vercel-ai](./vercel-ai/) | A Vercel AI SDK agent with a calculator tool  |
 
-Uses `@strands-agents/sdk` with its native Bedrock model.
+## The Agent
+
+### Strands Agents
 
 ```typescript
 const agent = new Agent({
   model: new BedrockModel({
     modelId: 'global.anthropic.claude-haiku-5-5',
     region: process.env['AWS_REGION'] ?? 'us-east-1',
+    maxTokens: 8192,
   }),
   tools: [calculator],
 })
@@ -45,11 +51,7 @@ const app = new BedrockAgentCoreApp({
 
 → [Full source](./strands/app/agent/main.ts)
 
----
-
-### [Vercel AI](./vercel-ai/)
-
-Uses the `ai` SDK with `ToolLoopAgent`.
+### Vercel AI SDK
 
 ```typescript
 const agent = new ToolLoopAgent({
@@ -57,23 +59,28 @@ const agent = new ToolLoopAgent({
   tools: { calculator },
 })
 
+const messages: ModelMessage[] = []
+
 const app = new BedrockAgentCoreApp({
   invocationHandler: {
     requestSchema: z.object({ prompt: z.string() }),
     process: async function* (request) {
-      const stream = await agent.stream({ prompt: request.prompt })
+      messages.push({ role: 'user', content: request.prompt })
+      const stream = await agent.stream({ messages })
 
       for await (const chunk of stream.textStream) {
         yield { event: 'message', data: { text: chunk } }
       }
+      messages.push(...(await stream.responseMessages))
     },
   },
 })
 ```
 
-→ [Full source](./vercel-ai/app/agent/main.ts)
+The Strands `Agent` keeps the conversation itself. `ToolLoopAgent` keeps no history, so `messages` holds the
+conversation.
 
----
+→ [Full source](./vercel-ai/app/agent/main.ts)
 
 ## Quick Start
 

@@ -31,6 +31,7 @@ const agent = new Agent({
   model: new BedrockModel({
     modelId: 'global.anthropic.claude-haiku-5-5',
     region: process.env['AWS_REGION'] ?? 'us-east-1',
+    maxTokens: 8192,
   }),
   tools: [calculator],
 })
@@ -92,4 +93,4 @@ agentcore remove all --yes
 agentcore deploy --yes
 ```
 
-This deletes the deployed stack. Run `git checkout agentcore` to restore the configuration and deploy again.
+This deletes the deployed stack. Run `git checkout -- agentcore` to restore the configuration and deploy again.
