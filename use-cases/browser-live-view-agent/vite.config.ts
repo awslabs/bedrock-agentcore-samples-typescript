@@ -1,16 +1,14 @@
 import react from '@vitejs/plugin-react'
-import { resolve, dirname } from 'path'
-import { fileURLToPath } from 'url'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vite'
 import { viteStaticCopy } from 'vite-plugin-static-copy'
+import { config } from './server/config.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
 // The DCV SDK vendored inside bedrock-agentcore, relative to the project root
 const dcvSdkDir = 'node_modules/bedrock-agentcore/dist/src/tools/browser/live-view/nice-dcv-web-client-sdk'
-
-const serverPort = parseInt(process.env['PORT'] ?? '3001')
-const clientPort = parseInt(process.env['CLIENT_PORT'] ?? '5173')
 
 export default defineConfig({
   resolve: {
@@ -46,10 +44,10 @@ export default defineConfig({
   ],
   // The browser talks only to Vite; /api is proxied to the local agent server
   server: {
-    port: clientPort,
+    port: config.clientPort,
     strictPort: true,
     proxy: {
-      '/api': `http://127.0.0.1:${serverPort}`,
+      '/api': `http://127.0.0.1:${config.serverPort}`,
     },
   },
 })

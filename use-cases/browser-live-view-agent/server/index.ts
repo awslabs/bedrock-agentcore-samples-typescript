@@ -1,10 +1,10 @@
 import Fastify from 'fastify'
 import { config } from './config.js'
-import { agentState, hasSession, startSession, runAgent, stopSession } from './agent.js'
+import { agentState, hasSession, startAgent, startSession, stopSession } from './agent.js'
 
 const app = Fastify({ logger: { level: 'warn' } })
 
-const clientOrigins = new Set([`http://localhost:${config.client.port}`, `http://127.0.0.1:${config.client.port}`])
+const clientOrigins = new Set([`http://localhost:${config.clientPort}`, `http://127.0.0.1:${config.clientPort}`])
 const loopbackHost = /^(localhost|127\.0\.0\.1)(:\d+)?$/
 
 // The API acts with your AWS credentials, so only the local Vite client may call it:
@@ -39,22 +39,14 @@ app.post<{ Body: { prompt: string } }>(
     if (agentState.status === 'running') {
       return reply.code(409).send({ error: 'Agent is already running' })
     }
-
-    // runAgent records its own errors in agentState; the client polls /api/status for progress
-    void runAgent(request.body.prompt)
+    // The client polls /api/status for the agent's progress
+    startAgent(request.body.prompt)
     return { status: 'started' }
   }
 )
 
 app.get('/api/status', async () => {
-  return {
-    status: agentState.status,
-    logs: agentState.logs,
-    result: agentState.result,
-    error: agentState.error,
-    liveViewUrl: agentState.liveViewUrl,
-    region: config.region,
-  }
+  return { ...agentState, region: config.region, viewport: config.viewport }
 })
 
 app.post('/api/stop', async () => {
@@ -75,15 +67,6 @@ async function shutdown(): Promise<void> {
 process.once('SIGINT', shutdown)
 process.once('SIGTERM', shutdown)
 
-async function start(): Promise<void> {
-  try {
-    await app.listen({ port: config.server.port, host: '127.0.0.1' })
-    console.log(`\n  Agent server running at http://127.0.0.1:${config.server.port}`)
-    console.log(`  Open the app at http://localhost:${config.client.port}\n`)
-  } catch (err) {
-    app.log.error(err)
-    process.exit(1)
-  }
-}
-
-start()
+await app.listen({ port: config.serverPort, host: '127.0.0.1' })
+console.log(`\n  Agent server running at http://127.0.0.1:${config.serverPort}`)
+console.log(`  Open the app at http://localhost:${config.clientPort}\n`)

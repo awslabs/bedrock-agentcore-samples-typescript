@@ -1,16 +1,27 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { BrowserLiveView } from 'bedrock-agentcore/browser/live-view'
-import { REMOTE_WIDTH, REMOTE_HEIGHT } from './constants'
 
-type AgentStatus = 'idle' | 'starting' | 'running' | 'completed' | 'error'
+type AgentStatus = 'idle' | 'running' | 'completed' | 'error'
+
+interface LogEntry {
+  time: string
+  text: string
+  tool?: string
+}
+
+interface Viewport {
+  width: number
+  height: number
+}
 
 interface StatusResponse {
   status: AgentStatus
-  logs: string[]
+  logs: LogEntry[]
   result: string | null
   error: string | null
   liveViewUrl: string | null
   region: string
+  viewport: Viewport
 }
 
 const DEFAULT_PROMPT =
@@ -27,6 +38,11 @@ async function postJson<T>(path: string, body?: object): Promise<T> {
   return payload
 }
 
+async function fetchStatus(): Promise<StatusResponse> {
+  const res = await fetch('/api/status')
+  return res.json()
+}
+
 function errorMessage(err: unknown): string {
   return err instanceof Error ? err.message : String(err)
 }
@@ -34,10 +50,11 @@ function errorMessage(err: unknown): string {
 export const App: React.FC = () => {
   const [liveViewUrl, setLiveViewUrl] = useState<string | null>(null)
   const [status, setStatus] = useState<AgentStatus>('idle')
-  const [logs, setLogs] = useState<string[]>([])
+  const [logs, setLogs] = useState<LogEntry[]>([])
   const [result, setResult] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [region, setRegion] = useState('—')
+  const [viewport, setViewport] = useState<Viewport | null>(null)
   const [prompt, setPrompt] = useState(DEFAULT_PROMPT)
   const [connecting, setConnecting] = useState(false)
   const logBodyRef = useRef<HTMLDivElement>(null)
@@ -48,14 +65,14 @@ export const App: React.FC = () => {
     setResult(data.result)
     setError(data.error)
     setRegion(data.region)
+    setViewport(data.viewport)
   }
 
   // Pick up a session the server already has (e.g. after a page reload) so it can still be watched and stopped
   useEffect(() => {
     const restore = async (): Promise<void> => {
       try {
-        const res = await fetch('/api/status')
-        const data: StatusResponse = await res.json()
+        const data = await fetchStatus()
         applyStatus(data)
         if (data.liveViewUrl) {
           const { liveViewUrl: freshUrl } = await postJson<{ liveViewUrl: string }>('/api/start')
@@ -69,11 +86,10 @@ export const App: React.FC = () => {
   }, [])
 
   useEffect(() => {
-    if (status !== 'running' && status !== 'starting') return
+    if (status !== 'running') return
     const poll = setInterval(async () => {
       try {
-        const res = await fetch('/api/status')
-        applyStatus(await res.json())
+        applyStatus(await fetchStatus())
       } catch {
         // Transient network errors are retried on the next tick
       }
@@ -84,7 +100,7 @@ export const App: React.FC = () => {
   useEffect(() => {
     // Scroll only the log panel, so the page doesn't jump away from the live view
     logBodyRef.current?.scrollTo({ top: logBodyRef.current.scrollHeight, behavior: 'smooth' })
-  }, [logs])
+  }, [logs, result])
 
   const handleLaunch = async (): Promise<void> => {
     try {
@@ -111,23 +127,21 @@ export const App: React.FC = () => {
     try {
       await postJson('/api/stop')
       setLiveViewUrl(null)
-      setStatus('idle')
+      applyStatus(await fetchStatus())
     } catch (err) {
       setError(errorMessage(err))
     }
   }
 
-  const isActive = status === 'running' || status === 'starting'
+  const isActive = status === 'running'
   const statusColor: Record<string, string> = {
     idle: '#9ca3af',
-    starting: '#f59e0b',
     running: '#10b981',
     completed: '#3b82f6',
     error: '#ef4444',
   }
   const statusLabel: Record<string, string> = {
     idle: 'Idle',
-    starting: 'Starting',
     running: 'Running',
     completed: 'Completed',
     error: 'Error',
@@ -135,7 +149,6 @@ export const App: React.FC = () => {
 
   return (
     <div style={s.root}>
-      {/* Header */}
       <header style={s.header}>
         <div style={s.headerLeft}>
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FF9900" strokeWidth="2.2">
@@ -158,9 +171,7 @@ export const App: React.FC = () => {
       {error && <div style={s.errorBar}>{error}</div>}
 
       <div style={s.layout}>
-        {/* Main */}
         <main style={s.main}>
-          {/* Live View */}
           <div style={s.card}>
             <div style={s.cardHeader}>
               <span style={s.cardTitle}>Browser Session - Live View</span>
@@ -170,9 +181,14 @@ export const App: React.FC = () => {
                 </button>
               )}
             </div>
-            <div style={s.viewerContainer}>
-              {liveViewUrl ? (
-                <BrowserLiveView signedUrl={liveViewUrl} remoteWidth={REMOTE_WIDTH} remoteHeight={REMOTE_HEIGHT} />
+            <div
+              style={{
+                ...s.viewerContainer,
+                aspectRatio: viewport ? `${viewport.width} / ${viewport.height}` : '16 / 9',
+              }}
+            >
+              {liveViewUrl && viewport ? (
+                <BrowserLiveView signedUrl={liveViewUrl} remoteWidth={viewport.width} remoteHeight={viewport.height} />
               ) : (
                 <div style={s.placeholder}>
                   <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" strokeWidth="1.2">
@@ -186,7 +202,6 @@ export const App: React.FC = () => {
             </div>
           </div>
 
-          {/* Prompt */}
           <div style={s.card}>
             <div style={s.promptRow}>
               <textarea
@@ -210,21 +225,9 @@ export const App: React.FC = () => {
               </button>
             </div>
           </div>
-
-          {/* Result */}
-          {result && (
-            <div style={s.card}>
-              <div style={{ ...s.cardHeader, borderColor: '#dbeafe' }}>
-                <span style={{ ...s.cardTitle, color: '#1d4ed8' }}>Agent Result</span>
-              </div>
-              <div style={s.resultBody}>{result}</div>
-            </div>
-          )}
         </main>
 
-        {/* Sidebar */}
         <aside style={s.sidebar}>
-          {/* Activity Log */}
           <div style={{ ...s.card, flex: 1, display: 'flex', flexDirection: 'column' as const, maxHeight: 580 }}>
             <div style={s.cardHeader}>
               <span style={s.cardTitle}>Activity Log</span>
@@ -234,17 +237,25 @@ export const App: React.FC = () => {
               {logs.length === 0 ? (
                 <p style={s.logEmpty}>Waiting for agent activity...</p>
               ) : (
-                logs.map((line, i) => (
-                  <div key={i} style={s.logLine}>
-                    <span style={s.logTime}>{line.slice(0, 8)}</span>
-                    <span style={s.logMsg}>{line.slice(9)}</span>
+                logs.map((entry, index) => (
+                  <div key={index} style={s.logLine}>
+                    <span style={s.logTime}>{entry.time}</span>
+                    <span style={entry.tool ? s.logMsg : s.logNote}>
+                      {entry.tool && <span style={s.logTool}>{entry.tool}</span>}
+                      {entry.text}
+                    </span>
                   </div>
                 ))
+              )}
+              {result && (
+                <div style={s.answer}>
+                  <div style={s.answerTitle}>Answer</div>
+                  {result}
+                </div>
               )}
             </div>
           </div>
 
-          {/* Session Info */}
           <div style={s.card}>
             <div style={s.cardHeader}>
               <span style={s.cardTitle}>Session Info</span>
@@ -253,9 +264,9 @@ export const App: React.FC = () => {
               {(
                 [
                   ['Region', region],
-                  ['Viewport', `${REMOTE_WIDTH}\u00D7${REMOTE_HEIGHT}`],
+                  ['Viewport', viewport ? `${viewport.width}\u00D7${viewport.height}` : '—'],
                   ['Protocol', 'DCV / WebSocket'],
-                  ['Agent', 'Bedrock Converse API'],
+                  ['Agent', 'Strands Agents'],
                 ] as const
               ).map(([label, value]) => (
                 <div key={label} style={s.infoRow}>
@@ -271,13 +282,12 @@ export const App: React.FC = () => {
   )
 }
 
-// ---- Styles (Light / AWS-themed) ----
 const s: Record<string, React.CSSProperties> = {
   root: {
     minHeight: '100vh',
     background: '#f4f6f9',
     color: '#1a202c',
-    fontFamily: '"IBM Plex Sans", -apple-system, BlinkMacSystemFont, sans-serif',
+    fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
   },
   header: {
     background: '#232F3E',
@@ -345,7 +355,6 @@ const s: Record<string, React.CSSProperties> = {
     fontWeight: 500,
   },
   viewerContainer: {
-    aspectRatio: `${REMOTE_WIDTH}/${REMOTE_HEIGHT}`,
     background: '#0f172a',
     position: 'relative' as const,
   },
@@ -392,13 +401,20 @@ const s: Record<string, React.CSSProperties> = {
     whiteSpace: 'nowrap' as const,
     letterSpacing: '-0.01em',
   },
-  resultBody: {
-    padding: '14px 16px',
+  answer: {
+    margin: '10px 12px',
+    padding: '10px 12px',
+    borderRadius: '8px',
+    background: '#eff6ff',
+    border: '1px solid #dbeafe',
+    color: '#1e293b',
+    fontFamily: 'system-ui, sans-serif',
     fontSize: '13px',
-    lineHeight: 1.7,
-    color: '#334155',
+    lineHeight: 1.6,
     whiteSpace: 'pre-wrap' as const,
+    wordBreak: 'break-word' as const,
   },
+  answerTitle: { fontSize: '12px', fontWeight: 700, color: '#1d4ed8', marginBottom: '4px' },
   sidebar: {
     flex: '1 1 330px',
     display: 'flex',
@@ -416,7 +432,7 @@ const s: Record<string, React.CSSProperties> = {
   logBody: {
     padding: '4px 0',
     fontSize: '12px',
-    fontFamily: '"IBM Plex Mono", monospace',
+    fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
     overflowY: 'auto' as const,
     flex: 1,
   },
@@ -425,7 +441,7 @@ const s: Record<string, React.CSSProperties> = {
     padding: '20px 16px',
     textAlign: 'center' as const,
     margin: 0,
-    fontFamily: '"IBM Plex Sans", sans-serif',
+    fontFamily: 'system-ui, sans-serif',
     fontSize: '13px',
   },
   logLine: {
@@ -436,7 +452,17 @@ const s: Record<string, React.CSSProperties> = {
     lineHeight: 1.6,
   },
   logTime: { color: '#94a3b8', flexShrink: 0 },
-  logMsg: { color: '#475569', wordBreak: 'break-word' as const },
+  logMsg: { color: '#334155', wordBreak: 'break-word' as const },
+  logNote: { color: '#64748b', wordBreak: 'break-word' as const, fontFamily: 'system-ui, sans-serif' },
+  logTool: {
+    display: 'inline-block',
+    marginRight: '8px',
+    padding: '0 6px',
+    borderRadius: '4px',
+    background: '#fff4e0',
+    color: '#b45309',
+    fontWeight: 600,
+  },
   infoRow: {
     display: 'flex',
     justifyContent: 'space-between',
