@@ -1,9 +1,6 @@
 import { Agent, BedrockModel, tool, type JSONValue } from '@strands-agents/sdk'
 import { z } from 'zod'
 
-const modelId = 'global.anthropic.claude-haiku-5-5'
-const region = process.env['AWS_REGION'] ?? 'us-east-1'
-
 const warrantyExpiryBySerial: Record<string, { product: string; expiresAt: string }> = {
   MNO33333333: { product: 'Gaming Console Pro', expiresAt: '2027-12-31' },
   ABC12345678: { product: 'Smart Watch Series X', expiresAt: '2024-01-15' },
@@ -81,9 +78,7 @@ const createAppointment = tool({
   }),
 })
 
-export function createSpecialists(): Agent[] {
-  const model = new BedrockModel({ modelId, region })
-
+export function createSpecialists(model: BedrockModel): Agent[] {
   return [
     new Agent({
       name: 'warrantySpecialist',

@@ -27,6 +27,40 @@ customer-support-agent/
     └── cdk/            # CDK app the CLI deploys
 ```
 
+## The Agent
+
+The orchestrator holds the conversation. There is one per runtime session, so a customer can refer back to an earlier
+message, and sessions never share history or block each other:
+
+```typescript
+const agentsBySession = new Map<string, Agent>()
+
+function getAgent(sessionId: string): Agent {
+  let agent = agentsBySession.get(sessionId)
+  if (!agent) {
+    agent = new Agent({ model, systemPrompt, tools: createSpecialists(model) })
+    agentsBySession.set(sessionId, agent)
+  }
+  return agent
+}
+
+const app = new BedrockAgentCoreApp({
+  invocationHandler: {
+    requestSchema: z.object({ prompt: z.string() }),
+    process: async function* (request, context) {
+      for await (const event of getAgent(context.sessionId).stream(request.prompt)) {
+        // ...yield text deltas as message events
+      }
+    },
+  },
+})
+```
+
+The history lives in memory for as long as the session runs. To keep it longer, add AgentCore Memory
+(`agentcore add memory`).
+
+→ [Full source](./app/agent/main.ts)
+
 ## How It Works
 
 | Specialist              | Handles                                            | Tools (sample data)                      |
@@ -47,37 +81,9 @@ new Agent({
 })
 ```
 
-The orchestrator holds the conversation. There is one per runtime session, so a customer can refer back to an earlier
-message, and sessions never share history or block each other:
+`createSpecialists(model)` builds the three specialists for each new orchestrator, sharing its model.
 
-```typescript
-const agentsBySession = new Map<string, Agent>()
-
-function getAgent(sessionId: string): Agent {
-  let agent = agentsBySession.get(sessionId)
-  if (!agent) {
-    agent = new Agent({ model, systemPrompt, tools: createSpecialists() })
-    agentsBySession.set(sessionId, agent)
-  }
-  return agent
-}
-
-const app = new BedrockAgentCoreApp({
-  invocationHandler: {
-    requestSchema: z.object({ prompt: z.string() }),
-    process: async function* (request, context) {
-      for await (const event of getAgent(context.sessionId).stream(request.prompt)) {
-        // yield the orchestrator's text deltas as { event: 'message', data: { text } }
-      }
-    },
-  },
-})
-```
-
-The history lives in memory for as long as the session runs. To keep it longer, add AgentCore Memory
-(`agentcore add memory`).
-
-→ [Full source](./app/agent/main.ts) | [Specialists](./app/agent/specialists.ts)
+→ [Specialists](./app/agent/specialists.ts)
 
 ## Run Locally
 
@@ -96,9 +102,9 @@ agentcore invoke --runtime agent --local --payload '{"prompt": "Which slots are 
 To hold a conversation, send each message with the same session ID (at least 33 characters):
 
 ```bash
-agentcore invoke --runtime agent --local --session-id support-session-0000000000000000000001 \
+agentcore invoke --runtime agent --local --session-id customer-support-agent-session-00000000000000000001 \
   --payload '{"prompt": "Hi, my serial number is ABC12345678. Is my warranty still valid?"}'
-agentcore invoke --runtime agent --local --session-id support-session-0000000000000000000001 \
+agentcore invoke --runtime agent --local --session-id customer-support-agent-session-00000000000000000001 \
   --payload '{"prompt": "What product was that, and what serial number did I give you?"}'
 ```
 
@@ -121,4 +127,4 @@ agentcore remove all --yes
 agentcore deploy --yes
 ```
 
-This deletes the deployed stack. Run `git checkout agentcore` to restore the configuration and deploy again.
+This deletes the deployed stack. Run `git checkout -- agentcore` to restore the configuration and deploy again.

@@ -3,7 +3,8 @@ import { BedrockAgentCoreApp } from 'bedrock-agentcore/runtime'
 import { z } from 'zod'
 import { createSpecialists } from './specialists.js'
 
-const systemPrompt = `You are a customer support orchestrator. Understand each customer request and delegate it to the right specialist:
+const systemPrompt = `You are a customer support orchestrator. Understand each customer request and delegate it to
+the right specialist:
 - warrantySpecialist: warranty checks, warranty status and warranty policy questions
 - techSupportSpecialist: technical issues, troubleshooting and device problems
 - schedulingSpecialist: available slots and booking support appointments
@@ -14,6 +15,7 @@ and ask a clarifying question when the request is unclear.`
 const model = new BedrockModel({
   modelId: 'global.anthropic.claude-haiku-5-5',
   region: process.env['AWS_REGION'] ?? 'us-east-1',
+  maxTokens: 8192,
 })
 
 const agentsBySession = new Map<string, Agent>()
@@ -21,7 +23,7 @@ const agentsBySession = new Map<string, Agent>()
 function getAgent(sessionId: string): Agent {
   let agent = agentsBySession.get(sessionId)
   if (!agent) {
-    agent = new Agent({ model, systemPrompt, tools: createSpecialists() })
+    agent = new Agent({ model, systemPrompt, tools: createSpecialists(model) })
     agentsBySession.set(sessionId, agent)
   }
   return agent
