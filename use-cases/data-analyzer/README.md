@@ -38,36 +38,51 @@ const app = new BedrockAgentCoreApp({
     requestSchema,
     process: async function* (request, context) {
       const session = getSession(context.sessionId)
-
-      let prompt = request.prompt
-      if (request.files?.length) {
-        await writeUploads(session, request.files)
-        const fileList = request.files.map((file) => `uploads/${file.name}`).join(', ')
-        prompt = `Uploaded files: ${fileList}\n\n${request.prompt}`
+      if (session.busy) {
+        yield { event: 'error', data: { error: 'The agent is still answering another request in this session' } }
+        return
       }
+      session.busy = true
 
-      for await (const event of session.agent.stream(prompt)) {
-        if (event.type === 'beforeToolCallEvent') {
-          const { toolUseId, name, input } = event.toolUse
-          yield { event: 'tool', data: { toolUseId, name, input } }
+      try {
+        let prompt = request.prompt
+        for (const file of request.files ?? []) session.files.set(file.name, file.content)
+        if (request.files?.length) {
+          const fileList = request.files.map((file) => `uploads/${file.name}`).join(', ')
+          prompt = `Uploaded files: ${fileList}\n\n${request.prompt}`
         }
-        // ...yield text deltas as message events
-        // ...yield tool outputs as tool_result events
-      }
+        if (session.files.size) await writeUploads(session)
 
-      if (!artifactBucket) return
+        for await (const event of session.agent.stream(prompt)) {
+          if (event.type === 'beforeToolCallEvent') {
+            const { toolUseId, name, input } = event.toolUse
+            yield { event: 'tool', data: { toolUseId, name, input } }
+          }
+          // ...yield text deltas as message events
+          // ...yield tool outputs as tool_result events
+        }
 
-      for (const name of await listNewArtifacts(session)) {
-        const url = await publishArtifact(session, context.sessionId, name)
-        session.publishedArtifacts.add(name)
-        yield { event: 'artifact', data: { name, url, mimeType: mimeTypeOf(name) } }
+        if (!artifactBucket) return
+
+        const artifacts = await listArtifacts(session)
+        if (artifacts.length) yield { event: 'uploading', data: {} }
+        for (const name of artifacts) {
+          const url = await publishArtifact(session, context.sessionId, name)
+          yield { event: 'artifact', data: { name, url, mimeType: mimeTypeOf(name) } }
+        }
+      } finally {
+        // A sandbox ends 15 minutes after it starts, so each request uses its own and stops it when done
+        await session.codeInterpreter.stopSession()
+        session.busy = false
       }
     },
   },
 })
 ```
 
-Each runtime session gets its own agent and Code Interpreter sandbox, so follow-up questions can use earlier results.
+Each runtime session gets its own agent, which keeps the conversation, and its uploaded files. A sandbox ends 15
+minutes after it starts, however active it is, so each request runs in a fresh one with the session's files written to
+`uploads/`, and stops it when the request finishes.
 `tool` events carry the `toolUseId` so the web app can pair each with its `tool_result`, which holds the code's output.
 The request is `{ "prompt": string, "files"?: [{ "name": string, "content": base64 }] }`, with up to 5 files of 10 MB
 each (about 70 MB as base64, within the runtime's 100 MB payload limit).
@@ -79,7 +94,7 @@ each (about 70 MB as base64, within the runtime's 100 MB payload limit).
 ```
 ┌──────────────┐  bearer token   ┌───────────────────┐       ┌──────────────────────┐
 │ React web app│────────────────▶│ AgentCore Runtime │──────▶│ Code Interpreter     │
-│ (Cognito     │◀── SSE stream ──│ (Strands agent)   │◀──────│ (sandbox, no network)│
+│ (Cognito     │◀── SSE stream ──│ (Strands agent)   │◀──────│ (sandbox mode)       │
 │  sign-in)    │                 └─────────┬─────────┘       └──────────────────────┘
 └──────┬───────┘                           │ charts and files
        │      presigned URLs     ┌─────────▼─────────┐
@@ -92,9 +107,10 @@ Uploaded files are written to `uploads/` in the sandbox. Whatever the agent save
 streamed back as a presigned URL. The web app shows the answer first, the code the agent ran (and its output) as a
 collapsed step, and charts and files below the answer.
 
-`agentcore/cdk/lib/cdk-stack.ts` adds the Cognito user pool, a Code Interpreter in `SANDBOX` network mode (the agent
-only needs the uploaded data, and no network means content in a file can't make it send your data anywhere), and a
-private bucket the runtime can only put and read objects in. Because the pool is created in the same stack, the
+`agentcore/cdk/lib/cdk-stack.ts` adds the Cognito user pool, a Code Interpreter in `SANDBOX` network mode, and a
+private bucket the runtime can only put and read objects in. Sandbox mode blocks the public internet but can still
+reach Amazon S3, so content planted in a file has fewer ways to send your data out; the web app also renders links in
+answers as plain text. Because the pool is created in the same stack, the
 runtime's JWT authorizer is set there too:
 
 ```typescript

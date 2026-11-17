@@ -40,7 +40,8 @@ about the user's data and to create charts, reports and processed files.
 - Save charts as PNG unless the user asks for another format. Use matplotlib and make them clear and good-looking.
 - Pre-installed libraries: pandas, numpy, matplotlib, seaborn, plotly, scipy, scikit-learn, openpyxl, xlrd. The sandbox
   has no internet access, so don't install packages or fetch URLs.
-- Variables and files persist between turns. Use print() to see results.
+- Each request runs in a fresh sandbox with the uploaded files in "uploads/", so reload the data you need. Use
+  print() to see results.
 - Your readers are not engineers: answer briefly and clearly, without code or technical detail unless asked.
 - The files you save in "outputs/" are shown to the user automatically below your answer. Never mention file names or
   paths, and never put images or links in your answer.`
@@ -66,7 +67,9 @@ function mimeTypeOf(fileName: string): string {
 interface Session {
   agent: Agent
   codeInterpreter: CodeInterpreterTools
-  publishedArtifacts: Set<string>
+  // Uploaded files by name, written into every request's sandbox
+  files: Map<string, string>
+  busy: boolean
 }
 
 const s3 = new S3Client({ region })
@@ -89,17 +92,18 @@ function getSession(sessionId: string): Session {
       toolExecutor: 'sequential',
     }),
     codeInterpreter,
-    publishedArtifacts: new Set(),
+    files: new Map(),
+    busy: false,
   }
   sessions.set(sessionId, session)
   return session
 }
 
 // The sandbox's writeFiles accepts text only, so binary files (.xlsx) are written as base64 and decoded in place.
-async function writeUploads(session: Session, files: { name: string; content: string }[]): Promise<void> {
+async function writeUploads(session: Session): Promise<void> {
   const client = session.codeInterpreter.getClient()
   const written = await client.writeFiles({
-    files: files.map((file) => ({ path: `uploads/${file.name}.b64`, content: file.content })),
+    files: [...session.files].map(([name, content]) => ({ path: `uploads/${name}.b64`, content })),
   })
   if (written.startsWith('Error')) throw new Error(`Could not upload files: ${written}`)
   const decodeErrors = await client.executeCommand({
@@ -123,13 +127,13 @@ async function publishArtifact(session: Session, sessionId: string, fileName: st
   return getSignedUrl(s3, new GetObjectCommand({ Bucket: artifactBucket, Key: key }), { expiresIn: 3600 })
 }
 
-async function listNewArtifacts(session: Session): Promise<string[]> {
+async function listArtifacts(session: Session): Promise<string[]> {
   const listing = await session.codeInterpreter.getClient().executeCommand({ command: 'ls -1 outputs 2>/dev/null' })
   const isImage = (name: string): boolean => mimeTypeOf(name).startsWith('image/')
   return listing
     .split(/\r?\n/)
     .map((line) => line.trim())
-    .filter((name) => /^[\w][\w .-]*$/.test(name) && !session.publishedArtifacts.has(name))
+    .filter((name) => /^[\w][\w .-]*$/.test(name))
     .sort((a, b) => Number(isImage(b)) - Number(isImage(a)))
 }
 
@@ -138,43 +142,54 @@ const app = new BedrockAgentCoreApp({
     requestSchema,
     process: async function* (request, context) {
       const session = getSession(context.sessionId)
-
-      let prompt = request.prompt
-      if (request.files?.length) {
-        await writeUploads(session, request.files)
-        const fileList = request.files.map((file) => `uploads/${file.name}`).join(', ')
-        prompt = `Uploaded files: ${fileList}\n\n${request.prompt}`
+      if (session.busy) {
+        yield { event: 'error', data: { error: 'The agent is still answering another request in this session' } }
+        return
       }
+      session.busy = true
 
-      for await (const event of session.agent.stream(prompt)) {
-        if (event.type === 'beforeToolCallEvent') {
-          const { toolUseId, name, input } = event.toolUse
-          yield { event: 'tool', data: { toolUseId, name, input } }
+      try {
+        let prompt = request.prompt
+        for (const file of request.files ?? []) session.files.set(file.name, file.content)
+        if (request.files?.length) {
+          const fileList = request.files.map((file) => `uploads/${file.name}`).join(', ')
+          prompt = `Uploaded files: ${fileList}\n\n${request.prompt}`
         }
-        if (
-          event.type === 'modelStreamUpdateEvent' &&
-          event.event.type === 'modelContentBlockDeltaEvent' &&
-          event.event.delta.type === 'textDelta'
-        ) {
-          yield { event: 'message', data: { text: event.event.delta.text } }
-        }
-        if (event.type === 'afterToolCallEvent') {
-          const { toolUseId, status } = event.result
-          const content = event.result.content.map((block) =>
-            block.type === 'textBlock' ? block.text : JSON.stringify(block)
-          )
-          yield { event: 'tool_result', data: { toolUseId, status, content: content.join('\n') } }
-        }
-      }
+        if (session.files.size) await writeUploads(session)
 
-      if (!artifactBucket) return
+        for await (const event of session.agent.stream(prompt)) {
+          if (event.type === 'beforeToolCallEvent') {
+            const { toolUseId, name, input } = event.toolUse
+            yield { event: 'tool', data: { toolUseId, name, input } }
+          }
+          if (
+            event.type === 'modelStreamUpdateEvent' &&
+            event.event.type === 'modelContentBlockDeltaEvent' &&
+            event.event.delta.type === 'textDelta'
+          ) {
+            yield { event: 'message', data: { text: event.event.delta.text } }
+          }
+          if (event.type === 'afterToolCallEvent') {
+            const { toolUseId, status } = event.result
+            const content = event.result.content.map((block) =>
+              block.type === 'textBlock' ? block.text : JSON.stringify(block)
+            )
+            yield { event: 'tool_result', data: { toolUseId, status, content: content.join('\n') } }
+          }
+        }
 
-      const newArtifacts = await listNewArtifacts(session)
-      if (newArtifacts.length) yield { event: 'uploading', data: {} }
-      for (const name of newArtifacts) {
-        const url = await publishArtifact(session, context.sessionId, name)
-        session.publishedArtifacts.add(name)
-        yield { event: 'artifact', data: { name, url, mimeType: mimeTypeOf(name) } }
+        if (!artifactBucket) return
+
+        const artifacts = await listArtifacts(session)
+        if (artifacts.length) yield { event: 'uploading', data: {} }
+        for (const name of artifacts) {
+          const url = await publishArtifact(session, context.sessionId, name)
+          yield { event: 'artifact', data: { name, url, mimeType: mimeTypeOf(name) } }
+        }
+      } finally {
+        // A sandbox ends 15 minutes after it starts, so each request uses its own and stops it when done
+        await session.codeInterpreter.stopSession()
+        session.busy = false
       }
     },
   },
@@ -189,14 +204,5 @@ const app = new BedrockAgentCoreApp({
     ],
   },
 })
-
-// An active sandbox session blocks deleting the Code Interpreter, so `agentcore remove` could fail until it times out.
-async function stopSandboxes(): Promise<void> {
-  await Promise.allSettled([...sessions.values()].map((session) => session.codeInterpreter.stopSession()))
-  process.exit(0)
-}
-
-process.on('SIGTERM', stopSandboxes)
-process.on('SIGINT', stopSandboxes)
 
 app.run({ port: parseInt(process.env['PORT'] ?? '8080') })

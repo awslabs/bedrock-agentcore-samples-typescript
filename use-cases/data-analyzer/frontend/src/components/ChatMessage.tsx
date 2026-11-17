@@ -129,8 +129,14 @@ export default function ChatMessage({ message, isStreaming = false }: ChatMessag
               key={index}
               className="prose prose-gray max-w-none text-[15px] leading-relaxed prose-p:my-2 prose-headings:mt-5 prose-headings:mb-2 prose-li:my-0.5 prose-table:my-3 prose-th:text-left prose-code:rounded-sm prose-code:bg-gray-100 prose-code:px-1 prose-code:py-0.5 prose-code:text-[0.875em] prose-code:font-medium prose-code:before:content-none prose-code:after:content-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0"
             >
-              {/* Model output can echo image URLs planted in the analysed data; charts arrive as artifacts. */}
-              <ReactMarkdown remarkPlugins={remarkPlugins} components={markdownComponents} disallowedElements={['img']}>
+              {/* Model output can echo URLs planted in the analysed data, which an image or a click would send data
+                  to, so links and images render as plain text. Charts and files arrive as artifacts. */}
+              <ReactMarkdown
+                remarkPlugins={remarkPlugins}
+                components={markdownComponents}
+                disallowedElements={['img', 'a']}
+                unwrapDisallowed
+              >
                 {block.text}
               </ReactMarkdown>
             </div>
