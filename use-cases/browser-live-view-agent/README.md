@@ -85,7 +85,9 @@ Amazon DCV; it doesn't pass through the server. `BrowserLiveView` loads the DCV 
 UI), and serves its workers at `/nice-dcv-web-client-sdk`.
 
 The server acts with your AWS credentials, so it listens on `127.0.0.1` only and refuses requests from any origin other
-than the Vite client. Your browser talks only to Vite, which passes `/api` on to the server.
+than the Vite client, or with a Host header other than `localhost` or `127.0.0.1`. Your browser talks only to Vite,
+which answers only to `localhost` too and passes `/api` on to the server with the browser's Host header, so a site
+that points its own domain at your machine (DNS rebinding) is refused by both.
 
 ## Run Locally
 

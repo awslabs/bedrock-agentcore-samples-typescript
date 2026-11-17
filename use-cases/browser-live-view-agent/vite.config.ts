@@ -47,7 +47,8 @@ export default defineConfig({
     port: config.clientPort,
     strictPort: true,
     proxy: {
-      '/api': `http://127.0.0.1:${config.serverPort}`,
+      // Keep the browser's Host header, so the server's own Host check applies to proxied requests too
+      '/api': { target: `http://127.0.0.1:${config.serverPort}`, changeOrigin: false },
     },
   },
 })

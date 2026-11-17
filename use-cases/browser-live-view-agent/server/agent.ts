@@ -1,3 +1,4 @@
+import { setTimeout } from 'node:timers/promises'
 import { Agent, BedrockModel, type JSONValue, type ToolResultBlock } from '@strands-agents/sdk'
 import { BrowserTools } from 'bedrock-agentcore/experimental/browser/strands'
 import { config } from './config.js'
@@ -49,6 +50,8 @@ const agent = new Agent({
   // The tools share one browser session, so they run one at a time
   toolExecutor: 'sequential',
 })
+
+const stopWaitMs = 10_000
 
 let sessionStart: Promise<void> | null = null
 let agentRun: Promise<void> | null = null
@@ -140,17 +143,19 @@ export function startAgent(prompt: string): void {
 }
 
 export async function stopSession(): Promise<void> {
-  // A running agent finishes its current tool first, so no later tool call can start a new session
+  // A running agent finishes its current tool first, so no later tool call can start a new session.
+  // A tool that hangs mustn't hang the stop, so the wait is capped.
   agent.cancel()
-  await agentRun
+  await Promise.race([agentRun, setTimeout(stopWaitMs)])
   try {
     await sessionStart
   } catch {
     return
   }
   if (!sessionStart) return
+  // Clear the state only once the session has stopped, so a failed stop can be retried
+  await browser.stopSession()
   sessionStart = null
   agentState.liveViewUrl = null
-  await browser.stopSession()
   log('Browser session stopped')
 }
