@@ -27,12 +27,13 @@ browser-live-view-agent/
 ## The Agent
 
 ```typescript
-const browserTools = new BrowserTools({ region })
+const browserTools = new BrowserTools({ region: config.region, identifier: config.browserIdentifier })
 const browser = browserTools.getClient()
 
 const agent = new Agent({
-  model: new BedrockModel({ modelId: 'global.anthropic.claude-haiku-5-5', region, maxTokens: 8192 }),
+  model: new BedrockModel({ modelId: config.modelId, region: config.region, maxTokens: 8192 }),
   systemPrompt,
+  // screenshot is left out: it can write files on this machine, and the live view already shows the page
   tools: [
     browserTools.navigate,
     browserTools.click,
@@ -45,19 +46,19 @@ const agent = new Agent({
   toolExecutor: 'sequential',
 })
 
-await browser.startSession({ viewport: { width: 1920, height: 1080 } })
-const liveViewUrl = await browser.generateLiveViewUrl()
+await browser.startSession({ sessionName: 'live-view-agent', viewport: config.viewport })
+agentState.liveViewUrl = await browser.generateLiveViewUrl()
 
 for await (const event of agent.stream(prompt)) {
   if (event.type === 'beforeToolCallEvent') {
     log(describeToolInput(event.toolUse.input), event.toolUse.name)
   }
+  // ...log failed tool calls and record the answer
 }
 ```
 
-The agent uses the SDK's Strands browser tools, which all drive one browser session, so they run one at a time. The
-server starts that session itself to get a live view URL, and turns the agent's events into the activity log. The
-`screenshot` tool is left out: it can write files on your machine, and the live view already shows the page.
+The agent uses the SDK's Strands browser tools, which all drive one browser session. The server starts that session
+itself to get a live view URL, and turns the agent's events into the activity log.
 
 → [Full source](./server/agent.ts)
 
