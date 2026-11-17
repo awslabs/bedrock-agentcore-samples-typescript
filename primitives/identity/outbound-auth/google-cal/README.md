@@ -89,7 +89,7 @@ Browser ── Cognito token ──▶ web app ── JWT ──▶ AgentCore Ru
 1. The user signs in with Cognito and chats through the local web app, which calls the runtime with their JWT.
 2. The agent's `getCalendar` tool asks AgentCore Identity for that user's Google token. The first time there is none,
    so Identity returns an authorization URL, which the agent streams to the web app.
-3. The user consents at Google. Google redirects to AgentCore, which redirects to the web app's `/oauth2/callback`.
+3. The user consents at Google. Google redirects to AgentCore, which redirects to the web app's `callback.html`.
 4. The callback page opens in a new tab, so the web app keeps the user's JWT in `localStorage`, where that tab can
    read it. The page sends the `session_id` and the JWT to the web app, which calls `CompleteResourceTokenAuth`:
 
@@ -142,7 +142,7 @@ Allow the web app's callback on the runtime's workload identity, and create a Co
 STACK=AgentCore-OutboundAuthGoogleCal-default
 output() { aws cloudformation describe-stacks --stack-name $STACK --query "Stacks[0].Outputs[?OutputKey=='$1'].OutputValue" --output text; }
 aws bedrock-agentcore-control update-workload-identity --name "$(output WorkloadIdentityName)" \
-  --allowed-resource-oauth2-return-urls http://localhost:9090/oauth2/callback
+  --allowed-resource-oauth2-return-urls http://localhost:9090/callback.html
 POOL_ID=$(output UserPoolId) CLIENT_ID=$(output ClientId)
 PASSWORD="$(openssl rand -base64 24)Aa1!"
 aws cognito-idp admin-create-user --user-pool-id $POOL_ID --username testuser --message-action SUPPRESS > /dev/null

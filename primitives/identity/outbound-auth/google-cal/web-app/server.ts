@@ -63,10 +63,6 @@ app.post('/api/chat', async (req, res) => {
   res.end()
 })
 
-app.get('/oauth2/callback', (_req, res) => {
-  res.sendFile('callback.html', { root: publicDir })
-})
-
 // AgentCore Identity completes the flow only if this token belongs to the user the authorization URL was issued for.
 app.post('/api/complete-auth', async (req, res) => {
   const userToken = bearerToken(req)

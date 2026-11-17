@@ -5,7 +5,7 @@ import { z } from 'zod'
 
 // `agentcore deploy` sets CREDENTIAL_GOOGLE_CAL_NAME to the provider created by `agentcore add credentials`.
 const providerName = process.env['CREDENTIAL_GOOGLE_CAL_NAME'] ?? 'google-cal'
-const callbackUrl = 'http://localhost:9090/oauth2/callback'
+const callbackUrl = 'http://localhost:9090/callback.html'
 
 interface GoogleCalendarEvent {
   summary?: string
