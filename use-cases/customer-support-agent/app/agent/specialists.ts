@@ -1,13 +1,13 @@
 import { Agent, BedrockModel, tool, type JSONValue } from '@strands-agents/sdk'
 import { z } from 'zod'
 
-const warrantyExpiryBySerial: Record<string, { product: string; expiresAt: string }> = {
-  MNO33333333: { product: 'Gaming Console Pro', expiresAt: '2027-12-31' },
-  ABC12345678: { product: 'Smart Watch Series X', expiresAt: '2024-01-15' },
-}
-
 function daysFromToday(days: number): string {
   return new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10)
+}
+
+const warrantyExpiryBySerial: Record<string, { product: string; expiresAt: string }> = {
+  MNO33333333: { product: 'Gaming Console Pro', expiresAt: daysFromToday(365) },
+  ABC12345678: { product: 'Smart Watch Series X', expiresAt: daysFromToday(-365) },
 }
 
 const checkWarranty = tool({

@@ -23,7 +23,13 @@ const agentsBySession = new Map<string, Agent>()
 function getAgent(sessionId: string): Agent {
   let agent = agentsBySession.get(sessionId)
   if (!agent) {
-    agent = new Agent({ model, systemPrompt, tools: createSpecialists(model) })
+    agent = new Agent({
+      model,
+      systemPrompt,
+      tools: createSpecialists(model),
+      // Each specialist handles one request at a time, so the orchestrator calls them one at a time
+      toolExecutor: 'sequential',
+    })
     agentsBySession.set(sessionId, agent)
   }
   return agent
