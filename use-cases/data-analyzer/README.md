@@ -155,6 +155,7 @@ bucket, doesn't return files; see [Configuration](#configuration) to get charts 
 ## Deploy
 
 ```bash
+npm install --prefix app/agent
 npm install --prefix agentcore/cdk
 agentcore deploy
 ```
