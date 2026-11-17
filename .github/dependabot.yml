@@ -1,7 +1,19 @@
 version: 2
 updates:
   - package-ecosystem: npm
-    directory: /
+    directories:
+      - /
+      - /primitives/**
+      - /use-cases/**
     schedule:
       interval: weekly
     open-pull-requests-limit: 10
+    groups:
+      dependencies:
+        patterns: ['*']
+        group-by: dependency-name
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly

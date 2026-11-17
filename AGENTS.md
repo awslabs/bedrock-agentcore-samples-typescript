@@ -144,7 +144,7 @@ Examples include customer support agents, data analyzers, and other practical ap
 - Minimize external dependencies — only include what's necessary for the example
 - Use workspace/monorepo structure to avoid duplicate dependencies
 - Pin major versions for stability
-- Node.js 20+ is the minimum required version
+- Node.js 22+ is the minimum required version
 
 ## Security and Best Practices
 

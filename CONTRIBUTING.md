@@ -10,8 +10,8 @@ Please read through this document before submitting any issues or pull requests.
 
 ### Prerequisites
 
-- **Node.js**: Version 20.0.0 or higher
-- **npm**: Version 9.0.0 or higher
+- **Node.js**: Version 22.0.0 or higher
+- **npm**: Version 10.0.0 or higher
 - **AWS CLI**: Configured with appropriate credentials
 - **Access to Amazon Bedrock AgentCore**: Required for running examples
 
@@ -143,7 +143,7 @@ One-line description of what this example demonstrates.
 
 ## Prerequisites
 
-- Node.js 20+
+- Node.js 22+
 - AWS CLI configured
 - Access to Amazon Bedrock AgentCore
 

@@ -10,3 +10,7 @@ package-lock.json
 
 # CDK output
 cdk.out/
+
+# Written by the AgentCore CLI
+**/agentcore/agentcore.json
+**/agentcore/aws-targets.json

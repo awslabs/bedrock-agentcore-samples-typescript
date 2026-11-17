@@ -138,7 +138,7 @@ const agent = new Agent({
 
 ## Prerequisites
 
-- Node.js 20+
+- Node.js 22+
 - AWS CLI configured with credentials
 - Access to Amazon Bedrock and AgentCore
 
