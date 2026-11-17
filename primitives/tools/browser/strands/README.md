@@ -41,10 +41,18 @@ const agent = new Agent({
   toolExecutor: 'sequential',
 })
 
+// The agent and its browser serve one request at a time; an overlapping request must not stop the browser in use
+let busy = false
+
 const app = new BedrockAgentCoreApp({
   invocationHandler: {
     requestSchema: z.object({ prompt: z.string() }),
     process: async function* (request) {
+      if (busy) {
+        yield { event: 'error', data: { error: 'The agent is still answering another request' } }
+        return
+      }
+      busy = true
       try {
         for await (const event of agent.stream(request.prompt)) {
           if (event.type === 'beforeToolCallEvent') {

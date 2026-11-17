@@ -22,10 +22,18 @@ const agent = new ToolLoopAgent({
 
 const messages: ModelMessage[] = []
 
+// The agent and its browser serve one request at a time; an overlapping request must not stop the browser in use
+let busy = false
+
 const app = new BedrockAgentCoreApp({
   invocationHandler: {
     requestSchema: z.object({ prompt: z.string() }),
     process: async function* (request) {
+      if (busy) {
+        yield { event: 'error', data: { error: 'The agent is still answering another request' } }
+        return
+      }
+      busy = true
       const userMessage: ModelMessage = { role: 'user', content: request.prompt }
       try {
         const stream = await agent.stream({ messages: [...messages, userMessage] })
@@ -43,6 +51,7 @@ const app = new BedrockAgentCoreApp({
       } finally {
         // A browser session outlives the runtime session, so stop it rather than let it run until its timeout
         await browser.stopSession()
+        busy = false
       }
     },
   },
