@@ -3,7 +3,6 @@ import express, { type Request } from 'express'
 import path from 'node:path'
 
 const port = parseInt(process.env['PORT'] ?? '9090')
-const region = process.env['AWS_REGION'] ?? 'us-east-1'
 const runtimeUrl = process.env['RUNTIME_URL']
 const clientId = process.env['CLIENT_ID']
 
@@ -12,6 +11,8 @@ if (!runtimeUrl || !clientId) {
   process.exit(1)
 }
 
+// The runtime URL names the region the stack is in (https://bedrock-agentcore.<region>.amazonaws.com/...)
+const region = new URL(runtimeUrl).hostname.split('.')[1]
 const identityClient = new BedrockAgentCoreClient({ region })
 const publicDir = path.join(import.meta.dirname, 'public')
 
@@ -83,6 +84,7 @@ app.post('/api/complete-auth', async (req, res) => {
   }
 })
 
-app.listen(port, () => {
+// The web app passes users' tokens on, so only this machine may reach it
+app.listen(port, '127.0.0.1', () => {
   console.log(`Web app on http://localhost:${port}, calling ${runtimeUrl}`)
 })
