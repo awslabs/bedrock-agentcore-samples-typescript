@@ -33,21 +33,35 @@ const codeInterpreter = new CodeInterpreterTools({ region })
 const agent = new Agent({
   model: new BedrockModel({ modelId: 'global.anthropic.claude-haiku-5-5', region, maxTokens: 8192 }),
   systemPrompt:
-    'You are a data analyst. Run Python in the sandbox to answer questions. Variables and files persist between calls.',
+    'You are a data analyst. Run Python in the sandbox to answer questions. Each request gets a fresh sandbox.',
   tools: codeInterpreter.tools,
   // The tools share one sandbox session, so they run one at a time
   toolExecutor: 'sequential',
 })
 
+// The agent and its sandbox serve one request at a time; an overlapping request must not stop the sandbox in use
+let busy = false
+
 const app = new BedrockAgentCoreApp({
   invocationHandler: {
     requestSchema: z.object({ prompt: z.string() }),
     process: async function* (request) {
-      for await (const event of agent.stream(request.prompt)) {
-        if (event.type === 'beforeToolCallEvent') {
-          yield { event: 'tool', data: { name: event.toolUse.name, input: event.toolUse.input } }
+      if (busy) {
+        yield { event: 'error', data: { error: 'The agent is still answering another request' } }
+        return
+      }
+      busy = true
+      try {
+        for await (const event of agent.stream(request.prompt)) {
+          if (event.type === 'beforeToolCallEvent') {
+            yield { event: 'tool', data: { name: event.toolUse.name, input: event.toolUse.input } }
+          }
+          // ...yield text deltas as message events
         }
-        // ...yield text deltas as message events
+      } finally {
+        // A sandbox ends 15 minutes after it starts, so each request uses its own and stops it when done
+        await codeInterpreter.stopSession()
+        busy = false
       }
     },
   },
@@ -55,8 +69,8 @@ const app = new BedrockAgentCoreApp({
 ```
 
 `codeInterpreter.tools` gives the agent `executeCode`, `executeCommand` and `fileOperations`. The sandbox starts on
-the first tool call and keeps its variables and files for the rest of the session. Each `tool` event shows the code
-the agent runs.
+the first tool call, keeps its variables and files across that request's tool calls, and is stopped when the request
+finishes. The agent keeps the conversation. Each `tool` event shows the code the agent runs.
 
 → [Full source](./app/agent/main.ts)
 
@@ -75,11 +89,17 @@ agentcore invoke --runtime agent --local --session-id code-interpreter-session-0
   --payload '{"prompt": "Use Python to print the sum of fib and how many of its values are even"}'
 ```
 
-The second prompt reuses `fib` from the sandbox:
+The second request gets a new sandbox, so the agent recreates `fib` from the conversation before using it:
 
 ```
 event: tool
-data: {"name":"executeCode","input":{"code":"total = sum(fib)\neven_count = sum(1 for x in fib if x % 2 == 0)\nprint(\"Sum:\", total)\nprint(\"Even count:\", even_count)","language":"python"}}
+data: {"name":"executeCode","input":{"code":"try:
+    fib
+except NameError:
+    fib = [0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377]
+
+total = sum(fib)
+...","language":"python"}}
 
 event: message
 data: {"text":"The sum of `fib` is 986, and 5 of its values are even"}

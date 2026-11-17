@@ -62,6 +62,7 @@ const app = new BedrockAgentCoreApp({
         }
       } finally {
         await browser.stopSession()
+        busy = false
       }
     },
   },

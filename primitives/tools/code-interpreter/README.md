@@ -21,7 +21,7 @@ const codeInterpreter = new CodeInterpreterTools({ region })
 const agent = new Agent({
   model: new BedrockModel({ modelId: 'global.anthropic.claude-haiku-5-5', region, maxTokens: 8192 }),
   systemPrompt:
-    'You are a data analyst. Run Python in the sandbox to answer questions. Variables and files persist between calls.',
+    'You are a data analyst. Run Python in the sandbox to answer questions. Each request gets a fresh sandbox.',
   tools: codeInterpreter.tools,
   // The tools share one sandbox session, so they run one at a time
   toolExecutor: 'sequential',
@@ -40,7 +40,8 @@ The Vercel AI SDK version is `CodeInterpreterTools` from `bedrock-agentcore/code
 | `executeCommand` | Execute shell commands                |
 
 The sandbox comes with pandas, numpy, matplotlib, seaborn, scipy and scikit-learn. Variables and files persist across
-tool calls until the sandbox session times out (15 minutes by default, up to 8 hours).
+the tool calls of a request. A sandbox ends 15 minutes after it starts, however active it is, so the samples give each
+request its own and stop it when the request finishes.
 
 ## Network Access
 

@@ -71,6 +71,7 @@ const app = new BedrockAgentCoreApp({
         messages.push(userMessage, ...(await stream.responseMessages))
       } finally {
         await browser.stopSession()
+        busy = false
       }
     },
   },
