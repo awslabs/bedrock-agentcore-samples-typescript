@@ -36,7 +36,7 @@ You provide your agent code, or a container image. AgentCore handles everything 
 
 ## The Handler Pattern
 
-Every AgentCore Runtime app follows the same pattern:
+Every runtime sample has the same handler. This is the [Strands hosting sample](./hosting-agent/strands/)'s:
 
 ```typescript
 import { BedrockAgentCoreApp } from 'bedrock-agentcore/runtime'
@@ -44,19 +44,20 @@ import { z } from 'zod'
 
 const app = new BedrockAgentCoreApp({
   invocationHandler: {
-    requestSchema: z.object({ prompt: z.string() }), // Typed inputs with Zod
-    process: async function* (request, context) {
-      // request.prompt is typed as string
-      // context: session ID, headers, auth tokens, etc.
-
-      yield { event: 'message', data: { text: 'Processing...' } }
-      yield { event: 'message', data: { text: 'Done!' } }
+    requestSchema: z.object({ prompt: z.string() }),
+    process: async function* (request) {
+      for await (const event of agent.stream(request.prompt)) {
+        // ...yield text deltas as message events
+      }
     },
   },
 })
 
 app.run({ port: parseInt(process.env['PORT'] ?? '8080') })
 ```
+
+The handler's second argument, `context`, carries the session ID, the forwarded headers and `context.log`, a
+request-scoped logger.
 
 `requestSchema` validates each payload before your handler runs, so `request.prompt` is a string by the time it
 reaches the agent. Requests that don't match are rejected. Keep prompts typed as `z.string()` and pass only the prompt
@@ -146,22 +147,23 @@ aws bedrock-agentcore invoke-agent-runtime \
 
 Session IDs must be at least 33 characters; a UUID works. The streamed events are written to `response.txt`.
 
-**With fetch (OAuth):**
+**With fetch (OAuth)**, as the [Google Calendar sample](../identity/outbound-auth/google-cal/)'s web app does:
 
 ```typescript
-const url = `https://bedrock-agentcore.${region}.amazonaws.com/runtimes/${encodeURIComponent(runtimeArn)}/invocations?qualifier=DEFAULT`
-
-const response = await fetch(url, {
+const response = await fetch(runtimeUrl, {
   method: 'POST',
   headers: {
-    Authorization: `Bearer ${token}`,
     'Content-Type': 'application/json',
     Accept: 'text/event-stream',
-    'x-amzn-bedrock-agentcore-runtime-session-id': sessionId,
+    Authorization: `Bearer ${userToken}`,
+    'X-Amzn-Bedrock-AgentCore-Runtime-Session-Id': sessionId,
   },
-  body: JSON.stringify({ prompt: 'Hello' }),
+  body: JSON.stringify({ prompt }),
 })
 ```
+
+`runtimeUrl` is the runtime's invocation URL, which that sample's stack outputs as `RuntimeUrl`:
+`https://bedrock-agentcore.<region>.amazonaws.com/runtimes/<URL-encoded runtime ARN>/invocations?qualifier=DEFAULT`.
 
 ### WebSocket
 
@@ -172,14 +174,12 @@ client:
 import { RuntimeClient } from 'bedrock-agentcore/runtime'
 import { WebSocket } from 'ws'
 
-const client = new RuntimeClient({ region: process.env['AWS_REGION'] ?? 'us-east-1' })
-
-const { url, headers } = await client.generateWsConnection({ runtimeArn })
-
+const region = runtimeArn.split(':')[3]
+const { url, headers } = await new RuntimeClient({ region }).generateWsConnection({ runtimeArn })
 const ws = new WebSocket(url, { headers })
 ```
 
-See [bidirectional streaming](./bidirectional-streaming/) for OAuth connections and a complete client.
+The [echo sample's client](./bidirectional-streaming/echo/app/agent/client.ts) is the complete version.
 
 ---
 

@@ -24,16 +24,12 @@ Deployed runtimes only accept authenticated WebSocket connections. `RuntimeClien
 import { RuntimeClient } from 'bedrock-agentcore/runtime'
 import { WebSocket } from 'ws'
 
-const client = new RuntimeClient({ region: process.env['AWS_REGION'] ?? 'us-east-1' })
-
-// IAM authentication (SigV4)
-const { url, headers } = await client.generateWsConnection({ runtimeArn })
-
-// Or OAuth authentication (bearer token)
-// const { url, headers } = await client.generateWsConnectionOAuth({ runtimeArn, bearerToken })
-
+const region = runtimeArn.split(':')[3]
+const { url, headers } = await new RuntimeClient({ region }).generateWsConnection({ runtimeArn })
 const ws = new WebSocket(url, { headers })
 ```
+
+For OAuth, `generateWsConnectionOAuth({ runtimeArn, bearerToken })` returns the same `url` and `headers`.
 
 The [echo sample's client](./echo/app/agent/client.ts) does both: it connects directly to a local URL and signs the
 connection for a runtime ARN.
