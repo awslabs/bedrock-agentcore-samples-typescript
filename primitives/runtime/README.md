@@ -171,15 +171,23 @@ Use `RuntimeClient` from the SDK to generate signed connections for the [`ws`](h
 client:
 
 ```typescript
+import { randomUUID } from 'node:crypto'
 import { RuntimeClient } from 'bedrock-agentcore/runtime'
 import { WebSocket } from 'ws'
 
-const region = runtimeArn.split(':')[3]
-const { url, headers } = await new RuntimeClient({ region }).generateWsConnection({ runtimeArn })
-const ws = new WebSocket(url, { headers })
+async function connect(urlOrArn: string): Promise<WebSocket> {
+  if (urlOrArn.startsWith('ws://')) {
+    return new WebSocket(urlOrArn, { headers: { 'x-amzn-bedrock-agentcore-runtime-session-id': randomUUID() } })
+  }
+
+  const region = urlOrArn.split(':')[3]
+  const { url, headers } = await new RuntimeClient({ region }).generateWsConnection({ runtimeArn: urlOrArn })
+  return new WebSocket(url, { headers })
+}
 ```
 
-The [echo sample's client](./bidirectional-streaming/echo/app/agent/client.ts) is the complete version.
+This is the [echo sample's client](./bidirectional-streaming/echo/app/agent/client.ts): it connects directly to a local
+URL and signs the connection for a runtime ARN.
 
 ---
 
