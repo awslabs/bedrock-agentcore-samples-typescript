@@ -84,6 +84,7 @@ status changes.
 ## Deploy
 
 ```bash
+npm install --prefix app/agent
 npm install --prefix agentcore/cdk
 agentcore deploy
 agentcore invoke --runtime agent --payload '{"prompt": "Start a 10 second background task"}'

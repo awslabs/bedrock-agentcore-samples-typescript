@@ -80,6 +80,7 @@ Closed
 ## Deploy
 
 ```bash
+npm install --prefix app/agent
 npm install --prefix agentcore/cdk
 agentcore deploy
 agentcore status
