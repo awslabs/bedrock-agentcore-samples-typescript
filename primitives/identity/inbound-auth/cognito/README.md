@@ -88,6 +88,7 @@ The local server doesn't check tokens, so the `agentcore dev` output shows `"msg
 ## Deploy
 
 ```bash
+npm install --prefix app/agent
 npm install --prefix agentcore/cdk
 agentcore deploy
 ```

@@ -123,6 +123,7 @@ printf '%s' "$GOOGLE_CLIENT_SECRET" | agentcore add credentials oauth --name goo
 Deploy the runtime, the Cognito user pool and the credential provider:
 
 ```bash
+npm install --prefix app/agent
 npm install --prefix agentcore/cdk
 agentcore deploy
 ```
