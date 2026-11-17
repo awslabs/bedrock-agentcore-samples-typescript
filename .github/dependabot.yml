@@ -5,6 +5,10 @@ updates:
       - /
       - /primitives/**
       - /use-cases/**
+    # The AgentCore CLI generates and pins these CDK apps
+    exclude-paths:
+      - '**/agentcore/cdk'
+      - '**/agentcore/cdk/**'
     schedule:
       interval: weekly
     open-pull-requests-limit: 10
