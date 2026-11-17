@@ -16,8 +16,15 @@ Give agents a secure code sandbox and a cloud browser with Amazon Bedrock AgentC
 ```typescript
 import { CodeInterpreterTools } from 'bedrock-agentcore/experimental/code-interpreter/strands'
 
-const codeInterpreter = new CodeInterpreterTools({ region: process.env['AWS_REGION'] ?? 'us-east-1' })
-const agent = new Agent({ model, tools: codeInterpreter.tools, toolExecutor: 'sequential' })
+const codeInterpreter = new CodeInterpreterTools({ region })
+
+const agent = new Agent({
+  model: new BedrockModel({ modelId: 'global.anthropic.claude-haiku-5-5', region, maxTokens: 8192 }),
+  // ...a system prompt
+  tools: codeInterpreter.tools,
+  // The tools share one sandbox session, so they run one at a time
+  toolExecutor: 'sequential',
+})
 ```
 
 The Vercel AI SDK integrations live at `bedrock-agentcore/code-interpreter/vercel-ai` and

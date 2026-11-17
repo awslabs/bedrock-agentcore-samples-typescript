@@ -17,7 +17,14 @@ Build agents that browse the web in a cloud browser with AgentCore Browser.
 import { BrowserTools } from 'bedrock-agentcore/experimental/browser/strands'
 
 const browser = new BrowserTools({ region })
-const agent = new Agent({ model, tools: browser.tools, toolExecutor: 'sequential' })
+
+const agent = new Agent({
+  model: new BedrockModel({ modelId: 'global.anthropic.claude-haiku-5-5', region, maxTokens: 8192 }),
+  // ...a system prompt
+  tools: browser.tools,
+  // The tools share one browser session, so they run one at a time
+  toolExecutor: 'sequential',
+})
 ```
 
 The Vercel AI SDK version is `BrowserTools` from `bedrock-agentcore/browser/vercel-ai`, used with

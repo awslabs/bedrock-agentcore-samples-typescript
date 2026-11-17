@@ -17,7 +17,15 @@ Build agents that run code in a secure sandbox with AgentCore Code Interpreter.
 import { CodeInterpreterTools } from 'bedrock-agentcore/experimental/code-interpreter/strands'
 
 const codeInterpreter = new CodeInterpreterTools({ region })
-const agent = new Agent({ model, tools: codeInterpreter.tools, toolExecutor: 'sequential' })
+
+const agent = new Agent({
+  model: new BedrockModel({ modelId: 'global.anthropic.claude-haiku-5-5', region, maxTokens: 8192 }),
+  systemPrompt:
+    'You are a data analyst. Run Python in the sandbox to answer questions. Variables and files persist between calls.',
+  tools: codeInterpreter.tools,
+  // The tools share one sandbox session, so they run one at a time
+  toolExecutor: 'sequential',
+})
 ```
 
 The Vercel AI SDK version is `CodeInterpreterTools` from `bedrock-agentcore/code-interpreter/vercel-ai`, used with
@@ -39,23 +47,26 @@ tool calls until the sandbox session times out (15 minutes by default, up to 8 h
 Every AWS account has a default Code Interpreter, `aws.codeinterpreter.v1`, which the samples use. It runs in
 `SANDBOX` mode: no internet access and no AWS access.
 
-To reach public URLs or resources in a VPC, create your own Code Interpreter with public or VPC network access. Add it
-to the stack in `agentcore/cdk/lib/cdk-stack.ts` (with `import * as agentcore from 'aws-cdk-lib/aws-bedrockagentcore'`),
-in place of the grant for the AWS-managed one:
+To control the network, create your own Code Interpreter in the stack, as the
+[data analyzer](../../../use-cases/data-analyzer/) does in `agentcore/cdk/lib/cdk-stack.ts`:
 
 ```typescript
 const codeInterpreter = new agentcore.CodeInterpreterCustom(this, 'CodeInterpreter', {
-  networkConfiguration: agentcore.CodeInterpreterNetworkConfiguration.usingPublicNetwork(),
+  networkConfiguration: agentcore.CodeInterpreterNetworkConfiguration.usingSandboxNetwork(),
 })
 codeInterpreter.grantUse(runtime)
 runtime.addEnvironmentVariable('CODE_INTERPRETER_ID', codeInterpreter.codeInterpreterId)
 ```
 
-and pass its id to the tools in `app/agent/main.ts`:
+and passes its id to the tools in `app/agent/main.ts`:
 
 ```typescript
-const codeInterpreter = new CodeInterpreterTools({ region, identifier: process.env['CODE_INTERPRETER_ID'] })
+const codeInterpreter = new CodeInterpreterTools({
+  region,
+  ...(codeInterpreterId && { identifier: codeInterpreterId }),
+})
 ```
 
+`usingSandboxNetwork()` keeps the sandbox offline; `usingPublicNetwork()` lets it reach public URLs.
 `agentcore deploy` creates the Code Interpreter with the agent, and `agentcore remove all` deletes it. To give the
 sandbox AWS permissions, such as S3 access, grant them to `codeInterpreter.executionRole`.
