@@ -38,9 +38,15 @@ const app = new BedrockAgentCoreApp({
     requestSchema,
     process: async function* (request, context) {
       const session = getSession(context.sessionId)
-      if (request.files?.length) await writeUploads(session, request.files)
 
-      for await (const event of session.agent.stream(request.prompt)) {
+      let prompt = request.prompt
+      if (request.files?.length) {
+        await writeUploads(session, request.files)
+        const fileList = request.files.map((file) => `uploads/${file.name}`).join(', ')
+        prompt = `Uploaded files: ${fileList}\n\n${request.prompt}`
+      }
+
+      for await (const event of session.agent.stream(prompt)) {
         if (event.type === 'beforeToolCallEvent') {
           const { toolUseId, name, input } = event.toolUse
           yield { event: 'tool', data: { toolUseId, name, input } }
@@ -49,8 +55,11 @@ const app = new BedrockAgentCoreApp({
         // ...yield tool outputs as tool_result events
       }
 
+      if (!artifactBucket) return
+
       for (const name of await listNewArtifacts(session)) {
         const url = await publishArtifact(session, context.sessionId, name)
+        session.publishedArtifacts.add(name)
         yield { event: 'artifact', data: { name, url, mimeType: mimeTypeOf(name) } }
       }
     },
