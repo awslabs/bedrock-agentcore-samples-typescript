@@ -8,20 +8,24 @@ function that calls the service, and the SDK passes it a token from the Token Va
 ```typescript
 import { withAccessToken } from 'bedrock-agentcore/identity'
 
-const listEvents = withAccessToken({
-  providerName: process.env['CREDENTIAL_GOOGLE_CAL_NAME'] ?? 'google-cal',
+// `agentcore deploy` sets CREDENTIAL_GOOGLE_CAL_NAME to the provider created by `agentcore add credentials`.
+const providerName = process.env['CREDENTIAL_GOOGLE_CAL_NAME'] ?? 'google-cal'
+
+const events = withAccessToken({
+  providerName,
   scopes: ['https://www.googleapis.com/auth/calendar.readonly'],
   authFlow: 'USER_FEDERATION',
-  onAuthUrl: (url) => console.log(`Ask the user to open ${url}`),
-})(async (token: string) => {
-  const response = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
-    headers: { Authorization: `Bearer ${token}` },
-  })
-  return response.json()
-})
+  callbackUrl,
+  customParameters: { access_type: 'offline', prompt: 'consent' },
+  onAuthUrl: resolveAuthUrl,
+})(listUpcomingEvents)(maxResults)
 ```
 
-`agentcore deploy` sets `CREDENTIAL_<NAME>_NAME` to the deployed provider's name. The Token Vault keeps each user's
+This is the [Google Calendar sample](./google-cal/)'s tool: `listUpcomingEvents(maxResults, token)` calls the Calendar
+API, and `withAccessToken` supplies its last argument, `token`. Until the user has consented, `onAuthUrl` receives the
+URL to send them to.
+
+For any credential `<name>`, the deploy sets `CREDENTIAL_<NAME>_NAME` the same way. The Token Vault keeps each user's
 tokens and refreshes them, so the user consents only once.
 
 ## Auth Flows
@@ -34,18 +38,8 @@ tokens and refreshes them, so the user consents only once.
 | `M2M`                         | The agent itself   | Client credentials (2LO): company-wide APIs, with no user involved       |
 | `ON_BEHALF_OF_TOKEN_EXCHANGE` | The signed-in user | OAuth token exchange: trade the user's token for one the service accepts |
 
-For services that use API keys, `withApiKey` passes the key from the Token Vault as the function's last argument:
-
-```typescript
-import { withApiKey } from 'bedrock-agentcore/identity'
-
-const getWeather = withApiKey({
-  providerName: process.env['CREDENTIAL_WEATHER_API_NAME'] ?? 'weather-api',
-})(async (city: string, apiKey: string) => {
-  const response = await fetch(`https://api.example.com/weather/${city}`, { headers: { 'X-API-Key': apiKey } })
-  return response.json()
-})
-```
+For services that use API keys, `withApiKey` from `bedrock-agentcore/identity` works the same way: it passes the key
+from the Token Vault as the wrapped function's last argument.
 
 ## Key Concepts
 
