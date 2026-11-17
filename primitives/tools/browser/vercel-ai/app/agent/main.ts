@@ -26,9 +26,9 @@ const app = new BedrockAgentCoreApp({
   invocationHandler: {
     requestSchema: z.object({ prompt: z.string() }),
     process: async function* (request) {
-      messages.push({ role: 'user', content: request.prompt })
+      const userMessage: ModelMessage = { role: 'user', content: request.prompt }
       try {
-        const stream = await agent.stream({ messages })
+        const stream = await agent.stream({ messages: [...messages, userMessage] })
 
         for await (const part of stream.fullStream) {
           if (part.type === 'tool-call') {
@@ -38,7 +38,8 @@ const app = new BedrockAgentCoreApp({
             yield { event: 'message', data: { text: part.text } }
           }
         }
-        messages.push(...(await stream.responseMessages))
+        // The turn joins the history only once it completes, so a failed or abandoned request leaves nothing behind
+        messages.push(userMessage, ...(await stream.responseMessages))
       } finally {
         // A browser session outlives the runtime session, so stop it rather than let it run until its timeout
         await browser.stopSession()
