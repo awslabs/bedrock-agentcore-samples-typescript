@@ -119,6 +119,7 @@ Prefer a chat UI? `agentcore dev --mode browser` opens the Agent Inspector.
 ## Deploy
 
 ```bash
+npm install --prefix app/agent
 npm install --prefix agentcore/cdk
 agentcore deploy
 agentcore invoke --runtime agent --payload '{"prompt": "Check the warranty for serial number MNO33333333"}'
