@@ -44,10 +44,6 @@ Thumbs.db
 *.generated.*
 .repolinter.json
 
-# Internal development
-DEVELOPMENT.md
-*.tgz
-
 # AgentCore CLI local state and build cache
 **/agentcore/.cli/
 **/agentcore/.cache/
