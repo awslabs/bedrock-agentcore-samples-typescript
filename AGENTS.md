@@ -216,9 +216,11 @@ Keep one agent per `context.sessionId` (a `Map`) only where a multi-turn convers
 ### Built-in Tools
 
 Code Interpreter and Browser tools share one session per tool instance, so run their calls one at a time:
-`toolExecutor: 'sequential'` (Strands) or `toolCallConcurrency: 1` (Vercel AI SDK). A Browser session isn't tied to the
-runtime session, so stop it when each request finishes. Playwright can't be bundled into a single file, so samples that
-use the Browser deploy as a container (a `Dockerfile` in `app/agent/`).
+`toolExecutor: 'sequential'` (Strands) or `toolCallConcurrency: 1` (Vercel AI SDK). Neither session is tied to the
+runtime session, and a Code Interpreter sandbox ends 15 minutes after it starts, so stop the session in a `finally` when
+each request finishes, and serve one request at a time so an overlapping request can't stop a session in use.
+Playwright can't be bundled into a single file, so samples that use the Browser deploy as a container (a `Dockerfile`
+in `app/agent/`).
 
 ### Tool Definitions
 

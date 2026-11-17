@@ -105,11 +105,14 @@ const codeInterpreter = new CodeInterpreterTools({ region })
 const agent = new Agent({
   model: new BedrockModel({ modelId: 'global.anthropic.claude-haiku-5-5', region, maxTokens: 8192 }),
   systemPrompt:
-    'You are a data analyst. Run Python in the sandbox to answer questions. Variables and files persist between calls.',
+    'You are a data analyst. Run Python in the sandbox to answer questions. Each request gets a fresh sandbox.',
   tools: codeInterpreter.tools,
   // The tools share one sandbox session, so they run one at a time
   toolExecutor: 'sequential',
 })
+
+// ...stream the agent's answer, then, when the request finishes:
+await codeInterpreter.stopSession()
 ```
 
 → [Code Interpreter examples](./primitives/tools/code-interpreter/)
@@ -133,7 +136,8 @@ const agent = new Agent({
 await browser.stopSession()
 ```
 
-A browser session isn't tied to the runtime session, so the samples stop it when each request finishes.
+Neither session is tied to the runtime session, so the samples stop each one when its request finishes; the agent keeps
+the conversation.
 
 → [Browser examples](./primitives/tools/browser/)
 

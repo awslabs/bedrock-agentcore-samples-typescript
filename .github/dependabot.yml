@@ -9,6 +9,13 @@ updates:
     exclude-paths:
       - '**/agentcore/cdk'
       - '**/agentcore/cdk/**'
+    ignore:
+      # typescript-eslint supports TypeScript up to 6.0
+      - dependency-name: typescript
+        update-types: ['version-update:semver-major']
+      # The live view's DCV UI, which ships inside bedrock-agentcore, needs @babel/runtime 7
+      - dependency-name: '@babel/runtime'
+        update-types: ['version-update:semver-major']
     schedule:
       interval: weekly
     open-pull-requests-limit: 10
