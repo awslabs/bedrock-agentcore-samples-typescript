@@ -85,7 +85,7 @@ const agent = new Agent({
     region: process.env['AWS_REGION'] ?? 'us-east-1',
     maxTokens: 8192,
   }),
-  tools: [myTool],
+  tools: [calculator],
 })
 
 for await (const event of agent.stream(prompt)) {
@@ -222,17 +222,29 @@ use the Browser deploy as a container (a `Dockerfile` in `app/agent/`).
 
 ### Tool Definitions
 
-Use Zod for input schemas, camelCase tool names, and clear descriptions:
+Use Zod for input schemas, camelCase tool names, clear descriptions and an explicit return type. The hosting
+sample's calculator:
 
 ```typescript
-const myTool = tool({
-  name: 'toolName',
-  description: 'Clear, concise description of what this tool does',
+const calculator = tool({
+  name: 'calculator',
+  description: 'Performs basic arithmetic',
   inputSchema: z.object({
-    param: z.string().describe('What this parameter does'),
+    operation: z.enum(['add', 'subtract', 'multiply', 'divide']),
+    a: z.number(),
+    b: z.number(),
   }),
-  callback: async ({ param }): Promise<string> => {
-    // Implementation
+  callback: ({ operation, a, b }): number => {
+    switch (operation) {
+      case 'add':
+        return a + b
+      case 'subtract':
+        return a - b
+      case 'multiply':
+        return a * b
+      case 'divide':
+        return a / b
+    }
   },
 })
 ```
