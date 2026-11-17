@@ -25,42 +25,28 @@ The `bedrock-agentcore` SDK provides the building blocks for TypeScript agents.
 
 ### Runtime
 
-`BedrockAgentCoreApp` wraps any agent framework in an HTTP server that follows the AgentCore Runtime protocol—handling request parsing, streaming responses, and session management:
-
-```typescript
-import { BedrockAgentCoreApp } from 'bedrock-agentcore/runtime'
-
-const app = new BedrockAgentCoreApp({
-  invocationHandler: {
-    process: async function* (request) {
-      // Your agent logic here
-      yield { event: 'message', data: { text: 'Hello!' } }
-    },
-  },
-})
-
-app.run({ port: parseInt(process.env['PORT'] ?? '8080') })
-```
-
-With a full agent framework:
+`BedrockAgentCoreApp` wraps any agent framework in an HTTP server that follows the AgentCore Runtime protocol: it
+parses and validates requests, streams responses, and manages sessions. This is the
+[Strands hosting sample](./primitives/runtime/hosting-agent/strands/), with its calculator tool elided:
 
 ```typescript
 import { Agent, BedrockModel, tool } from '@strands-agents/sdk'
 import { BedrockAgentCoreApp } from 'bedrock-agentcore/runtime'
 import { z } from 'zod'
 
-const region = process.env['AWS_REGION'] ?? 'us-east-1'
-
-const getWeather = tool({
-  name: 'getWeather',
-  description: 'Gets weather for a city',
-  inputSchema: z.object({ city: z.string() }),
-  callback: ({ city }): string => `72°F and sunny in ${city}`,
+const calculator = tool({
+  name: 'calculator',
+  description: 'Performs basic arithmetic',
+  // ...a Zod input schema and the arithmetic
 })
 
 const agent = new Agent({
-  model: new BedrockModel({ modelId: 'global.anthropic.claude-haiku-5-5', region, maxTokens: 8192 }),
-  tools: [getWeather],
+  model: new BedrockModel({
+    modelId: 'global.anthropic.claude-haiku-5-5',
+    region: process.env['AWS_REGION'] ?? 'us-east-1',
+    maxTokens: 8192,
+  }),
+  tools: [calculator],
 })
 
 const app = new BedrockAgentCoreApp({
@@ -83,7 +69,7 @@ const app = new BedrockAgentCoreApp({
 app.run({ port: parseInt(process.env['PORT'] ?? '8080') })
 ```
 
-`requestSchema` validates each invocation before it reaches the agent.
+`requestSchema` validates each invocation before it reaches the agent, and each `yield` streams an event to the caller.
 
 Every runtime sample is an [AgentCore CLI](https://github.com/aws/agentcore-cli) project, so trying one takes a few
 commands:
@@ -107,9 +93,9 @@ agentcore invoke --runtime agent --payload '{"prompt": "What is 25 * 4?"}'
 
 ### Tools
 
-Built-in tools for common agent capabilities.
+Built-in tools the SDK ready-makes for each framework. With Strands:
 
-**Code Interpreter** — Run Python, JavaScript, TypeScript and shell commands in a secure sandbox:
+**Code Interpreter** — run Python, JavaScript, TypeScript and shell commands in a secure sandbox:
 
 ```typescript
 import { CodeInterpreterTools } from 'bedrock-agentcore/experimental/code-interpreter/strands'
@@ -118,36 +104,36 @@ const codeInterpreter = new CodeInterpreterTools({ region })
 
 const agent = new Agent({
   model: new BedrockModel({ modelId: 'global.anthropic.claude-haiku-5-5', region, maxTokens: 8192 }),
+  systemPrompt:
+    'You are a data analyst. Run Python in the sandbox to answer questions. Variables and files persist between calls.',
   tools: codeInterpreter.tools,
   // The tools share one sandbox session, so they run one at a time
   toolExecutor: 'sequential',
 })
-
-// Agent can now run: "Calculate the standard deviation of [1, 2, 3, 4, 5]"
-// → Executes Python in a secure sandbox, returns the result
 ```
 
 → [Code Interpreter examples](./primitives/tools/code-interpreter/)
 
-**Browser** — Automate web browsing with a remote browser session:
+**Browser** — drive a cloud browser session:
 
 ```typescript
 import { BrowserTools } from 'bedrock-agentcore/experimental/browser/strands'
 
-const browserTools = new BrowserTools({ region })
+const browser = new BrowserTools({ region })
 
 const agent = new Agent({
   model: new BedrockModel({ modelId: 'global.anthropic.claude-haiku-5-5', region, maxTokens: 8192 }),
-  tools: browserTools.tools,
+  // ...a system prompt
+  tools: browser.tools,
   // The tools share one browser session, so they run one at a time
   toolExecutor: 'sequential',
 })
 
-// Agent can now: "Go to news.ycombinator.com and list the top 3 stories"
-// → Starts a browser session on the first tool call, then navigates and reads the page
-
-await browserTools.stopSession() // when the request finishes: the session doesn't end with the runtime session
+// ...stream the agent's answer, then, when the request finishes:
+await browser.stopSession()
 ```
+
+A browser session isn't tied to the runtime session, so the samples stop it when each request finishes.
 
 → [Browser examples](./primitives/tools/browser/)
 
