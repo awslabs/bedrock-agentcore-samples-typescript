@@ -27,8 +27,8 @@ async-agent/
 ## The Agent
 
 AgentCore Runtime polls each session's `/ping` endpoint. A session that reports `Healthy` for 15 minutes is stopped; one
-that reports `HealthyBusy` is kept running. `BedrockAgentCoreApp` tracks this for you: register work with
-`addAsyncTask()` and `/ping` reports `HealthyBusy` until every task is finished with `completeAsyncTask()`.
+that reports `HealthyBusy` is kept running. `BedrockAgentCoreApp` tracks this for you: wrap the work with
+`app.asyncTask()`, and `/ping` reports `HealthyBusy` until it settles, even if it throws.
 
 ```typescript
 const startBackgroundTask = tool({
@@ -38,18 +38,23 @@ const startBackgroundTask = tool({
     duration: z.number().int().min(1).max(3600).default(5).describe('Duration in seconds for the background task'),
   }),
   callback: ({ duration }): string => {
-    const taskId = app.addAsyncTask('backgroundTask', { duration })
+    // asyncTask marks the work as running until it settles, so /ping reports HealthyBusy and AgentCore keeps the session
+    const backgroundTask = app.asyncTask(async (): Promise<void> => {
+      try {
+        await setTimeout(duration * 1000)
+      } catch (error) {
+        console.error('Background task failed:', error)
+      }
+    })
+    void backgroundTask()
 
-    setTimeout(() => {
-      app.completeAsyncTask(taskId)
-    }, duration * 1000)
-
-    return `Started background task ${taskId} for ${duration} seconds. The agent reports HealthyBusy until it finishes.`
+    return `Started a background task for ${duration} seconds. The agent reports HealthyBusy until it finishes.`
   },
 })
 ```
 
-The agent answers immediately while the task keeps running in the background.
+Replace the `setTimeout` wait with your own work. The agent answers immediately while the task keeps running in the
+background.
 
 → [Full source](./app/agent/main.ts)
 

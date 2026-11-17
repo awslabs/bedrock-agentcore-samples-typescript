@@ -41,13 +41,14 @@ const app = new BedrockAgentCoreApp({
   invocationHandler: {
     requestSchema: z.object({ prompt: z.string() }),
     process: async function* (request) {
-      messages.push({ role: 'user', content: request.prompt })
-      const stream = await agent.stream({ messages })
+      const userMessage: ModelMessage = { role: 'user', content: request.prompt }
+      const stream = await agent.stream({ messages: [...messages, userMessage] })
 
       for await (const chunk of stream.textStream) {
         yield { event: 'message', data: { text: chunk } }
       }
-      messages.push(...(await stream.responseMessages))
+      // The turn joins the history only once it completes, so a failed or abandoned request leaves nothing behind
+      messages.push(userMessage, ...(await stream.responseMessages))
     },
   },
 })

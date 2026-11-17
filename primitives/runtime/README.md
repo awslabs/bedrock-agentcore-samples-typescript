@@ -65,9 +65,10 @@ text to the agent.
 
 The generator function (`async function*`) enables streaming — each `yield` sends an event to the client immediately.
 
-Deployed, each runtime session runs in its own microVM, so an agent created at module level serves a single session.
-Samples where the conversation is the point keep one agent per `context.sessionId`, which also keeps sessions apart
-under `agentcore dev`.
+Deployed, each runtime session runs in its own microVM, so the runtime samples create their agent once, at module
+level, and it serves a single session. Under `agentcore dev` that one agent serves every session ID. Where the
+conversation is the point, the [customer support](../../use-cases/customer-support-agent/) and
+[data analyzer](../../use-cases/data-analyzer/) use cases keep one agent per `context.sessionId` instead.
 
 ## The AgentCore Protocol
 
