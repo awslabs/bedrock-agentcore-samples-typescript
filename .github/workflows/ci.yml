@@ -29,6 +29,47 @@ jobs:
       - name: Validate (format, lint)
         run: npm run validate
 
+  find-samples:
+    name: Find Samples
+    runs-on: ubuntu-latest
+    outputs:
+      projects: ${{ steps.find.outputs.projects }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: List TypeScript projects
+        id: find
+        run: echo "projects=$(git ls-files '*/tsconfig.json' | xargs -n1 dirname | jq -Rsc 'split("\n") | map(select(. != ""))')" >> "$GITHUB_OUTPUT"
+
+  type-check:
+    name: Type-check ${{ matrix.project }}
+    needs: find-samples
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        project: ${{ fromJSON(needs.find-samples.outputs.projects) }}
+    defaults:
+      run:
+        working-directory: ${{ matrix.project }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Type-check
+        run: npx tsc --noEmit -p .
+
   security:
     name: Security Audit
     runs-on: ubuntu-latest

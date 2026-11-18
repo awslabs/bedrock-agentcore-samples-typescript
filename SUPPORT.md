@@ -6,11 +6,11 @@
 
 - [README](README.md) - Getting started guide
 - [CONTRIBUTING](CONTRIBUTING.md) - How to contribute
-- [Amazon Bedrock AgentCore Documentation](https://docs.aws.amazon.com/bedrock/latest/userguide/agentcore.html)
+- [Amazon Bedrock AgentCore Documentation](https://docs.aws.amazon.com/bedrock-agentcore/)
 
 ### Issues
 
-If you encounter a bug or have a feature request, please [open an issue](https://github.com/awslabs/amazon-bedrock-agentcore-samples-typescript/issues/new/choose).
+If you encounter a bug or have a feature request, please [open an issue](https://github.com/awslabs/bedrock-agentcore-samples-typescript/issues/new/choose).
 
 Before opening an issue, please:
 
@@ -19,8 +19,8 @@ Before opening an issue, please:
 
 ### Community
 
-- [Amazon Bedrock AgentCore TypeScript SDK](https://github.com/awslabs/amazon-bedrock-agentcore-sdk-typescript)
-- [Amazon Bedrock AgentCore Python Samples](https://github.com/awslabs/amazon-bedrock-agentcore-samples)
+- [Amazon Bedrock AgentCore TypeScript SDK](https://github.com/aws/bedrock-agentcore-sdk-typescript)
+- [Amazon Bedrock AgentCore samples](https://github.com/awslabs/agentcore-samples)
 
 ### Security Issues
 
