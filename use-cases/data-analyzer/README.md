@@ -1,146 +1,229 @@
 # Data Analyzer
 
-A data analysis agent that executes code in a secure sandbox using AgentCore Code Interpreter. Includes a React frontend with file upload, streaming responses, and Cognito authentication.
+A data analysis agent that runs Python in a sandboxed AgentCore Code Interpreter, with a React web app for uploading
+files, streaming answers and showing the code it ran and the charts it created.
 
-## Features
-
-- **Code Interpreter** — Execute code in a secure sandbox with internet access
-- **File Upload** — Upload CSV, Excel, JSON, or TXT files for analysis
-- **Artifact Storage** — Generated charts and files uploaded to S3
-- **Streaming** — Real-time streaming of agent responses and tool execution
-- **Authentication** — Cognito OAuth2 for deployed endpoint, no auth for local development
-
-## Architecture
-
-```
-┌─────────────┐     ┌─────────────────┐     ┌──────────────────┐
-│   React     │────▶│ AgentCore       │────▶│ Code Interpreter │
-│   Frontend  │◀────│ Runtime         │◀────│    (sandbox)     │
-└─────────────┘     └─────────────────┘     └──────────────────┘
-       │                    │
-       │                    ▼
-       │            ┌─────────────┐
-       └───────────▶│ S3 Bucket   │
-         (presigned │ (artifacts) │
-          URLs)     └─────────────┘
-```
-
-The CDK stack deploys:
-
-- **AgentCore Runtime** — Hosts the agent with JWT authentication
-- **Code Interpreter** — Sandboxed execution with internet access (PUBLIC network mode)
-- **S3 Bucket** — Stores generated artifacts (charts, reports, etc.)
-- **Cognito User Pool** — OAuth2 with Managed Login UI and test user
+→ See the [parent README](../README.md) for the other use cases.
 
 ## Prerequisites
 
-- Node.js 20+
-- AWS CLI configured with appropriate permissions
-- AWS CDK CLI: `npm install -g aws-cdk`
-- Docker (for local development)
+- Node.js 22+
+- AWS credentials with access to Amazon Bedrock, AgentCore, Cognito and S3
+- The AWS CLI, configured for the region you deploy to
+- [jq](https://jqlang.org/)
+- OpenSSL, to generate the test user's password
+- The [AgentCore CLI](https://github.com/aws/agentcore-cli):
+
+```bash
+npm install -g @aws/agentcore
+```
+
+## Project Structure
+
+```
+data-analyzer/
+├── app/agent/          # The agent: main.ts, package.json
+├── agentcore/
+│   ├── agentcore.json  # Runtime configuration read by the AgentCore CLI
+│   └── cdk/            # CDK app the CLI deploys, plus Cognito, Code Interpreter and S3
+├── frontend/           # React + Vite web app in TypeScript
+└── data/               # sample_sales_data.csv to try it with
+```
+
+## The Agent
+
+```typescript
+const app = new BedrockAgentCoreApp({
+  invocationHandler: {
+    requestSchema,
+    process: async function* (request, context) {
+      const session = getSession(context.sessionId)
+      if (session.busy) {
+        yield { event: 'error', data: { error: 'The agent is still answering another request in this session' } }
+        return
+      }
+      session.busy = true
+
+      try {
+        let prompt = request.prompt
+        for (const file of request.files ?? []) session.files.set(file.name, file.content)
+        if (request.files?.length) {
+          const fileList = request.files.map((file) => `uploads/${file.name}`).join(', ')
+          prompt = `Uploaded files: ${fileList}\n\n${request.prompt}`
+        }
+        if (session.files.size) await writeUploads(session)
+
+        for await (const event of session.agent.stream(prompt)) {
+          if (event.type === 'beforeToolCallEvent') {
+            const { toolUseId, name, input } = event.toolUse
+            yield { event: 'tool', data: { toolUseId, name, input } }
+          }
+          // ...yield text deltas as message events
+          // ...yield tool outputs as tool_result events
+        }
+
+        if (!artifactBucket) return
+
+        const artifacts = await listArtifacts(session)
+        if (artifacts.length) yield { event: 'uploading', data: {} }
+        for (const name of artifacts) {
+          const url = await publishArtifact(session, context.sessionId, name)
+          yield { event: 'artifact', data: { name, url, mimeType: mimeTypeOf(name) } }
+        }
+      } finally {
+        // A sandbox ends 15 minutes after it starts, so each request uses its own and stops it when done
+        await session.codeInterpreter.stopSession()
+        session.busy = false
+      }
+    },
+  },
+})
+```
+
+Each runtime session gets its own agent, which keeps the conversation, and its uploaded files. A sandbox ends 15
+minutes after it starts, however active it is, so each request runs in a fresh one with the session's files written to
+`uploads/`, and stops it when the request finishes.
+`tool` events carry the `toolUseId` so the web app can pair each with its `tool_result`, which holds the code's output.
+The request is `{ "prompt": string, "files"?: [{ "name": string, "content": base64 }] }`, with up to 5 files of 10 MB
+each (about 70 MB as base64, within the runtime's 100 MB payload limit).
+
+→ [Full source](./app/agent/main.ts)
+
+## How It Works
+
+```
+┌──────────────┐  bearer token   ┌───────────────────┐       ┌──────────────────────┐
+│ React web app│────────────────▶│ AgentCore Runtime │──────▶│ Code Interpreter     │
+│ (Cognito     │◀── SSE stream ──│ (Strands agent)   │◀──────│ (sandbox mode)       │
+│  sign-in)    │                 └─────────┬─────────┘       └──────────────────────┘
+└──────┬───────┘                           │ charts and files
+       │      presigned URLs     ┌─────────▼─────────┐
+       └────────────────────────▶│ S3 bucket         │
+                                 │ (private)         │
+                                 └───────────────────┘
+```
+
+Uploaded files are written to `uploads/` in the sandbox. Whatever the agent saves to `outputs/` is copied to S3 and
+streamed back as a presigned URL. The web app shows the answer first, the code the agent ran (and its output) as a
+collapsed step, and charts and files below the answer.
+
+`agentcore/cdk/lib/cdk-stack.ts` adds the Cognito user pool, a Code Interpreter in `SANDBOX` network mode, and a
+private bucket the runtime can only put and read objects in. Sandbox mode blocks the public internet but can still
+reach Amazon S3, so content planted in a file has fewer ways to send your data out; the web app also renders links in
+answers as plain text. Because the pool is created in the same stack, the
+runtime's JWT authorizer is set there too:
+
+```typescript
+const cfnRuntime = runtime.resource.node.defaultChild as agentcore.CfnRuntime
+cfnRuntime.authorizerConfiguration = {
+  customJwtAuthorizer: {
+    discoveryUrl: `${userPool.userPoolProviderUrl}/.well-known/openid-configuration`,
+    allowedClients: [client.userPoolClientId],
+  },
+}
+```
+
+The web app signs in with the authorization code flow and PKCE, keeps tokens in memory only, and calls the runtime
+directly with the access token.
+
+## Run Locally
+
+```bash
+agentcore dev
+```
+
+The first run installs the agent's dependencies. In a second terminal, ask about the sample data:
+
+```bash
+PAYLOAD=$(jq -n --arg c "$(base64 < data/sample_sales_data.csv | tr -d '\n')" \
+  '{prompt: "Which region has the highest total sales?", files: [{name: "sample_sales_data.csv", content: $c}]}')
+agentcore invoke --runtime agent --local --payload "$PAYLOAD"
+```
+
+Or use the web app with the local agent, without sign-in:
+
+```bash
+cd frontend
+cp .env.example .env
+npm install
+npm run dev
+```
+
+Open http://localhost:3000. Locally the agent uses the AWS-managed Code Interpreter (also sandboxed) and, without a
+bucket, doesn't return files; see [Configuration](#configuration) to get charts locally.
 
 ## Deploy
 
 ```bash
-npm install
-npm run bootstrap   # First time only
-npm run deploy
+npm install --prefix app/agent
+npm install --prefix agentcore/cdk
+agentcore deploy
 ```
 
-Note the CDK outputs — you'll need them for the `.env` files.
+The user pool has no self sign-up. Create a user with a generated password:
 
-## Frontend Setup
+```bash
+STACK=AgentCore-DataAnalyzer-default
+output() { aws cloudformation describe-stacks --stack-name $STACK --query "Stacks[0].Outputs[?OutputKey=='$1'].OutputValue" --output text; }
+POOL_ID=$(output UserPoolId) CLIENT_ID=$(output ClientId)
+PASSWORD="$(openssl rand -base64 24)Aa1!"
+aws cognito-idp admin-create-user --user-pool-id $POOL_ID --username you@example.com --message-action SUPPRESS \
+  --user-attributes Name=email,Value=you@example.com Name=email_verified,Value=true > /dev/null
+aws cognito-idp admin-set-user-password --user-pool-id $POOL_ID --username you@example.com --password "$PASSWORD" --permanent
+echo "$PASSWORD"
+```
+
+Point the web app at the deployed agent and start it:
 
 ```bash
 cd frontend
+cat > .env <<EOF
+VITE_RUNTIME_URL=$(output RuntimeUrl)
+VITE_COGNITO_DOMAIN=$(output CognitoDomain)
+VITE_CLIENT_ID=$CLIENT_ID
+EOF
 npm install
-cp .env.example .env
-```
-
-Fill `frontend/.env` with CDK outputs:
-
-```
-VITE_COGNITO_DOMAIN=<CognitoDomain output>
-VITE_CLIENT_ID=<WebClientId output>
-VITE_AWS_REGION=<your region, e.g., us-east-1>
-VITE_RUNTIME_ARN=<RuntimeArn output>
-```
-
-Start the frontend:
-
-```bash
 npm run dev
 ```
 
-Open http://localhost:3000 and login with:
+Open http://localhost:3000, sign in, attach `data/sample_sales_data.csv` and ask for sales per region and category as a
+chart.
 
-- **Email:** user@example.com
-- **Password:** password
-
-To test, try uploading `data/sample_sales_data.csv` and ask the agent to show sales per region per category.
-
-## Request Format
-
-The agent accepts JSON requests with the following schema:
-
-```json
-{
-  "prompt": "Analyze this data and create a chart",
-  "files": [
-    {
-      "name": "data.csv",
-      "content": "<base64-encoded content>"
-    }
-  ]
-}
-```
-
-| Field    | Type   | Required | Description                                     |
-| -------- | ------ | -------- | ----------------------------------------------- |
-| `prompt` | string | Yes      | The analysis request or question                |
-| `files`  | array  | No       | Files to upload (name + base64-encoded content) |
-
-Files are written to the `artifacts/` directory in the sandbox and referenced in the prompt automatically.
-
-## Local Development
-
-For backend development without deploying:
+The runtime rejects calls without a valid access token:
 
 ```bash
-cp .env.example .env
+curl -s -w '\n%{http_code}\n' -X POST "$(output RuntimeUrl)" -H 'Content-Type: application/json' -d '{"prompt": "Hello"}'
 ```
 
-Fill `.env`:
+```
+{"jsonrpc":"2.0","error":{"code":-32001,"message":"Missing Authentication Token"}}
+401
+```
+
+## Configuration
+
+Cognito only redirects back to the web app's registered URL, `http://localhost:3000` by default. To serve the web app
+elsewhere, deploy with `FRONTEND_URL=https://your-host agentcore deploy`, and set `FRONTEND_PORT` in `frontend/.env`
+when you change the port.
+
+To get charts and files from the local agent, deploy first and point it at the deployed bucket and Code Interpreter in
+`agentcore/.env.local`, then restart `agentcore dev`:
 
 ```
-ARTIFACT_BUCKET=<BucketName output>
+ARTIFACT_BUCKET=<ArtifactBucketName output>
 CODE_INTERPRETER_ID=<CodeInterpreterId output>
 ```
 
-Run:
-
-```bash
-npm run dev
-```
-
-The frontend can switch between local (`localhost:8080`) and deployed endpoints using the dropdown.
-
 ## Clean Up
 
+The runtime, Code Interpreter and Bedrock are billed per use; see
+[AgentCore pricing](https://aws.amazon.com/bedrock/agentcore/pricing/) and
+[Bedrock pricing](https://aws.amazon.com/bedrock/pricing/). Removing the stack also deletes the user pool, its users
+and the bucket with its files:
+
 ```bash
-npm run destroy
+agentcore remove all --yes
+agentcore deploy --yes
 ```
 
-## Pricing
-
-This sample uses the following AWS services:
-
-| Service               | Pricing                                                                                                          |
-| --------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| **AgentCore Runtime** | vCPU-hour + GB-hour (billed per second) — [AgentCore Pricing](https://aws.amazon.com/bedrock/agentcore/pricing/) |
-| **Code Interpreter**  | vCPU-hour + GB-hour (billed per second) — [AgentCore Pricing](https://aws.amazon.com/bedrock/agentcore/pricing/) |
-| **Bedrock (Claude)**  | Per input/output token — [Bedrock Pricing](https://aws.amazon.com/bedrock/pricing/)                              |
-| **S3**                | Storage and requests — [S3 Pricing](https://aws.amazon.com/s3/pricing/)                                          |
-| **Cognito**           | Monthly active users — [Cognito Pricing](https://aws.amazon.com/cognito/pricing/)                                |
-
-AgentCore Runtime and Code Interpreter only incur costs when actively processing requests. For development and testing, expect costs below $1/day. Delete resources with `npm run destroy` when no longer needed.
+This deletes the deployed stack. Run `git checkout -- agentcore` to restore the configuration and deploy again.
