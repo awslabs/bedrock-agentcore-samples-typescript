@@ -1,0 +1,25 @@
+{
+  "name": "browser-strands",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "main.ts",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsc --noEmit",
+    "dev": "tsx watch main.ts"
+  },
+  "dependencies": {
+    "@strands-agents/sdk": "^1.25.0",
+    "bedrock-agentcore": "^0.4.7",
+    "playwright": "^1.65.1",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "tsx": "^4.23.15",
+    "typescript": "~6.0.3"
+  }
+}

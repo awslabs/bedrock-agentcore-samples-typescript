@@ -1,41 +1,54 @@
 # Browser
 
-Build AI agents that browse the web using AgentCore's Browser tool.
+Build agents that browse the web in a cloud browser with AgentCore Browser.
 
-## Capabilities
+→ See the [parent README](../README.md) for how the tools samples run.
 
-| Tool         | Description                          |
-| ------------ | ------------------------------------ |
-| `navigate`   | Go to a URL                          |
-| `click`      | Click an element by selector or text |
-| `type`       | Enter text into an input field       |
-| `getText`    | Read text content from the page      |
-| `screenshot` | Capture the current page             |
+## Samples
 
-**Session persistence:** Browser state (cookies, login, cart) persists within a session. Sessions timeout after inactivity.
+| Sample                    | What it shows                                                      |
+| ------------------------- | ------------------------------------------------------------------ |
+| [strands](./strands/)     | A Strands agent that browses real sites in a Browser session       |
+| [vercel-ai](./vercel-ai/) | A Vercel AI SDK agent that browses real sites in a Browser session |
 
-**Note:** These samples use [Playwright](https://playwright.dev/) as the client library to communicate with the remote AWS browser via CDP (Chrome DevTools Protocol).
+## How It Works
 
-## Quick Start
+```typescript
+import { BrowserTools } from 'bedrock-agentcore/experimental/browser/strands'
 
-```bash
-cd strands  # or vercel-ai
-npm install
-npm start                    # HTTP server on :8080
-npm run start:interactive    # Interactive shell
+const browser = new BrowserTools({ region })
+
+const agent = new Agent({
+  model: new BedrockModel({ modelId: 'global.anthropic.claude-haiku-5-5', region, maxTokens: 8192 }),
+  // ...a system prompt
+  tools: browser.tools,
+  // The tools share one browser session, so they run one at a time
+  toolExecutor: 'sequential',
+})
 ```
 
-## Example
+The Vercel AI SDK version is `BrowserTools` from `bedrock-agentcore/browser/vercel-ai`, used with
+`toolCallConcurrency: 1`.
 
-```bash
-curl -X POST http://localhost:8080/invocations \
-  -H "Content-Type: application/json" \
-  -H "Accept: text/event-stream" \
-  -H "x-amzn-bedrock-agentcore-runtime-session-id: test-123" \
-  -d '{"prompt": "Go to amazon.com and search for Echo Show devices. Open the product page of one, and save a screenshot."}'
-```
+`browser.tools` gives the agent seven tools:
 
-## Notes
+| Tool         | Description                                      |
+| ------------ | ------------------------------------------------ |
+| `navigate`   | Go to a URL                                      |
+| `click`      | Click an element by CSS selector                 |
+| `type`       | Enter text into an input field                   |
+| `getText`    | Read the text of the page or an element          |
+| `getHtml`    | Read the HTML of the page or an element          |
+| `screenshot` | Capture the page, optionally saving it to a file |
+| `evaluate`   | Run JavaScript in the page                       |
 
-- Sessions timeout after inactivity
-- Real sites may have anti-bot measures; results may vary
+The browser session starts on the first tool call and keeps its page, cookies and login state across tool calls. It
+isn't tied to the runtime session: left alone it runs until it times out (1 hour by default), so the samples call
+`browser.stopSession()` when each request finishes. The agent still remembers the conversation.
+
+The tools drive the remote browser with [Playwright](https://playwright.dev/) over the Chrome DevTools Protocol, so
+`playwright` is a dependency of both samples. Playwright can't be bundled into a single file, so the samples deploy as
+a container: the `Dockerfile` in `app/agent/` installs the dependencies and runs `main.ts` with Node.js. `agentcore dev`
+builds and runs the same image locally, with Docker, Podman or Finch.
+
+Real sites may block automated browsers, so results vary from site to site.

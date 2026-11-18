@@ -1,71 +1,133 @@
-# Code Interpreter - Strands SDK
+# Code Interpreter (Strands)
 
-A data analysis agent using the Strands Agents SDK with AgentCore Code Interpreter.
+A [Strands Agents](https://strandsagents.com/) agent on AgentCore Runtime that runs Python in an AgentCore Code
+Interpreter sandbox.
 
-See [parent README](../README.md) for network access configuration and artifact retrieval details.
+→ See the [parent README](../README.md) for what the sandbox provides.
 
-## Quick Start
+## Prerequisites
 
-```bash
-npm install
-npm start
-```
-
-## Test - Server Mode
+- Node.js 22+
+- AWS credentials with access to Amazon Bedrock and AgentCore
+- The [AgentCore CLI](https://github.com/aws/agentcore-cli):
 
 ```bash
-npm start  # Starts HTTP server on :8080
-
-# In another terminal:
-curl -X POST http://localhost:8080/invocations \
-  -H "Content-Type: application/json" \
-  -H "Accept: text/event-stream" \
-  -H "x-amzn-bedrock-agentcore-runtime-session-id: test-123" \
-  -d '{"prompt": "Calculate the first 20 prime numbers"}'
-
-# With artifact generation:
-curl -X POST http://localhost:8080/invocations \
-  -H "Content-Type: application/json" \
-  -H "Accept: text/event-stream" \
-  -H "x-amzn-bedrock-agentcore-runtime-session-id: test-123" \
-  -d '{"prompt": "Create a bar chart of fibonacci numbers 1-10 and save it"}'
-
-ls output/  # Check saved artifacts
+npm install -g @aws/agentcore
 ```
 
-## Test - Interactive Mode
+## Project Structure
 
-```bash
-npm run start:interactive
-
-> Calculate the first 10 fibonacci numbers
-[agent response...]
-
-> Create a bar chart of those numbers
---- Artifacts saved to ./output/: fib_chart.png ---
-
-> exit
+```
+strands/
+├── app/agent/          # The agent: main.ts, package.json
+└── agentcore/
+    ├── agentcore.json  # Runtime configuration read by the AgentCore CLI
+    └── cdk/            # CDK app the CLI deploys, with the Code Interpreter grant
 ```
 
-## How It Works
-
-This sample uses `BedrockAgentCoreApp` which creates an HTTP server following the AgentCore Runtime protocol. The same code runs locally for development and deploys to AWS without changes.
-
-For deployment, see [runtime examples](../../../runtime/).
-
-## Code Highlights
+## The Agent
 
 ```typescript
-import { Agent, BedrockModel } from '@strands-agents/sdk'
-import { CodeInterpreterTools } from 'bedrock-agentcore/experimental/code-interpreter/strands'
-
-const codeInterpreter = new CodeInterpreterTools({ region: 'us-east-1' })
+const codeInterpreter = new CodeInterpreterTools({ region })
 
 const agent = new Agent({
-  model: new BedrockModel({ modelId: 'global.anthropic.claude-haiku-4-5-20251001-v1:0' }),
+  model: new BedrockModel({ modelId: 'global.anthropic.claude-haiku-5-5', region, maxTokens: 8192 }),
+  systemPrompt:
+    'You are a data analyst. Run Python in the sandbox to answer questions. Each request gets a fresh sandbox.',
   tools: codeInterpreter.tools,
-  systemPrompt: '... save artifacts to output/ ...',
+  // The tools share one sandbox session, so they run one at a time
+  toolExecutor: 'sequential',
 })
 
-// Artifacts saved to sandbox output/ are automatically retrieved and saved locally
+// The agent and its sandbox serve one request at a time; an overlapping request must not stop the sandbox in use
+let busy = false
+
+const app = new BedrockAgentCoreApp({
+  invocationHandler: {
+    requestSchema: z.object({ prompt: z.string() }),
+    process: async function* (request) {
+      if (busy) {
+        yield { event: 'error', data: { error: 'The agent is still answering another request' } }
+        return
+      }
+      busy = true
+      try {
+        for await (const event of agent.stream(request.prompt)) {
+          if (event.type === 'beforeToolCallEvent') {
+            yield { event: 'tool', data: { name: event.toolUse.name, input: event.toolUse.input } }
+          }
+          // ...yield text deltas as message events
+        }
+      } finally {
+        // A sandbox ends 15 minutes after it starts, so each request uses its own and stops it when done
+        await codeInterpreter.stopSession()
+        busy = false
+      }
+    },
+  },
+})
 ```
+
+`codeInterpreter.tools` gives the agent `executeCode`, `executeCommand` and `fileOperations`. The sandbox starts on
+the first tool call, keeps its variables and files across that request's tool calls, and is stopped when the request
+finishes. The agent keeps the conversation. Each `tool` event shows the code the agent runs.
+
+→ [Full source](./app/agent/main.ts)
+
+## Run Locally
+
+```bash
+agentcore dev
+```
+
+The first run installs the agent's dependencies. In a second terminal:
+
+```bash
+agentcore invoke --runtime agent --local --session-id code-interpreter-session-00000000000000000001 \
+  --payload '{"prompt": "Use Python to compute the first 15 Fibonacci numbers and store them in a variable named fib"}'
+agentcore invoke --runtime agent --local --session-id code-interpreter-session-00000000000000000001 \
+  --payload '{"prompt": "Use Python to print the sum of fib and how many of its values are even"}'
+```
+
+The second request gets a new sandbox, so the agent recreates `fib` from the conversation before using it:
+
+```
+event: tool
+data: {"name":"executeCode","input":{"code":"try:
+    fib
+except NameError:
+    fib = [0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377]
+
+total = sum(fib)
+...","language":"python"}}
+
+event: message
+data: {"text":"The sum of `fib` is 986, and 5 of its values are even"}
+...
+```
+
+Prefer a chat UI? `agentcore dev --mode browser` opens the Agent Inspector.
+
+## Deploy
+
+```bash
+npm install --prefix app/agent
+npm install --prefix agentcore/cdk
+agentcore deploy
+agentcore invoke --runtime agent --session-id code-interpreter-session-00000000000000000001 \
+  --payload '{"prompt": "Use Python to compute the first 15 Fibonacci numbers and store them in a variable named fib"}'
+agentcore invoke --runtime agent --session-id code-interpreter-session-00000000000000000001 \
+  --payload '{"prompt": "Use Python to print the sum of fib and how many of its values are even"}'
+```
+
+`agentcore/cdk/lib/cdk-stack.ts` lets the runtime's role use the AWS-managed Code Interpreter. Each runtime session
+runs in its own microVM with its own agent and sandbox.
+
+## Clean Up
+
+```bash
+agentcore remove all --yes
+agentcore deploy --yes
+```
+
+This deletes the deployed stack. Run `git checkout -- agentcore` to restore the configuration and deploy again.
