@@ -1,0 +1,26 @@
+{
+  "name": "hosting-agent-vercel-ai",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "main.ts",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsc --noEmit",
+    "dev": "tsx watch main.ts"
+  },
+  "dependencies": {
+    "@ai-sdk/amazon-bedrock": "^5.0.142",
+    "@aws-sdk/credential-providers": "^3.1169.0",
+    "ai": "^7.0.173",
+    "bedrock-agentcore": "^0.4.7",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "tsx": "^4.23.15",
+    "typescript": "~6.0.3"
+  }
+}

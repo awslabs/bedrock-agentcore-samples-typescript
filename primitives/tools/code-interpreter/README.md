@@ -1,10 +1,37 @@
 # Code Interpreter
 
-Build AI agents that execute code in a secure sandbox using AgentCore's Code Interpreter.
+Build agents that run code in a secure sandbox with AgentCore Code Interpreter.
 
-## Sandbox Capabilities
+→ See the [parent README](../README.md) for how the tools samples run.
 
-The Code Interpreter provides three tools:
+## Samples
+
+| Sample                    | What it shows                                                        |
+| ------------------------- | -------------------------------------------------------------------- |
+| [strands](./strands/)     | A Strands agent that runs Python in a Code Interpreter sandbox       |
+| [vercel-ai](./vercel-ai/) | A Vercel AI SDK agent that runs Python in a Code Interpreter sandbox |
+
+## How It Works
+
+```typescript
+import { CodeInterpreterTools } from 'bedrock-agentcore/experimental/code-interpreter/strands'
+
+const codeInterpreter = new CodeInterpreterTools({ region })
+
+const agent = new Agent({
+  model: new BedrockModel({ modelId: 'global.anthropic.claude-haiku-5-5', region, maxTokens: 8192 }),
+  systemPrompt:
+    'You are a data analyst. Run Python in the sandbox to answer questions. Each request gets a fresh sandbox.',
+  tools: codeInterpreter.tools,
+  // The tools share one sandbox session, so they run one at a time
+  toolExecutor: 'sequential',
+})
+```
+
+The Vercel AI SDK version is `CodeInterpreterTools` from `bedrock-agentcore/code-interpreter/vercel-ai`, used with
+`toolCallConcurrency: 1`.
+
+`codeInterpreter.tools` gives the agent three tools:
 
 | Tool             | Description                           |
 | ---------------- | ------------------------------------- |
@@ -12,87 +39,35 @@ The Code Interpreter provides three tools:
 | `fileOperations` | Read, write, list, or remove files    |
 | `executeCommand` | Execute shell commands                |
 
-**Pre-installed libraries:** pandas, numpy, matplotlib, seaborn, scipy, scikit-learn
-
-**Session persistence:** Variables and files persist across tool invocations within a session. Sessions timeout after 15 minutes of inactivity (max 8 hours).
+The sandbox comes with pandas, numpy, matplotlib, seaborn, scipy and scikit-learn. Variables and files persist across
+the tool calls of a request. A sandbox ends 15 minutes after it starts, however active it is, so the samples give each
+request its own and stop it when the request finishes.
 
 ## Network Access
 
-Every AWS account has access to a default Code Interpreter (`aws.codeinterpreter.v1`). This default environment runs in **SANDBOX** mode with no internet access and no execution role attached, meaning no external network or S3 access.
+Every AWS account has a default Code Interpreter, `aws.codeinterpreter.v1`, which the samples use. It runs in
+`SANDBOX` mode: no internet access and no AWS access.
 
-If you need to download data from public URLs, access external APIs, or connect to internal resources, create a custom Code Interpreter with `PUBLIC` or `VPC` network mode:
+To control the network, create your own Code Interpreter in the stack, as the
+[data analyzer](../../../use-cases/data-analyzer/) does in `agentcore/cdk/lib/cdk-stack.ts`:
 
-```bash
-aws bedrock-agentcore create-code-interpreter \
-  --region <region> \
-  --name "my-code-interpreter" \
-  --description "Code Interpreter with public internet access" \
-  --network-configuration '{"networkMode": "PUBLIC"}' \
-  --execution-role-arn "arn:aws:iam::<account-id>:role/<execution-role>"
+```typescript
+const codeInterpreter = new agentcore.CodeInterpreterCustom(this, 'CodeInterpreter', {
+  networkConfiguration: agentcore.CodeInterpreterNetworkConfiguration.usingSandboxNetwork(),
+})
+codeInterpreter.grantUse(runtime)
+runtime.addEnvironmentVariable('CODE_INTERPRETER_ID', codeInterpreter.codeInterpreterId)
 ```
 
-**Network modes:**
-
-- `SANDBOX` – No internet access, no AWS resource access (default)
-- `PUBLIC` – Can access public internet URLs
-- `VPC` – Access resources within a specific VPC
-
-**Execution role:** Determines AWS access permissions, including which S3 buckets the agent can read from or write to.
-
-The response contains the `codeInterpreterId`:
-
-```json
-{
-  "codeInterpreterArn": "arn:aws:bedrock-agentcore:<region>:<account-id>:code-interpreter/<id>",
-  "codeInterpreterId": "<id>",
-  "createdAt": "2024-01-15T10:30:00Z",
-  "status": "ACTIVE"
-}
-```
-
-Pass this identifier when creating the tools:
+and passes its id to the tools in `app/agent/main.ts`:
 
 ```typescript
 const codeInterpreter = new CodeInterpreterTools({
-  region: '<region>',
-  identifier: '<id>', // Your codeInterpreterId
+  region,
+  ...(codeInterpreterId && { identifier: codeInterpreterId }),
 })
 ```
 
-## Quick Start
-
-```bash
-cd strands  # or vercel-ai
-npm install
-npm start                    # HTTP server on :8080
-npm run start:interactive    # Interactive shell
-```
-
-### Test
-
-```bash
-curl -X POST http://localhost:8080/invocations \
-  -H "Content-Type: application/json" \
-  -H "Accept: text/event-stream" \
-  -H "x-amzn-bedrock-agentcore-runtime-session-id: test-123" \
-  -d '{"prompt": "Calculate the first 20 prime numbers and create a bar chart"}'
-```
-
-## Artifact Retrieval
-
-These samples automatically retrieve artifacts after each request. The agent is instructed to save outputs to `output/` in the sandbox, and the sample code downloads them locally:
-
-```typescript
-// After agent completes, retrieve artifacts from sandbox
-const client = codeInterpreter.getClient()
-const listing = await client.executeCommand({ command: 'ls -1 output/' })
-
-for (const file of listing.split('\n').filter(Boolean)) {
-  const content = await client.readFiles({ paths: [`output/${file}`] })
-  // Binary files (images, PDFs) are returned as base64
-  const buffer = Buffer.from(JSON.parse(content).blob, 'base64')
-  fs.writeFileSync(`./output/${file}`, buffer)
-}
-```
-
-Generated files are saved to `./output/` in your local directory
+`usingSandboxNetwork()` keeps the sandbox offline; `usingPublicNetwork()` lets it reach public URLs.
+`agentcore deploy` creates the Code Interpreter with the agent, and `agentcore remove all` deletes it. To give the
+sandbox AWS permissions, such as S3 access, grant them to `codeInterpreter.executionRole`.

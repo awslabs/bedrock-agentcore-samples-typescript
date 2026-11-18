@@ -1,19 +1,18 @@
-import {
-  BedrockRuntimeClient,
-  ConverseCommand,
-  type Message,
-  type ContentBlock,
-  type ToolConfiguration,
-  type ToolResultContentBlock,
-} from '@aws-sdk/client-bedrock-runtime'
-import { PlaywrightBrowser } from 'bedrock-agentcore/browser/playwright'
-import type { BrowserClientConfig } from 'bedrock-agentcore/browser'
+import { setTimeout } from 'node:timers/promises'
+import { Agent, BedrockModel, type JSONValue, type ToolResultBlock } from '@strands-agents/sdk'
+import { BrowserTools } from 'bedrock-agentcore/experimental/browser/strands'
 import { config } from './config.js'
 
+export interface LogEntry {
+  time: string
+  text: string
+  tool?: string
+}
+
 export interface AgentState {
-  status: 'idle' | 'starting' | 'running' | 'completed' | 'error'
+  status: 'idle' | 'running' | 'completed' | 'error'
   liveViewUrl: string | null
-  logs: string[]
+  logs: LogEntry[]
   result: string | null
   error: string | null
 }
@@ -26,262 +25,137 @@ export const agentState: AgentState = {
   error: null,
 }
 
-let browser: PlaywrightBrowser | null = null
+const systemPrompt = `You are a browser automation agent. Do every task with the browser tools; never answer from memory.
+- Start with navigate.
+- Read pages with getText and no selector. Use selectors only on pages you have already read.
+- To search a site, type into its search box and click its button, or navigate straight to the results URL.
+- evaluate takes a JavaScript expression, such as document.title, not a function body.
+- As soon as you have what the task asks for, give a short answer in plain text.`
 
-function log(message: string): void {
-  const now = new Date()
-  const timestamp = now.toLocaleTimeString('en-US', {
-    hour12: false,
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  })
-  const entry = `${timestamp} ${message}`
-  agentState.logs.push(entry)
-  console.log(`[agent] ${entry}`)
-}
+const browserTools = new BrowserTools({ region: config.region, identifier: config.browserIdentifier })
+const browser = browserTools.getClient()
 
-const TOOL_CONFIG: ToolConfiguration = {
+const agent = new Agent({
+  model: new BedrockModel({ modelId: config.modelId, region: config.region, maxTokens: 8192 }),
+  systemPrompt,
+  // screenshot is left out: it can write files on this machine, and the live view already shows the page
   tools: [
-    {
-      toolSpec: {
-        name: 'navigate',
-        description: 'Navigate the browser to a URL.',
-        inputSchema: {
-          json: {
-            type: 'object',
-            properties: { url: { type: 'string', description: 'URL to navigate to' } },
-            required: ['url'],
-          },
-        },
-      },
-    },
-    {
-      toolSpec: {
-        name: 'click',
-        description: 'Click an element by CSS selector.',
-        inputSchema: {
-          json: {
-            type: 'object',
-            properties: { selector: { type: 'string', description: 'CSS selector' } },
-            required: ['selector'],
-          },
-        },
-      },
-    },
-    {
-      toolSpec: {
-        name: 'type',
-        description: 'Type text into an input element.',
-        inputSchema: {
-          json: {
-            type: 'object',
-            properties: {
-              selector: { type: 'string', description: 'CSS selector' },
-              text: { type: 'string', description: 'Text to type' },
-            },
-            required: ['selector', 'text'],
-          },
-        },
-      },
-    },
-    {
-      toolSpec: {
-        name: 'getText',
-        description: 'Get text content of the page or a specific element.',
-        inputSchema: {
-          json: {
-            type: 'object',
-            properties: { selector: { type: 'string', description: 'CSS selector (omit for full page)' } },
-            required: [],
-          },
-        },
-      },
-    },
-    {
-      toolSpec: {
-        name: 'getHtml',
-        description: 'Get HTML content of the page or a specific element.',
-        inputSchema: {
-          json: {
-            type: 'object',
-            properties: { selector: { type: 'string', description: 'CSS selector (omit for full page)' } },
-            required: [],
-          },
-        },
-      },
-    },
-    {
-      toolSpec: {
-        name: 'pressKey',
-        description: 'Press a keyboard key, e.g. "Enter", "Tab".',
-        inputSchema: {
-          json: { type: 'object', properties: { key: { type: 'string', description: 'Key name' } }, required: ['key'] },
-        },
-      },
-    },
+    browserTools.navigate,
+    browserTools.click,
+    browserTools.type,
+    browserTools.getText,
+    browserTools.getHtml,
+    browserTools.evaluate,
   ],
+  // The tools share one browser session, so they run one at a time
+  toolExecutor: 'sequential',
+})
+
+const stopWaitMs = 10_000
+
+let sessionStart: Promise<void> | null = null
+let agentRun: Promise<void> | null = null
+
+function log(text: string, tool?: string): void {
+  const time = new Date().toLocaleTimeString('en-GB')
+  agentState.logs.push(tool ? { time, text, tool } : { time, text })
 }
 
-async function executeTool(name: string, input: Record<string, unknown>): Promise<string> {
-  if (!browser) throw new Error('No browser session')
-  try {
-    switch (name) {
-      case 'navigate':
-        await browser.navigate({ url: input.url as string })
-        return `Navigated to ${input.url}`
-      case 'click':
-        await browser.click({ selector: input.selector as string })
-        return `Clicked: ${input.selector}`
-      case 'type':
-        await browser.type({ selector: input.selector as string, text: input.text as string })
-        return `Typed "${input.text}" into ${input.selector}`
-      case 'getText': {
-        const text = await browser.getText(input.selector ? { selector: input.selector as string } : {})
-        return text.length > 4000 ? text.slice(0, 4000) + '\n... [truncated]' : text
-      }
-      case 'getHtml': {
-        const html = await browser.getHtml(input.selector ? { selector: input.selector as string } : {})
-        return html.length > 4000 ? html.slice(0, 4000) + '\n... [truncated]' : html
-      }
-      case 'pressKey':
-        await browser.pressKey(input.key as string)
-        return `Pressed: ${input.key}`
-      default:
-        return `Unknown tool: ${name}`
-    }
-  } catch (err) {
-    return `Error: ${err instanceof Error ? err.message : 'Tool execution failed'}`
-  }
+function describeToolInput(input: JSONValue): string {
+  if (typeof input !== 'object' || input === null) return ''
+  const values = Object.values(input).map((value) => (typeof value === 'string' ? value : JSON.stringify(value)))
+  return values.length > 0 ? values.join(' · ').slice(0, 200) : 'whole page'
 }
 
-export async function startSession(): Promise<string> {
-  agentState.status = 'starting'
+// The SDK's browser tools return { success: false, error } when a browser action fails
+function toolError({ status, content: [output] }: ToolResultBlock): string | null {
+  if (status === 'error') return output?.type === 'textBlock' ? output.text : 'Unknown error'
+  if (output?.type !== 'jsonBlock') return null
+  const { success, error } = output.json as { success?: boolean; error?: string }
+  return success === false ? (error ?? 'Unknown error') : null
+}
+
+async function openSession(): Promise<void> {
+  // A new browser session starts a new conversation, so the agent doesn't recall pages from the last one
+  agent.messages = []
   agentState.logs = []
   agentState.result = null
   agentState.error = null
-
-  log('Creating browser session...')
-
-  const clientConfig: BrowserClientConfig = {
-    region: config.region,
-    identifier: config.browser.identifier,
-    credentialsProvider: async () => config.credentials,
+  log('Starting the browser session')
+  try {
+    await browser.startSession({ sessionName: 'live-view-agent', viewport: config.viewport })
+  } catch (error) {
+    sessionStart = null
+    throw error
   }
+  log('Browser session started')
+}
 
-  browser = new PlaywrightBrowser(clientConfig)
-  await browser.startSession({
-    sessionName: 'liveview-demo',
-    timeout: config.browser.sessionTimeout,
-    viewport: config.browser.viewport,
-  })
-  log(`Session started: ${config.browser.identifier}`)
+export async function startSession(): Promise<string> {
+  // Concurrent callers share one start, so a second request can't leave an orphaned session
+  sessionStart ??= openSession()
+  await sessionStart
+  // Live view URLs expire after 5 minutes, so every call signs a fresh one
+  agentState.liveViewUrl = await browser.generateLiveViewUrl()
+  return agentState.liveViewUrl
+}
 
-  const liveViewUrl = await browser.generateLiveViewUrl()
-  agentState.liveViewUrl = liveViewUrl
-  log('Live view URL generated')
+export function hasSession(): boolean {
+  return sessionStart !== null
+}
 
-  agentState.status = 'idle'
-  return liveViewUrl
+async function runAgent(prompt: string): Promise<void> {
+  agentState.status = 'running'
+  agentState.result = null
+  agentState.error = null
+  log(`Task: ${prompt}`)
+
+  try {
+    for await (const event of agent.stream(prompt)) {
+      if (event.type === 'beforeToolCallEvent') {
+        log(describeToolInput(event.toolUse.input), event.toolUse.name)
+      } else if (event.type === 'afterToolCallEvent') {
+        const error = toolError(event.result)
+        if (error) log(`${event.toolUse.name} failed: ${error.split('\n')[0]}`)
+      } else if (event.type === 'modelMessageEvent' && event.stopReason === 'toolUse') {
+        for (const block of event.message.content) {
+          if (block.type === 'textBlock') log(block.text)
+        }
+      } else if (event.type === 'agentResultEvent') {
+        if (event.result.stopReason === 'cancelled') {
+          agentState.status = 'idle'
+          log('Stopped')
+          return
+        }
+        agentState.result = event.result.toString()
+        agentState.status = 'completed'
+      }
+    }
+  } catch (error) {
+    agentState.error = error instanceof Error ? error.message : String(error)
+    agentState.status = 'error'
+    log(`Error: ${agentState.error}`)
+  }
+}
+
+export function startAgent(prompt: string): void {
+  agentRun = runAgent(prompt)
 }
 
 export async function stopSession(): Promise<void> {
-  if (browser) {
-    log('Stopping session...')
-    await browser.stopSession()
-    browser = null
-    agentState.status = 'idle'
-    agentState.liveViewUrl = null
-    log('Session stopped')
-  }
-}
-
-const SYSTEM_PROMPT = `You are a browser automation agent. You MUST use the provided tools to browse websites. You CANNOT answer from memory.
-Workflow:
-1. Call navigate to go to the URL
-2. Call getText to read page content (no selector = full page text, which is usually best)
-3. Call type and click to interact with search boxes and links
-4. Call pressKey with "Enter" to submit forms
-5. Once you have read the page content with getText, IMMEDIATELY provide your final summary
-IMPORTANT:
-- Always start with navigate
-- Prefer getText with NO selector to get the full page text — do NOT try to target specific CSS selectors on unfamiliar pages
-- After you have read page content, summarize it RIGHT AWAY — do not keep clicking around for more sections
-- When you have enough information, respond with your final answer as plain text (no tool call)`
-
-export async function runAgent(prompt: string): Promise<void> {
-  if (!browser) throw new Error('No active session')
-
-  agentState.status = 'running'
-  log(`Agent starting with prompt: "${prompt.slice(0, 80)}..."`)
-
+  // A running agent finishes its current tool first, so no later tool call can start a new session.
+  // A tool that hangs mustn't hang the stop, so the wait is capped.
+  agent.cancel()
+  await Promise.race([agentRun, setTimeout(stopWaitMs)])
   try {
-    const bedrockClient = new BedrockRuntimeClient({
-      region: config.region,
-      credentials: config.credentials,
-    })
-
-    const messages: Message[] = [{ role: 'user', content: [{ text: prompt }] }]
-    let step = 0
-
-    while (step < 40) {
-      step++
-      log(`Step ${step}/40`)
-
-      const response = await bedrockClient.send(
-        new ConverseCommand({
-          modelId: config.modelId,
-          system: [{ text: SYSTEM_PROMPT }],
-          messages,
-          toolConfig: TOOL_CONFIG,
-        })
-      )
-
-      const outputContent = response.output?.message?.content || []
-      messages.push({ role: 'assistant', content: outputContent })
-
-      if (response.stopReason === 'tool_use') {
-        const toolResultBlocks: ContentBlock[] = []
-
-        for (const block of outputContent) {
-          if (block.toolUse) {
-            const name = block.toolUse.name!
-            const input = (block.toolUse.input as Record<string, unknown>) || {}
-            log(`Tool: ${name}(${JSON.stringify(input).slice(0, 120)})`)
-
-            const result = await executeTool(name, input)
-            log(`Result: ${result.slice(0, 100)}${result.length > 100 ? '...' : ''}`)
-
-            toolResultBlocks.push({
-              toolResult: {
-                toolUseId: block.toolUse.toolUseId!,
-                content: [{ text: result } as ToolResultContentBlock],
-              },
-            })
-          }
-        }
-
-        messages.push({ role: 'user', content: toolResultBlocks })
-      } else {
-        const finalText = outputContent
-          .filter((b) => b.text)
-          .map((b) => b.text)
-          .join('\n')
-        agentState.result = finalText || 'Agent completed.'
-        agentState.status = 'completed'
-        log('Agent completed successfully')
-        return
-      }
-    }
-
-    agentState.result = 'Reached maximum steps.'
-    agentState.status = 'completed'
-    log('Max steps reached')
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error'
-    agentState.error = message
-    agentState.status = 'error'
-    log(`Agent error: ${message}`)
-    console.error('Full error:', err)
+    await sessionStart
+  } catch {
+    return
   }
+  if (!sessionStart) return
+  // Clear the state only once the session has stopped, so a failed stop can be retried
+  await browser.stopSession()
+  sessionStart = null
+  agentState.liveViewUrl = null
+  log('Browser session stopped')
 }

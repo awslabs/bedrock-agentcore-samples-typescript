@@ -1,135 +1,97 @@
 # Hosting an Agent (Strands)
 
-Deploy a Strands agent to Amazon Bedrock AgentCore Runtime.
+Deploy a [Strands Agents](https://strandsagents.com/) agent with a calculator tool to Amazon Bedrock AgentCore Runtime.
 
-→ See [parent README](../README.md) for full context on hosting agents.
+→ See the [parent README](../README.md) for how hosting works.
 
 ## Prerequisites
 
-- Node.js 20+
-- AWS credentials configured
-- [AgentCore Starter Toolkit](https://github.com/aws/bedrock-agentcore-starter-toolkit):
+- Node.js 22+
+- AWS credentials with access to Amazon Bedrock and AgentCore
+- The [AgentCore CLI](https://github.com/aws/agentcore-cli):
 
 ```bash
-pip install bedrock-agentcore-starter-toolkit
+npm install -g @aws/agentcore
 ```
 
-## Implementation
+## Project Structure
+
+```
+strands/
+├── app/agent/          # The agent: main.ts, package.json
+└── agentcore/
+    ├── agentcore.json  # Runtime configuration read by the AgentCore CLI
+    └── cdk/            # CDK app the CLI deploys
+```
+
+## The Agent
 
 ```typescript
-import { Agent, BedrockModel, tool } from '@strands-agents/sdk'
-import { BedrockAgentCoreApp } from 'bedrock-agentcore/runtime'
-import { z } from 'zod'
-
-const requestSchema = z.object({ prompt: z.string() })
-
-const calculator = tool({
-  name: 'calculator',
-  description: 'Performs basic arithmetic',
-  inputSchema: z.object({
-    operation: z.enum(['add', 'subtract', 'multiply', 'divide']),
-    a: z.number(),
-    b: z.number(),
-  }),
-  callback: ({ operation, a, b }) => {
-    switch (operation) {
-      case 'add':
-        return a + b
-      case 'subtract':
-        return a - b
-      case 'multiply':
-        return a * b
-      case 'divide':
-        return a / b
-    }
-  },
-})
-
 const agent = new Agent({
   model: new BedrockModel({
-    modelId: 'global.amazon.nova-2-lite-v1:0',
+    modelId: 'global.anthropic.claude-haiku-5-5',
     region: process.env['AWS_REGION'] ?? 'us-east-1',
+    maxTokens: 8192,
   }),
   tools: [calculator],
 })
 
 const app = new BedrockAgentCoreApp({
   invocationHandler: {
-    requestSchema,
-    process: async function* (request, _context) {
+    requestSchema: z.object({ prompt: z.string() }),
+    process: async function* (request) {
       for await (const event of agent.stream(request.prompt)) {
-        if (event.type === 'modelContentBlockDeltaEvent' && event.delta?.type === 'textDelta') {
-          yield { event: 'message', data: { text: event.delta.text } }
+        if (
+          event.type === 'modelStreamUpdateEvent' &&
+          event.event.type === 'modelContentBlockDeltaEvent' &&
+          event.event.delta.type === 'textDelta'
+        ) {
+          yield { event: 'message', data: { text: event.event.delta.text } }
         }
       }
     },
   },
 })
 
-app.run()
+app.run({ port: parseInt(process.env['PORT'] ?? '8080') })
 ```
 
-The Zod request schema validates entrypoint input. Keep prompts typed as strings and pass only prompt text to
-Strands.
+`requestSchema` validates each invocation before it reaches the agent. Each `yield` streams a server-sent event to the
+caller.
 
-→ [Full source](./agent.ts)
+→ [Full source](./app/agent/main.ts)
 
-## Quick Start
-
-Install dependencies:
-
-```bash
-npm install
-```
-
-Configure the agent (specify `agent.ts` as the entrypoint):
-
-```bash
-agentcore configure
-```
-
-Accept defaults for all prompts, except for memory—enter `s` to skip memory creation.
-
-## Local Development
-
-Start the local dev server:
+## Run Locally
 
 ```bash
 agentcore dev
 ```
 
-Test with the CLI:
+The first run installs the agent's dependencies. In a second terminal:
 
 ```bash
-agentcore invoke --dev '{"prompt": "What is 25 * 4?"}'
+agentcore invoke --runtime agent --local --payload '{"prompt": "What is 25 * 4?"}'
 ```
 
-Or with curl:
+Prefer a chat UI? `agentcore dev --mode browser` opens the Agent Inspector.
+
+## Deploy
 
 ```bash
-curl -X POST http://localhost:8080/invocations \
-  -H "Content-Type: application/json" \
-  -H "Accept: text/event-stream" \
-  -H "x-amzn-bedrock-agentcore-runtime-session-id: test-123" \
-  -d '{"prompt": "What is 25 * 4?"}'
-```
-
-## Deploy to AWS
-
-```bash
+npm install --prefix app/agent
+npm install --prefix agentcore/cdk
 agentcore deploy
+agentcore invoke --runtime agent --payload '{"prompt": "What is 25 * 4?"}'
 ```
 
-## Test Deployed Agent
-
-```bash
-agentcore invoke '{"prompt": "What is 25 * 4?"}'
-```
-
-After deployment, your agent can also be invoked via AWS SDKs, APIs, or HTTP requests.
+`agentcore deploy` bundles `app/agent/main.ts`, uploads it, and creates the runtime with permission to call Bedrock
+models.
 
 ## Clean Up
 
 ```bash
-agentcore destroy
+agentcore remove all --yes
+agentcore deploy --yes
 ```
+
+This deletes the deployed stack. Run `git checkout -- agentcore` to restore the configuration and deploy again.
