@@ -1,189 +1,115 @@
-# Amazon Bedrock AgentCore Browser — Live View Agent Demo
+# Browser Live View Agent
 
-Watch an AI agent browse the web in real time. This sample app embeds a live stream of an [Amazon Bedrock AgentCore](https://aws.amazon.com/bedrock/agentcore/) cloud browser session into a React application using the [`BrowserLiveView`](https://github.com/aws/bedrock-agentcore-sdk-typescript/tree/main/src/tools/browser/live-view) component from the [Bedrock AgentCore TypeScript SDK](https://github.com/aws/bedrock-agentcore-sdk-typescript).
+A local web app where you watch an AI agent browse the web in an AgentCore Browser session, live.
 
-An AI agent drives the browser autonomously — navigating pages, clicking elements, typing into forms, and reading content — while you watch every action through the embedded live view.
-
-<!-- [Screenshot: demo app showing live view of Wikipedia with activity log and prompt input] -->
-
-## How It Works
-
-The app has three layers:
-
-1. **React frontend** — renders `<BrowserLiveView>` to stream the cloud browser session via the NICE DCV protocol, displays a real-time activity log, and accepts user prompts.
-2. **Node.js server** — starts the browser session, generates a SigV4-presigned live view URL, and runs the AI agent loop using the [Bedrock Converse API](https://docs.aws.amazon.com/bedrock/latest/APIReference/API_runtime_Converse.html) with browser tools.
-3. **AWS services** — AgentCore Browser provides the isolated cloud browser instance; Amazon Bedrock provides the AI model with tool-use support.
-
-```
-┌─────────────────────────────────────────────┐
-│  React App (localhost:5173)                  │
-│                                              │
-│  ┌────────────────────────────────────────┐  │
-│  │  <BrowserLiveView>                     │  │
-│  │  Real-time DCV stream of agent's       │  │◄── DCV WebSocket
-│  │  browser (3 lines of JSX)              │  │    (direct from AgentCore)
-│  └────────────────────────────────────────┘  │
-│                                              │
-│  [Prompt input] [Launch Agent]               │
-│  [Activity Log] [Agent Result]               │
-└──────────────────┬───────────────────────────┘
-                   │ REST API
-                   ▼
-┌─────────────────────────────────────────────┐
-│  Server (localhost:3001)                     │
-│                                              │
-│  PlaywrightBrowser ──► AgentCore Browser     │
-│  Bedrock Converse API ──► AI Model           │
-│  Agent loop: model → tool call → execute     │
-└─────────────────────────────────────────────┘
-```
-
-The DCV live view stream flows **directly** from AgentCore to the browser via the presigned URL — it does not pass through your server.
+→ See the [parent README](../README.md) for the other use cases.
 
 ## Prerequisites
 
-- **Node.js 20+**
-- **AWS account** with Amazon Bedrock AgentCore access
-- **AWS credentials** with permissions for `bedrock-agentcore` and `bedrock` services
-- **Bedrock model access** — any model that supports tool use (Claude, Amazon Nova, etc.)
-
-## Quick Start
-
-1. **Clone and install:**
-
-   ```bash
-   git clone https://github.com/awslabs/agentcore-browser-liveview-demo.git
-   cd agentcore-browser-liveview-demo
-   npm install
-   ```
-
-2. **Export your AWS credentials:**
-
-   ```bash
-   export AWS_ACCESS_KEY_ID=<your-access-key>
-   export AWS_SECRET_ACCESS_KEY=<your-secret-key>
-   export AWS_SESSION_TOKEN=<your-session-token>
-   export AWS_REGION=us-west-2
-   ```
-
-   Use temporary credentials from AWS SSO, STS, or IAM Identity Center. Never commit long-lived credentials.
-
-3. **Start the app:**
-
-   ```bash
-   npm run dev
-   ```
-
-4. **Open** `http://localhost:5173`, enter a prompt, and click **Launch Agent**.
-
-The live view panel streams the agent's browser session while the activity log shows each tool call in real time.
-
-## Configuration
-
-The server reads all configuration from environment variables:
-
-| Variable                | Default                                   | Description                             |
-| ----------------------- | ----------------------------------------- | --------------------------------------- |
-| `AWS_ACCESS_KEY_ID`     | (required)                                | AWS access key                          |
-| `AWS_SECRET_ACCESS_KEY` | (required)                                | AWS secret key                          |
-| `AWS_SESSION_TOKEN`     | (optional)                                | Session token for temporary credentials |
-| `AWS_REGION`            | `us-west-2`                               | AWS region                              |
-| `BEDROCK_MODEL_ID`      | `anthropic.claude-sonnet-4-20250514-v1:0` | Bedrock model for the agent             |
-| `BROWSER_IDENTIFIER`    | `aws.browser.v1`                          | AgentCore browser identifier            |
-
-To use a different model:
-
-```bash
-export BEDROCK_MODEL_ID=amazon.nova-pro-v1:0
-```
+- Node.js 22+
+- AWS credentials with access to Amazon Bedrock and AgentCore
 
 ## Project Structure
 
 ```
+browser-live-view-agent/
 ├── server/
-│   ├── config.ts         # Reads env vars, validates credentials
-│   ├── agent.ts          # Bedrock Converse API agent loop + PlaywrightBrowser
-│   └── index.ts          # Fastify API server (start, run-agent, status, stop)
+│   ├── agent.ts       # The Strands agent, the browser session and the activity log
+│   ├── index.ts       # Local API: start, run-agent, status, stop
+│   └── config.ts      # Region, model, viewport and ports
 ├── src/
-│   ├── App.tsx           # React dashboard with live view, logs, prompt input
-│   ├── main.tsx          # React entry point
-│   └── constants.ts      # Frontend config (API URL, viewport dimensions)
-├── index.html            # HTML entry
-├── vite.config.ts        # DCV SDK aliases, static copy, dedupe
-├── tsconfig.json
-└── package.json
+│   ├── App.tsx        # Live view, prompt, activity log and answer
+│   └── main.tsx
+├── index.html
+└── vite.config.ts     # Live view assets and the /api proxy
 ```
 
-## Key Code Snippets
+## The Agent
 
-**Embedding the live view (client side):**
+```typescript
+const browserTools = new BrowserTools({ region: config.region, identifier: config.browserIdentifier })
+const browser = browserTools.getClient()
+
+const agent = new Agent({
+  model: new BedrockModel({ modelId: config.modelId, region: config.region, maxTokens: 8192 }),
+  systemPrompt,
+  // screenshot is left out: it can write files on this machine, and the live view already shows the page
+  tools: [
+    browserTools.navigate,
+    browserTools.click,
+    browserTools.type,
+    browserTools.getText,
+    browserTools.getHtml,
+    browserTools.evaluate,
+  ],
+  // The tools share one browser session, so they run one at a time
+  toolExecutor: 'sequential',
+})
+
+await browser.startSession({ sessionName: 'live-view-agent', viewport: config.viewport })
+agentState.liveViewUrl = await browser.generateLiveViewUrl()
+
+for await (const event of agent.stream(prompt)) {
+  if (event.type === 'beforeToolCallEvent') {
+    log(describeToolInput(event.toolUse.input), event.toolUse.name)
+  }
+  // ...log failed tool calls and record the answer
+}
+```
+
+The agent uses the SDK's Strands browser tools, which all drive one browser session. The server starts that session
+itself to get a live view URL, and turns the agent's events into the activity log.
+
+→ [Full source](./server/agent.ts)
+
+The client shows the session with the SDK's `BrowserLiveView` React component:
 
 ```tsx
-import { BrowserLiveView } from 'bedrock-agentcore/browser/live-view'
-;<BrowserLiveView signedUrl={presignedUrl} remoteWidth={1920} remoteHeight={1080} />
+<BrowserLiveView signedUrl={liveViewUrl} remoteWidth={viewport.width} remoteHeight={viewport.height} />
 ```
 
-**Generating the presigned URL (server side):**
+→ [Full source](./src/App.tsx)
 
-```typescript
-import { PlaywrightBrowser } from 'bedrock-agentcore/browser/playwright'
+## How It Works
 
-const browser = new PlaywrightBrowser({ region: 'us-west-2' })
-await browser.startSession({ viewport: { width: 1920, height: 1080 } })
-
-const liveViewUrl = await browser.generateLiveViewUrl()
+```
+Your browser ──► Vite (localhost:5173) ──/api──► Agent server (127.0.0.1:3001)
+     ▲                                              │  Strands agent ──► Amazon Bedrock
+     │                                              │  BrowserTools  ──► AgentCore Browser
+     └──────── live view stream, straight from AgentCore ──────────────┘
 ```
 
-**Agent loop (server side):**
+The live view URL is presigned and valid for 5 minutes. The stream goes straight from AgentCore to your browser over
+Amazon DCV; it doesn't pass through the server. `BrowserLiveView` loads the DCV client that ships inside
+`bedrock-agentcore`, so `vite.config.ts` points the `dcv` and `dcv-ui` imports at it, dedupes React and Cloudscape (its
+UI), and serves its workers at `/nice-dcv-web-client-sdk`.
 
-The agent uses the Bedrock Converse API with tool definitions for browser actions. The model calls tools, the server executes them via PlaywrightBrowser, and feeds results back until the model returns a final text response.
+The server acts with your AWS credentials, so it listens on `127.0.0.1` only and refuses requests from any origin other
+than the Vite client, or with a Host header other than `localhost` or `127.0.0.1`. Your browser talks only to Vite,
+which answers only to `localhost` too and passes `/api` on to the server with the browser's Host header, so a site
+that points its own domain at your machine (DNS rebinding) is refused by both.
 
-## Vite Configuration
+## Run Locally
 
-The `BrowserLiveView` component uses the NICE DCV Web Client SDK, which ships vendored inside `bedrock-agentcore`. Your Vite config needs:
-
-- **`resolve.alias`** — points `dcv` and `dcv-ui` to the vendored SDK files
-- **`resolve.dedupe`** — forces shared deps (React, Cloudscape, etc.) to resolve from your `node_modules`
-- **`viteStaticCopy`** — copies DCV runtime files (workers, WASM decoders) to the build output
-
-See [`vite.config.ts`](./vite.config.ts) for the complete configuration.
-
-## Using with Agent Frameworks
-
-This sample uses the Bedrock Converse API directly, but the AgentCore TypeScript SDK also provides framework-native integrations:
-
-**Vercel AI SDK:**
-
-```typescript
-import { BrowserTools } from 'bedrock-agentcore/browser/vercel-ai'
-const browser = new BrowserTools({ region: 'us-west-2' })
-await generateText({ model: bedrock(modelId), tools: browser.tools, prompt: '...' })
+```bash
+npm install
+npm run dev
 ```
 
-**Strands Agents SDK (experimental):**
+Open http://localhost:5173, enter a task such as `Go to example.com and tell me the page title`, and click **Launch
+Agent**. The live view shows the agent's browser, and the activity log lists each tool call.
 
-```typescript
-import { BrowserTools } from 'bedrock-agentcore/browser/strands'
-const browser = new BrowserTools({ region: 'us-west-2' })
-const agent = new Agent({ model: new BedrockModel({ modelId }), tools: browser.tools })
-```
+Click **Stop Session** when you're done. Stopping the server (Ctrl+C) also stops the browser session, so it doesn't
+keep running until its one-hour timeout.
 
-Both use the same underlying `PlaywrightBrowser`, so the live view works identically.
+## Configuration
 
-## Related Resources
+| Variable             | Default                             | Description                                  |
+| -------------------- | ----------------------------------- | -------------------------------------------- |
+| `AWS_REGION`         | `us-east-1`                         | Region for AgentCore Browser and Bedrock     |
+| `BEDROCK_MODEL_ID`   | `global.anthropic.claude-haiku-5-5` | Any Bedrock model that supports tool use     |
+| `BROWSER_IDENTIFIER` | `aws.browser.v1`                    | AgentCore browser (or your custom browser)   |
+| `PORT`               | `3001`                              | Agent server port (Vite proxies `/api` here) |
+| `CLIENT_PORT`        | `5173`                              | Vite port; the only origin the server allows |
 
-- [Bedrock AgentCore TypeScript SDK](https://github.com/aws/bedrock-agentcore-sdk-typescript)
-- [BrowserLiveView source code](https://github.com/aws/bedrock-agentcore-sdk-typescript/tree/main/src/tools/browser/live-view)
-- [AgentCore Browser documentation](https://docs.aws.amazon.com/bedrock/latest/userguide/agentcore-browser.html)
-- [Blog: Customize AI agent browsing with proxies, profiles, and extensions](https://aws.amazon.com/blogs/machine-learning/customize-ai-agent-browsing-with-proxies-profiles-and-extensions-in-amazon-bedrock-agentcore-browser/)
-- [Blog: Reduce CAPTCHAs with Web Bot Auth (Preview)](https://aws.amazon.com/blogs/machine-learning/reduce-captchas-for-ai-agents-browsing-the-web-with-web-bot-auth-preview/)
-- [AgentCore samples (Python)](https://github.com/awslabs/amazon-bedrock-agentcore-samples)
-- [Amazon Bedrock AgentCore pricing](https://aws.amazon.com/bedrock/agentcore/pricing/)
-
-## Security
-
-See [CONTRIBUTING](CONTRIBUTING.md#security-issue-notifications) for more information.
-
-## License
-
-This project is licensed under the MIT-0 License. See the [LICENSE](LICENSE) file.
+For example, to run on other ports: `PORT=3101 CLIENT_PORT=5174 npm run dev`.
