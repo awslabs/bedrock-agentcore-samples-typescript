@@ -2,23 +2,15 @@ import { Agent, BedrockModel, tool } from '@strands-agents/sdk'
 import { BedrockAgentCoreApp } from 'bedrock-agentcore/runtime'
 import { z } from 'zod'
 
-// Request schema
-const requestSchema = z.object({
-  prompt: z.string(),
-})
-
-const calculatorSchema = z.object({
-  operation: z.enum(['add', 'subtract', 'multiply', 'divide']),
-  a: z.number(),
-  b: z.number(),
-})
-
 const calculator = tool({
   name: 'calculator',
   description: 'Performs basic arithmetic',
-  inputSchema: calculatorSchema,
-  callback: (input: z.infer<typeof calculatorSchema>): number => {
-    const { operation, a, b } = input
+  inputSchema: z.object({
+    operation: z.enum(['add', 'subtract', 'multiply', 'divide']),
+    a: z.number(),
+    b: z.number(),
+  }),
+  callback: ({ operation, a, b }): number => {
     switch (operation) {
       case 'add':
         return a + b
@@ -28,31 +20,34 @@ const calculator = tool({
         return a * b
       case 'divide':
         return a / b
-      default:
-        throw new Error(`Unknown operation: ${operation}`)
     }
   },
 })
 
 const agent = new Agent({
   model: new BedrockModel({
-    modelId: 'global.amazon.nova-2-lite-v1:0',
+    modelId: 'global.anthropic.claude-haiku-5-5',
     region: process.env['AWS_REGION'] ?? 'us-east-1',
+    maxTokens: 8192,
   }),
   tools: [calculator],
 })
 
 const app = new BedrockAgentCoreApp({
   invocationHandler: {
-    requestSchema,
-    process: async function* (request, _context) {
+    requestSchema: z.object({ prompt: z.string() }),
+    process: async function* (request) {
       for await (const event of agent.stream(request.prompt)) {
-        if (event.type === 'modelContentBlockDeltaEvent' && event.delta?.type === 'textDelta') {
-          yield { event: 'message', data: { text: event.delta.text } }
+        if (
+          event.type === 'modelStreamUpdateEvent' &&
+          event.event.type === 'modelContentBlockDeltaEvent' &&
+          event.event.delta.type === 'textDelta'
+        ) {
+          yield { event: 'message', data: { text: event.event.delta.text } }
         }
       }
     },
   },
 })
 
-app.run()
+app.run({ port: parseInt(process.env['PORT'] ?? '8080') })
