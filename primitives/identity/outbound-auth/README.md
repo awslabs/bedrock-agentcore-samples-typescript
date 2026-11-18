@@ -1,105 +1,56 @@
 # Outbound Authentication
 
-Your agent accessing external services on behalf of users.
+Let your agent call external services, such as Google Calendar, with credentials it never stores itself.
 
-## Overview
-
-Agents become useful when they can take actions — read calendars, send emails, query databases. These services require authentication, and managing OAuth tokens per-user is complex: handling consent flows, secure storage, token refresh, and revocation.
-
-AgentCore Identity handles this through the Token Vault. You wrap your API calls with `withAccessToken`, and the SDK manages everything else:
-
-```
-User: "What's on my calendar today?"
-        │
-        ▼
-┌─────────────────────────────────────────────────────┐
-│                    Your Agent                       │
-│                                                     │
-│   withAccessToken({                                 │
-│     providerName: 'google-cal',                     │
-│     scopes: ['calendar.readonly'],                  │
-│   })(async (token) => {                             │
-│     // token injected automatically                 │
-│     fetch('googleapis.com/calendar', {              │
-│       headers: { Authorization: `Bearer ${token}` } │
-│     })                                              │
-│   })                                                │
-│                                                     │
-└─────────────────────────────────────────────────────┘
-        │
-        ▼
-┌─────────────────────────────────────────────────────┐
-│              AgentCore Token Vault                  │
-│                                                     │
-│   • First request → triggers OAuth flow             │
-│   • Tokens stored per-user, encrypted               │
-│   • Automatic refresh when expired                  │
-│   • No credentials in your code                     │
-│                                                     │
-└─────────────────────────────────────────────────────┘
-```
-
-## Auth Flow Types
-
-### Three-Legged OAuth (3LO) — User Delegation
-
-The agent acts **on behalf of a specific user**. The user grants permission via OAuth consent.
-
-**Use cases:**
-
-- Access a user's Google Calendar
-- Send emails from a user's account
-- Read a user's Slack messages
-
-**How it works:**
-
-1. Agent requests access → user sees OAuth consent screen
-2. User grants permission → token stored in Token Vault
-3. Future requests → token auto-injected, refreshed as needed
-
-### Two-Legged OAuth (2LO) — Service Accounts
-
-The agent acts **as itself**, not on behalf of a user. Uses service account credentials.
-
-**Use cases:**
-
-- Access company-wide resources
-- Backend-to-backend API calls
-- No user interaction required
-
-### API Keys
-
-Simple authentication for services that don't support OAuth. Use `withApiKey` to retrieve keys from the Token Vault:
+You give AgentCore Identity your OAuth client or API key once, as a credential provider. In the agent, you wrap the
+function that calls the service, and the SDK passes it a token from the Token Vault:
 
 ```typescript
-const callWeatherApi = withApiKey({
-  providerName: 'weather-api',
-})(async (city: string, apiKey: string) => {
-  return fetch(`https://api.weather.com/v1/${city}`, {
-    headers: { 'X-API-Key': apiKey },
-  })
-})
+import { withAccessToken } from 'bedrock-agentcore/identity'
+
+// `agentcore deploy` sets CREDENTIAL_GOOGLE_CAL_NAME to the provider created by `agentcore add credentials`.
+const providerName = process.env['CREDENTIAL_GOOGLE_CAL_NAME'] ?? 'google-cal'
+
+const events = withAccessToken({
+  providerName,
+  scopes: ['https://www.googleapis.com/auth/calendar.readonly'],
+  authFlow: 'USER_FEDERATION',
+  callbackUrl,
+  customParameters: { access_type: 'offline', prompt: 'consent' },
+  onAuthUrl: resolveAuthUrl,
+})(listUpcomingEvents)(maxResults)
 ```
 
-**Use cases:**
+This is the [Google Calendar sample](./google-cal/)'s tool: `listUpcomingEvents(maxResults, token)` calls the Calendar
+API, and `withAccessToken` supplies its last argument, `token`. Until the user has consented, `onAuthUrl` receives the
+URL to send them to.
 
-- Third-party APIs (weather, maps, etc.)
-- Internal services with key-based auth
+For any credential `<name>`, the deploy sets `CREDENTIAL_<NAME>_NAME` the same way. The Token Vault keeps each user's
+tokens and refreshes them, so the user consents only once.
 
-## Samples
+## Auth Flows
 
-| Sample                      | Auth Type | Description                               |
-| --------------------------- | --------- | ----------------------------------------- |
-| [google-cal](./google-cal/) | 3LO       | Access Google Calendar on behalf of users |
+`authFlow` picks how AgentCore gets the token:
+
+| `authFlow`                    | Acts as            | Use it for                                                               |
+| ----------------------------- | ------------------ | ------------------------------------------------------------------------ |
+| `USER_FEDERATION`             | The signed-in user | Three-legged OAuth (3LO): the user consents once, e.g. to their calendar |
+| `M2M`                         | The agent itself   | Client credentials (2LO): company-wide APIs, with no user involved       |
+| `ON_BEHALF_OF_TOKEN_EXCHANGE` | The signed-in user | OAuth token exchange: trade the user's token for one the service accepts |
+
+For services that use API keys, `withApiKey` from `bedrock-agentcore/identity` works the same way: it passes the key
+from the Token Vault as the wrapped function's last argument.
 
 ## Key Concepts
 
-**Credential Provider** — Configured in AgentCore with your OAuth client credentials. Defines which external service (Google, Slack, etc.) and what scopes are available.
+- **Credential provider**: your OAuth client or API key, stored in AgentCore Identity. Add one with
+  `agentcore add credentials`; `agentcore deploy` creates it.
+- **Workload identity**: the agent's identity in AgentCore. It links the agent to credential providers and lists the
+  URLs a user may be sent back to after consent.
+- **Token Vault**: per-user token storage that encrypts and refreshes tokens.
 
-**Workload Identity** — Your agent's identity in AgentCore. Links your agent to credential providers and defines allowed callback URLs.
+## Samples
 
-**Token Vault** — Secure, per-user token storage. Handles encryption, refresh, and injection automatically.
-
-**`withAccessToken`** — SDK wrapper for OAuth2. Handles token retrieval, caching, and refresh. Your code just receives the token.
-
-**`withApiKey`** — SDK wrapper for API keys. Retrieves keys from the Token Vault by provider name.
+| Sample                      | What it shows                                                |
+| --------------------------- | ------------------------------------------------------------ |
+| [google-cal](./google-cal/) | An agent that reads a user's Google Calendar on their behalf |
