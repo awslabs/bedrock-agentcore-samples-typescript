@@ -51,6 +51,7 @@ const app = new BedrockAgentCoreApp({
           tools: [],
           mcpServers: { tools },
           allowedTools: ['mcp__tools__calculator'],
+          settingSources: [],
           includePartialMessages: true,
           resume: sessionId,
         },

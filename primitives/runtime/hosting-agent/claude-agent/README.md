@@ -62,6 +62,7 @@ const app = new BedrockAgentCoreApp({
           tools: [],
           mcpServers: { tools },
           allowedTools: ['mcp__tools__calculator'],
+          settingSources: [],
           includePartialMessages: true,
           resume: sessionId,
         },
@@ -86,8 +87,9 @@ const app = new BedrockAgentCoreApp({
 
 The SDK runs the Claude Code binary it ships with, and `CLAUDE_CODE_USE_BEDROCK` sends its model calls to Amazon
 Bedrock. `tools: []` turns off the built-in Claude Code tools (Bash, Read, Edit and the rest), so the calculator, served
-from an in-process MCP server, is the only tool. `allowedTools` lets it run without a permission prompt. `resume`
-continues the previous session, so the agent remembers the conversation.
+from an in-process MCP server, is the only tool. `allowedTools` lets it run without a permission prompt.
+`settingSources: []` keeps the agent from loading Claude Code settings, CLAUDE.md files or MCP servers from the machine
+it runs on. `resume` continues the previous session, so the agent remembers the conversation.
 
 → [Full source](./app/agent/main.ts)
 
