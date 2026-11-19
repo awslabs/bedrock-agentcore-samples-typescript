@@ -1,133 +1,100 @@
 # Hosting an Agent (Vercel AI SDK)
 
-Deploy an agent using Vercel AI SDK to Amazon Bedrock AgentCore Runtime.
+Deploy a [Vercel AI SDK](https://ai-sdk.dev) agent with a calculator tool to Amazon Bedrock AgentCore Runtime.
 
-→ See [parent README](../README.md) for full context on hosting agents.
+→ See the [parent README](../README.md) for how hosting works.
 
 ## Prerequisites
 
-- Node.js 20+
-- AWS credentials configured
-- [AgentCore Starter Toolkit](https://github.com/aws/bedrock-agentcore-starter-toolkit):
+- Node.js 22+
+- AWS credentials with access to Amazon Bedrock and AgentCore
+- The [AgentCore CLI](https://github.com/aws/agentcore-cli):
 
 ```bash
-pip install bedrock-agentcore-starter-toolkit
+npm install -g @aws/agentcore
 ```
 
-## Implementation
+## Project Structure
+
+```
+vercel-ai/
+├── app/agent/          # The agent: main.ts, package.json
+└── agentcore/
+    ├── agentcore.json  # Runtime configuration read by the AgentCore CLI
+    └── cdk/            # CDK app the CLI deploys
+```
+
+## The Agent
 
 ```typescript
-import { ToolLoopAgent, tool } from 'ai'
-import { createAmazonBedrock } from '@ai-sdk/amazon-bedrock'
-import { BedrockAgentCoreApp } from 'bedrock-agentcore/runtime'
-import { z } from 'zod'
-
-const bedrock = createAmazonBedrock({ region: 'us-east-1' })
-
-const requestSchema = z.object({ prompt: z.string() })
-
-const calculator = tool({
-  description: 'Performs basic arithmetic',
-  inputSchema: z.object({
-    operation: z.enum(['add', 'subtract', 'multiply', 'divide']),
-    a: z.number(),
-    b: z.number(),
-  }),
-  execute: async ({ operation, a, b }) => {
-    switch (operation) {
-      case 'add':
-        return { result: a + b }
-      case 'subtract':
-        return { result: a - b }
-      case 'multiply':
-        return { result: a * b }
-      case 'divide':
-        return { result: a / b }
-    }
-  },
+const bedrock = createAmazonBedrock({
+  region: process.env['AWS_REGION'] ?? 'us-east-1',
+  credentialProvider: fromNodeProviderChain(),
 })
 
 const agent = new ToolLoopAgent({
-  model: bedrock('global.amazon.nova-2-lite-v1:0'),
+  model: bedrock('global.anthropic.claude-haiku-5-5'),
   tools: { calculator },
 })
 
+const messages: ModelMessage[] = []
+
 const app = new BedrockAgentCoreApp({
   invocationHandler: {
-    requestSchema,
-    process: async function* (request, _context) {
-      const stream = await agent.stream({ prompt: request.prompt })
+    requestSchema: z.object({ prompt: z.string() }),
+    process: async function* (request) {
+      const userMessage: ModelMessage = { role: 'user', content: request.prompt }
+      const stream = await agent.stream({ messages: [...messages, userMessage] })
+
       for await (const chunk of stream.textStream) {
         yield { event: 'message', data: { text: chunk } }
       }
+      // The turn joins the history only once it completes, so a failed or abandoned request leaves nothing behind
+      messages.push(userMessage, ...(await stream.responseMessages))
     },
   },
 })
 
-app.run()
+app.run({ port: parseInt(process.env['PORT'] ?? '8080') })
 ```
 
-The Zod request schema validates entrypoint input. Keep prompts typed as strings and pass only prompt text to the
-agent.
+`ToolLoopAgent` calls the calculator as often as it needs before answering. It keeps no history, so `messages` holds
+the conversation. `fromNodeProviderChain()` picks up the runtime's IAM role when deployed and your local AWS
+credentials during development.
 
-→ [Full source](./agent.ts)
+→ [Full source](./app/agent/main.ts)
 
-## Quick Start
-
-Install dependencies:
-
-```bash
-npm install
-```
-
-Configure the agent (specify `agent.ts` as the entrypoint):
-
-```bash
-agentcore configure
-```
-
-Accept defaults for all prompts, except for memory—enter `s` to skip memory creation.
-
-## Local Development
-
-Start the local dev server:
+## Run Locally
 
 ```bash
 agentcore dev
 ```
 
-Test with the CLI:
+The first run installs the agent's dependencies. In a second terminal:
 
 ```bash
-agentcore invoke --dev '{"prompt": "What is 25 * 4?"}'
+agentcore invoke --runtime agent --local --payload '{"prompt": "What is 25 * 4?"}'
 ```
 
-Or with curl:
+Prefer a chat UI? `agentcore dev --mode browser` opens the Agent Inspector.
+
+## Deploy
 
 ```bash
-curl -X POST http://localhost:8080/invocations \
-  -H "Content-Type: application/json" \
-  -H "Accept: text/event-stream" \
-  -H "x-amzn-bedrock-agentcore-runtime-session-id: test-123" \
-  -d '{"prompt": "What is 25 * 4?"}'
-```
-
-## Deploy to AWS
-
-```bash
+npm install --prefix app/agent
+npm install --prefix agentcore/cdk
 agentcore deploy
+agentcore invoke --runtime agent --payload '{"prompt": "What is 25 * 4?"}'
 ```
 
-## Test Deployed Agent
-
-```bash
-agentcore invoke '{"prompt": "What is 25 * 4?"}'
-```
-
-After deployment, your agent can also be invoked via AWS SDKs, APIs, or HTTP requests.
+`agentcore deploy` bundles `app/agent/main.ts`, uploads it, and creates the runtime with permission to call Bedrock
+models.
 
 ## Clean Up
 
 ```bash
-agentcore destroy
+agentcore remove all --yes
+agentcore deploy --yes
 ```
+
+This deletes the deployed stack. Run `git checkout -- agentcore` to restore the configuration and deploy again.

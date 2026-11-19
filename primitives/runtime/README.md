@@ -4,15 +4,15 @@ Amazon Bedrock AgentCore Runtime is managed infrastructure for hosting AI agents
 
 ## What is AgentCore Runtime?
 
-AgentCore Runtime runs your agent code in containers, providing:
+AgentCore Runtime runs your agent code in isolated sessions, providing:
 
-- **Auto-scaling** — Automatically scales based on request volume
-- **Load balancing** — Distributes requests across instances
-- **Logging** — CloudWatch integration out of the box
+- **Auto-scaling** — Scales with request volume
+- **Session isolation** — Each session runs in its own microVM
+- **Logging and tracing** — CloudWatch integration out of the box
 - **Networking** — Public or VPC-private endpoints
-- **Protocol support** — HTTP, WebSocket, MCP, and A2A
+- **Protocol support** — HTTP, WebSocket, MCP, A2A, and AG-UI
 
-You provide a container image or just agent code. AgentCore handles everything else.
+You provide your agent code, or a container image. AgentCore handles everything else.
 
 ## How It Works
 
@@ -20,7 +20,7 @@ You provide a container image or just agent code. AgentCore handles everything e
 ┌──────────────┐     ┌─────────────────────────────────────┐     ┌──────────────┐
 │    Client    │────▶│         AgentCore Runtime           │────▶│     LLMs     │
 │              │◀────│  ┌─────────────────────────────┐    │◀────│              │
-└──────────────┘     │  │     Your Container          │    │     └──────────────┘
+└──────────────┘     │  │     Your Agent Session      │    │     └──────────────┘
                      │  │  ┌─────────────────────┐    │    │
                      │  │  │ BedrockAgentCoreApp │    │    │
                      │  │  │   (SDK wrapper)     │    │    │
@@ -29,14 +29,14 @@ You provide a container image or just agent code. AgentCore handles everything e
                      └─────────────────────────────────────┘
 ```
 
-1. Client sends request to AgentCore endpoint
-2. AgentCore authenticates request and routes to your container
-3. `BedrockAgentCoreApp` (from the SDK) handles protocol details
-4. Your handler processes the request, streams responses back
+1. A client sends a request to the AgentCore endpoint
+2. AgentCore authenticates it and routes it to the session's microVM
+3. `BedrockAgentCoreApp` (from the SDK) handles the protocol details
+4. Your handler processes the request and streams responses back
 
 ## The Handler Pattern
 
-Every AgentCore Runtime app follows the same pattern:
+Every runtime sample has the same handler. This is the [Strands hosting sample](./hosting-agent/strands/)'s:
 
 ```typescript
 import { BedrockAgentCoreApp } from 'bedrock-agentcore/runtime'
@@ -44,137 +44,158 @@ import { z } from 'zod'
 
 const app = new BedrockAgentCoreApp({
   invocationHandler: {
-    requestSchema: z.object({ prompt: z.string() }), // Typed inputs with Zod
-    process: async function* (request, context) {
-      // request.prompt is typed as string
-      // context: session ID, headers, auth tokens, etc.
-
-      yield { event: 'message', data: { text: 'Processing...' } }
-      yield { event: 'message', data: { text: 'Done!' } }
+    requestSchema: z.object({ prompt: z.string() }),
+    process: async function* (request) {
+      for await (const event of agent.stream(request.prompt)) {
+        // ...yield text deltas as message events
+      }
     },
   },
 })
 
-app.run() // Starts HTTP server on port 8080
+app.run({ port: parseInt(process.env['PORT'] ?? '8080') })
 ```
 
-Validate invocation payloads before forwarding them to an agent. Keep text prompts defined as `z.string()` and pass
-only prompt text to the agent.
+The handler's second argument, `context`, carries the session ID, the forwarded headers and `context.log`, a
+request-scoped logger.
+
+`requestSchema` validates each payload before your handler runs, so `request.prompt` is a string by the time it
+reaches the agent. Requests that don't match are rejected. Keep prompts typed as `z.string()` and pass only the prompt
+text to the agent.
 
 The generator function (`async function*`) enables streaming — each `yield` sends an event to the client immediately.
+
+Deployed, each runtime session runs in its own microVM, so the runtime samples create their agent once, at module
+level, and it serves a single session. Under `agentcore dev` that one agent serves every session ID. Where the
+conversation is the point, the [customer support](../../use-cases/customer-support-agent/) and
+[data analyzer](../../use-cases/data-analyzer/) use cases keep one agent per `context.sessionId` instead.
 
 ## The AgentCore Protocol
 
 `BedrockAgentCoreApp` creates an HTTP server that follows the AgentCore Runtime protocol:
 
-- **POST /invocations** — Accepts JSON requests, streams SSE responses
-- **Session management** via `x-amzn-bedrock-agentcore-runtime-session-id` header
-- **Streaming** via Server-Sent Events (SSE)
+- **POST /invocations** — Accepts JSON requests, streams server-sent events
+- **GET /ping** — Reports whether the session is `Healthy` or `HealthyBusy`
+- **/ws** — WebSocket endpoint, when you provide a `websocketHandler`
+- **Sessions** via the `x-amzn-bedrock-agentcore-runtime-session-id` header
 
 This means:
 
-1. **Same code runs locally and on AWS** — No changes needed for deployment
+1. **The same code runs locally and on AWS** — No changes needed for deployment
 2. **Any HTTP client works** — curl, fetch, Postman, custom CLIs
-3. **You could use any server framework** — Express, Fastify, etc. — as long as it implements the protocol
+3. **You could use any server framework** — as long as it implements the protocol
 
-The SDK handles the protocol details so you focus on your agent logic.
+## Developing and Deploying
 
-## Invoking an Agent
+Every runtime sample is an [AgentCore CLI](https://github.com/aws/agentcore-cli) project:
 
-Once deployed, you can invoke your agent via HTTP or WebSocket. AgentCore supports two authentication methods:
+```
+<sample>/
+├── app/agent/          # The agent: main.ts, package.json
+└── agentcore/
+    ├── agentcore.json  # Runtime configuration read by the AgentCore CLI
+    └── cdk/            # CDK app the CLI deploys
+```
+
+Install the CLI once:
+
+```bash
+npm install -g @aws/agentcore
+```
+
+Then, from any sample, run it locally with hot reload:
+
+```bash
+agentcore dev
+```
+
+In a second terminal, invoke it:
+
+```bash
+agentcore invoke --runtime agent --local --payload '{"prompt": "Hello"}'
+```
+
+Deploy it to AgentCore Runtime, invoke it, and clean up:
+
+```bash
+npm install --prefix agentcore/cdk
+agentcore deploy
+agentcore invoke --runtime agent --payload '{"prompt": "Hello"}'
+agentcore remove all --yes && agentcore deploy --yes
+```
+
+## Invoking a Deployed Agent
+
+AgentCore supports two authentication methods:
 
 - **IAM** — AWS SigV4 request signing (used in these samples)
-- **OAuth** — Bearer token in Authorization header
+- **OAuth** — Bearer token in the Authorization header (see [inbound auth](../identity/inbound-auth/))
 
 ### HTTP
 
-**With AWS CLI (IAM):**
+**With the AWS CLI (IAM):**
 
 ```bash
 aws bedrock-agentcore invoke-agent-runtime \
-  --agent-runtime-arn "arn:aws:..." \
-  --runtime-session-id "session-123" \
-  --payload '{"prompt": "Hello"}'
+  --agent-runtime-arn "<runtime-arn>" \
+  --runtime-session-id "$(uuidgen)" \
+  --content-type application/json \
+  --accept text/event-stream \
+  --cli-binary-format raw-in-base64-out \
+  --payload '{"prompt": "What is 25 * 4?"}' \
+  response.txt
 ```
 
-**With fetch (OAuth):**
+Session IDs must be at least 33 characters; a UUID works. The streamed events are written to `response.txt`.
+
+**With fetch (OAuth)**, as the [Google Calendar sample](../identity/outbound-auth/google-cal/)'s web app does:
 
 ```typescript
-const response = await fetch(`${runtimeEndpoint}/invocations`, {
+const response = await fetch(runtimeUrl, {
   method: 'POST',
   headers: {
-    Authorization: `Bearer ${token}`,
     'Content-Type': 'application/json',
-    'x-amzn-bedrock-agentcore-runtime-session-id': sessionId,
+    Accept: 'text/event-stream',
+    Authorization: `Bearer ${userToken}`,
+    'X-Amzn-Bedrock-AgentCore-Runtime-Session-Id': sessionId,
   },
-  body: JSON.stringify({ prompt: 'Hello' }),
+  body: JSON.stringify({ prompt }),
 })
 ```
+
+`runtimeUrl` is the runtime's invocation URL, which that sample's stack outputs as `RuntimeUrl`:
+`https://bedrock-agentcore.<region>.amazonaws.com/runtimes/<URL-encoded runtime ARN>/invocations?qualifier=DEFAULT`.
 
 ### WebSocket
 
-Use `RuntimeClient` from the SDK to generate signed connections:
+Use `RuntimeClient` from the SDK to generate signed connections for the [`ws`](https://github.com/websockets/ws)
+client:
 
 ```typescript
+import { randomUUID } from 'node:crypto'
 import { RuntimeClient } from 'bedrock-agentcore/runtime'
 import { WebSocket } from 'ws'
 
-const client = new RuntimeClient({ region: 'us-east-1' })
+async function connect(urlOrArn: string): Promise<WebSocket> {
+  if (urlOrArn.startsWith('ws://')) {
+    return new WebSocket(urlOrArn, { headers: { 'x-amzn-bedrock-agentcore-runtime-session-id': randomUUID() } })
+  }
 
-// IAM authentication
-const { url, headers } = await client.generateWsConnection({
-  runtimeArn: 'arn:aws:...',
-})
-
-// OAuth authentication
-const { url, headers } = await client.generateWsConnectionOAuth({
-  runtimeArn: 'arn:aws:...',
-  bearerToken: token,
-})
-
-const ws = new WebSocket(url, { headers })
+  const region = urlOrArn.split(':')[3]
+  const { url, headers } = await new RuntimeClient({ region }).generateWsConnection({ runtimeArn: urlOrArn })
+  return new WebSocket(url, { headers })
+}
 ```
 
-For OAuth setup, see the [AgentCore Identity documentation](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/identity-getting-started.html).
+This is the [echo sample's client](./bidirectional-streaming/echo/app/agent/client.ts): it connects directly to a local
+URL and signs the connection for a runtime ARN.
 
 ---
 
 ## Samples
 
-### [hosting-agent](./hosting-agent/)
-
-Deploy an AI agent that responds to prompts with tool use. Implementations for Strands Agents SDK, Vercel AI SDK, and Claude Agent SDK.
-
-### [bidirectional-streaming](./bidirectional-streaming/)
-
-Full-duplex WebSocket communication for real-time applications.
-
-### [async-agent](./async-agent/)
-
-Long-running background tasks with automatic health status tracking.
-
----
-
-## Running Locally
-
-Install the [AgentCore Starter Toolkit](https://github.com/aws/bedrock-agentcore-starter-toolkit):
-
-```bash
-pip install bedrock-agentcore-starter-toolkit
-```
-
-Then run any sample:
-
-```bash
-cd hosting-agent/strands
-npm install
-agentcore configure
-agentcore dev
-```
-
-## Deploying to AgentCore
-
-```bash
-agentcore deploy    # Build and deploy to AgentCore
-agentcore destroy   # Clean up
-```
+| Sample                                                | What it shows                                                            |
+| ----------------------------------------------------- | ------------------------------------------------------------------------ |
+| [hosting-agent](./hosting-agent/)                     | An agent with a calculator tool, in Strands Agents and the Vercel AI SDK |
+| [bidirectional-streaming](./bidirectional-streaming/) | Full-duplex communication over WebSocket connections                     |
+| [async-agent](./async-agent/)                         | An agent that keeps its session alive while background work runs         |

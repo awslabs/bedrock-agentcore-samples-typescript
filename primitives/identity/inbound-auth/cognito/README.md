@@ -1,192 +1,132 @@
 # Inbound Authentication with Cognito
 
-Configure OAuth for inbound authentication—AgentCore validates JWTs before requests reach your container.
+An agent behind a JWT authorizer that only accepts access tokens from an Amazon Cognito user pool.
 
-## Overview
-
-This sample demonstrates how to configure inbound authentication for an AgentCore Runtime using Amazon Cognito as the identity provider. AgentCore validates JWT tokens before requests reach your container, so your agent code stays simple—no auth logic required.
-
-The CDK stack deploys:
-
-- **Cognito User Pool** with a test user (`user@example.com` / `password`)
-- **Client** configured for USER_PASSWORD_AUTH flow
+→ See the [parent README](../README.md) for how inbound authentication works.
 
 ## Prerequisites
 
-- Node.js 20+
-- AWS credentials configured
-- [AgentCore Starter Toolkit](https://github.com/aws/bedrock-agentcore-starter-toolkit):
+- Node.js 22+
+- AWS credentials with access to Amazon Bedrock, AgentCore and Cognito
+- The AWS CLI, configured for the region you deploy to
+- OpenSSL, to generate the test user's password
+- The [AgentCore CLI](https://github.com/aws/agentcore-cli):
 
 ```bash
-pip install bedrock-agentcore-starter-toolkit
+npm install -g @aws/agentcore
 ```
 
-## Implementation
+## Project Structure
+
+```
+cognito/
+├── app/agent/                # The agent: main.ts, package.json
+└── agentcore/
+    ├── agentcore.json        # Runtime configuration read by the AgentCore CLI
+    └── cdk/lib/cdk-stack.ts  # Adds the Cognito user pool and the runtime's JWT authorizer
+```
+
+## The Agent
+
+The agent has no auth code. AgentCore Runtime checks every token before the request reaches it, and `agentcore.json`
+allowlists the `Authorization` header, so the agent can read who is calling:
 
 ```typescript
-import { Agent, BedrockModel, tool } from '@strands-agents/sdk'
-import { BedrockAgentCoreApp } from 'bedrock-agentcore/runtime'
-import { z } from 'zod'
+function usernameFromAuthorization(authorization: string | undefined): string {
+  const payload = authorization?.split('.')[1]
+  if (!payload) return 'anonymous'
+  try {
+    const claims = JSON.parse(Buffer.from(payload, 'base64url').toString()) as { username?: string }
+    return claims.username ?? 'unknown'
+  } catch {
+    return 'unknown'
+  }
+}
 
-const requestSchema = z.object({ prompt: z.string() })
+process: async function* (request, context) {
+  context.log.info(`Invoked by ${usernameFromAuthorization(context.headers['authorization'])}`)
+  // ...yield text deltas as message events
+}
+```
 
-const calculator = tool({
-  name: 'calculator',
-  description: 'Performs basic arithmetic',
-  inputSchema: z.object({
-    operation: z.enum(['add', 'subtract', 'multiply', 'divide']),
-    a: z.number(),
-    b: z.number(),
-  }),
-  callback: ({ operation, a, b }) => {
-    switch (operation) {
-      case 'add':
-        return a + b
-      case 'subtract':
-        return a - b
-      case 'multiply':
-        return a * b
-      case 'divide':
-        return a / b
-    }
+`context.log` is the SDK's request-scoped logger: each line carries the request's ID.
+
+→ [Full source](./app/agent/main.ts)
+
+The stack adds a user pool (admin-created users only) and an app client, and points the runtime's authorizer at them.
+The pool exists only once the stack deploys, so the stack sets the authorizer itself:
+
+```typescript
+const cfnRuntime = runtime.resource.node.defaultChild as agentcore.CfnRuntime
+cfnRuntime.authorizerConfiguration = {
+  customJwtAuthorizer: {
+    discoveryUrl: `${userPool.userPoolProviderUrl}/.well-known/openid-configuration`,
+    allowedClients: [client.userPoolClientId],
   },
-})
-
-const agent = new Agent({
-  model: new BedrockModel({
-    modelId: 'global.amazon.nova-2-lite-v1:0',
-    region: process.env['AWS_REGION'] ?? 'us-east-1',
-  }),
-  tools: [calculator],
-})
-
-const app = new BedrockAgentCoreApp({
-  invocationHandler: {
-    requestSchema,
-    process: async function* (request, context) {
-      // Log Authorization header (first 20 chars) to demonstrate header propagation
-      const authHeader = context.headers?.authorization ?? 'none'
-      console.log(`Authorization: ${authHeader.substring(0, 20)}...`)
-
-      for await (const event of agent.stream(request.prompt)) {
-        if (event.type === 'modelContentBlockDeltaEvent' && event.delta?.type === 'textDelta') {
-          yield { event: 'message', data: { text: event.delta.text } }
-        }
-      }
-    },
-  },
-})
-
-app.run()
+}
 ```
 
-> [Full source](./agent.ts)
+Cognito access tokens name the app client in `client_id` and have no `aud` claim, so the authorizer checks
+`allowedClients`, not `allowedAudience`.
 
-## Setup
+→ [Full source](./agentcore/cdk/lib/cdk-stack.ts)
 
-### 1. Deploy Cognito
-
-```bash
-cd cdk
-npm install
-npx cdk deploy
-```
-
-Note the outputs:
-
-- `DiscoveryUrl` - OIDC discovery URL for configuring AgentCore
-- `ClientId` - Cognito client ID
-
-### 2. Install Agent Dependencies
-
-```bash
-cd ..
-npm install
-```
-
-### 3. Configure the Agent
-
-```bash
-agentcore configure
-```
-
-When prompted:
-
-- Specify `agent.ts` as the entrypoint
-- Enter a name for the agent
-- Enter `s` to skip memory creation
-- When prompted to allow headers, enter `Authorization`
-- Select **OAuth/OIDC** as the authentication method
-- Enter the `DiscoveryUrl` from CDK outputs
-- Enter the `ClientId` as an allowed client
-
-By allow-listing the `Authorization` header, the access token becomes available in your agent via `context.headers.authorization`. This allows the agent to access user identity information from the JWT.
-
-## Local Development
-
-Start the local dev server:
+## Run Locally
 
 ```bash
 agentcore dev
 ```
 
-### Test with Authentication
-
-Get a token:
+The first run installs the agent's dependencies. In a second terminal:
 
 ```bash
-# Set your client ID from CDK outputs
-export CLIENT_ID=<your-client-id>
-
-# Get an access token
-export TOKEN=$(aws cognito-idp initiate-auth \
-  --client-id $CLIENT_ID \
-  --auth-flow USER_PASSWORD_AUTH \
-  --auth-parameters USERNAME=user@example.com,PASSWORD=password \
-  --query 'AuthenticationResult.AccessToken' \
-  --output text)
+agentcore invoke --runtime agent --local --payload '{"prompt": "What is 25 * 4?"}'
 ```
 
-Test the local dev server:
+The local server doesn't check tokens, so the `agentcore dev` output shows `"msg":"Invoked by anonymous"`.
+
+## Deploy
 
 ```bash
-agentcore invoke --dev '{"prompt": "What is 25 * 4?"}'
-```
-
-Or with curl: (note that the access token is added. This is not required when invoking the local endpoint)
-
-```bash
-curl -X POST http://localhost:8080/invocations \
-  -H "Content-Type: application/json" \
-  -H "Accept: text/event-stream" \
-  -H "x-amzn-bedrock-agentcore-runtime-session-id: test-123" \
-  -H "Authorization: Bearer $TOKEN" \
-  -d '{"prompt": "What is 25 * 4?"}'
-```
-
-## Deploy to AWS
-
-```bash
+npm install --prefix app/agent
+npm install --prefix agentcore/cdk
 agentcore deploy
 ```
 
-## Test Deployed Agent
+The deployed runtime refuses calls without a valid token (`401` or `403`) before they reach the agent.
+
+Create a test user with a random password, and sign in to get an access token:
 
 ```bash
-agentcore invoke '{"prompt": "What is 25 * 4?"}' -bt $TOKEN
+STACK=AgentCore-InboundAuthCognito-default
+output() { aws cloudformation describe-stacks --stack-name $STACK --query "Stacks[0].Outputs[?OutputKey=='$1'].OutputValue" --output text; }
+POOL_ID=$(output UserPoolId) CLIENT_ID=$(output ClientId)
+PASSWORD="$(openssl rand -base64 24)Aa1!"
+aws cognito-idp admin-create-user --user-pool-id $POOL_ID --username testuser --message-action SUPPRESS > /dev/null
+aws cognito-idp admin-set-user-password --user-pool-id $POOL_ID --username testuser --password "$PASSWORD" --permanent
+TOKEN=$(aws cognito-idp initiate-auth --client-id $CLIENT_ID --auth-flow USER_PASSWORD_AUTH \
+  --auth-parameters "USERNAME=testuser,PASSWORD=$PASSWORD" --query AuthenticationResult.AccessToken --output text)
 ```
+
+Invoke the agent with the token:
+
+```bash
+agentcore invoke --runtime agent --bearer-token "$TOKEN" --payload '{"prompt": "What is 25 * 4?"}'
+```
+
+The runtime's log shows `Invoked by testuser`:
+
+```bash
+agentcore logs runtime --name agent --since 5m
+```
+
+The token is valid for an hour; run the `initiate-auth` line again for a new one.
 
 ## Clean Up
 
-Destroy the AgentCore Runtime:
-
 ```bash
-agentcore destroy
+agentcore remove all --yes
+agentcore deploy --yes
 ```
 
-Destroy the Cognito stack:
-
-```bash
-cd cdk
-npx cdk destroy
-```
+This deletes the deployed stack. Run `git checkout -- agentcore` to restore the configuration and deploy again.

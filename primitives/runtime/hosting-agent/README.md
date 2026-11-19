@@ -1,29 +1,32 @@
 # Hosting an Agent
 
-This sample shows how to deploy an AI agent to AgentCore Runtime. The agent receives prompts, uses tools to gather information, and streams responses back.
+Deploy an AI agent to AgentCore Runtime. The agent receives prompts, calls a calculator tool, and streams its answer
+back.
 
 ## What This Sample Demonstrates
 
 - Wrapping an agent framework with `BedrockAgentCoreApp`
-- Streaming responses using generator functions
-- Tool use (a calculator that the agent can call)
+- Streaming responses from an async generator
+- Tool use (a calculator the agent can call)
 - Request validation with Zod schemas
 
-## Choose Your Framework
+## Samples
 
-### [Strands Agents](./strands/)
+| Sample                    | What it shows                                 |
+| ------------------------- | --------------------------------------------- |
+| [strands](./strands/)     | A Strands Agents agent with a calculator tool |
+| [vercel-ai](./vercel-ai/) | A Vercel AI SDK agent with a calculator tool  |
 
-Uses `@strands-agents/sdk` with native Bedrock integration.
+## The Agent
+
+### Strands Agents
 
 ```typescript
-import { Agent, BedrockModel, tool } from '@strands-agents/sdk'
-import { BedrockAgentCoreApp } from 'bedrock-agentcore/runtime'
-import { z } from 'zod'
-
 const agent = new Agent({
   model: new BedrockModel({
-    modelId: 'global.amazon.nova-2-lite-v1:0',
-    region: 'us-east-1',
+    modelId: 'global.anthropic.claude-haiku-5-5',
+    region: process.env['AWS_REGION'] ?? 'us-east-1',
+    maxTokens: 8192,
   }),
   tools: [calculator],
 })
@@ -31,10 +34,14 @@ const agent = new Agent({
 const app = new BedrockAgentCoreApp({
   invocationHandler: {
     requestSchema: z.object({ prompt: z.string() }),
-    process: async function* (request, _context) {
+    process: async function* (request) {
       for await (const event of agent.stream(request.prompt)) {
-        if (event.type === 'modelContentBlockDeltaEvent' && event.delta?.type === 'textDelta') {
-          yield { event: 'message', data: { text: event.delta.text } }
+        if (
+          event.type === 'modelStreamUpdateEvent' &&
+          event.event.type === 'modelContentBlockDeltaEvent' &&
+          event.event.delta.type === 'textDelta'
+        ) {
+          yield { event: 'message', data: { text: event.event.delta.text } }
         }
       }
     },
@@ -42,115 +49,66 @@ const app = new BedrockAgentCoreApp({
 })
 ```
 
-→ [Full source](./strands/agent.ts)
+→ [Full source](./strands/app/agent/main.ts)
 
----
-
-### [Vercel AI](./vercel-ai/)
-
-Uses `ai` SDK with `ToolLoopAgent` for agentic workflows.
+### Vercel AI SDK
 
 ```typescript
-import { ToolLoopAgent, tool } from 'ai'
-import { createAmazonBedrock } from '@ai-sdk/amazon-bedrock'
-import { BedrockAgentCoreApp } from 'bedrock-agentcore/runtime'
-import { z } from 'zod'
-
-const bedrock = createAmazonBedrock({ region: 'us-east-1' })
-
 const agent = new ToolLoopAgent({
-  model: bedrock('global.amazon.nova-2-lite-v1:0'),
+  model: bedrock('global.anthropic.claude-haiku-5-5'),
   tools: { calculator },
 })
 
+const messages: ModelMessage[] = []
+
 const app = new BedrockAgentCoreApp({
   invocationHandler: {
     requestSchema: z.object({ prompt: z.string() }),
-    process: async function* (request, _context) {
-      const stream = await agent.stream({ prompt: request.prompt })
+    process: async function* (request) {
+      const userMessage: ModelMessage = { role: 'user', content: request.prompt }
+      const stream = await agent.stream({ messages: [...messages, userMessage] })
+
       for await (const chunk of stream.textStream) {
         yield { event: 'message', data: { text: chunk } }
       }
+      // The turn joins the history only once it completes, so a failed or abandoned request leaves nothing behind
+      messages.push(userMessage, ...(await stream.responseMessages))
     },
   },
 })
 ```
 
-→ [Full source](./vercel-ai/agent.ts)
+The Strands `Agent` keeps the conversation itself. `ToolLoopAgent` keeps no history, so `messages` holds the
+conversation.
 
----
-
-### [Claude Agent SDK](./claude-agent/)
-
-Uses `@anthropic-ai/claude-agent-sdk` — model calls route through Amazon Bedrock via `CLAUDE_CODE_USE_BEDROCK=1`. Deployed via container image since the SDK spawns the Claude Code CLI as a subprocess.
-
-```typescript
-import { query } from '@anthropic-ai/claude-agent-sdk'
-import { BedrockAgentCoreApp } from 'bedrock-agentcore/runtime'
-import { z } from 'zod'
-
-const app = new BedrockAgentCoreApp({
-  invocationHandler: {
-    requestSchema: z.object({ prompt: z.string() }),
-    process: async function* (request, _context) {
-      const response = query({
-        prompt: request.prompt,
-        options: { systemPrompt: "You're a helpful assistant.", maxTurns: 5, allowedTools: [] },
-      })
-
-      for await (const message of response) {
-        if (message.type === 'assistant') {
-          for (const block of message.message.content) {
-            if (block.type === 'text') {
-              yield { event: 'message', data: { text: block.text } }
-            }
-          }
-        }
-      }
-    },
-  },
-})
-```
-
-→ [Full source](./claude-agent/agent.ts)
-
----
-
-## Input Validation
-
-Validate invocation payloads before forwarding them to an agent. Keep the Zod string schema when adapting these
-samples so prompts stay typed as strings.
+→ [Full source](./vercel-ai/app/agent/main.ts)
 
 ## Quick Start
 
-For Strands or Vercel AI:
-
 ```bash
 cd strands  # or vercel-ai
-
-npm install
-agentcore configure
-agentcore dev       # Run locally
-agentcore deploy    # Deploy to AgentCore
+agentcore dev
 ```
 
-For Claude Agent SDK (container-based deployment via the sample's `Dockerfile`):
+In a second terminal:
 
 ```bash
-cd claude-agent
+agentcore invoke --runtime agent --local --payload '{"prompt": "What is 25 * 4?"}'
+```
 
-npm install
-agentcore configure
-agentcore configure env CLAUDE_CODE_USE_BEDROCK=1
-agentcore dev       # Run locally
-agentcore deploy    # Deploy to AgentCore
+Then deploy it and invoke the deployed agent:
+
+```bash
+npm install --prefix agentcore/cdk
+agentcore deploy
+agentcore invoke --runtime agent --payload '{"prompt": "What is 25 * 4?"}'
 ```
 
 ## How It Works
 
 ```
 ┌────────┐       ┌───────────────────────────────────┐       ┌─────────┐
-│        │       │    AgentCore Runtime Container    │       │         │
+│        │       │         AgentCore Runtime         │       │         │
 │ Client │──────▶│                                   │──────▶│   LLM   │
 │        │◀──────│  BedrockAgentCoreApp              │◀──────│         │
 │        │       │    ├── Agent                      │       │         │
@@ -159,12 +117,12 @@ agentcore deploy    # Deploy to AgentCore
                  └───────────────────────────────────┘
 ```
 
-1. Client sends request to AgentCore Runtime endpoint
-2. `BedrockAgentCoreApp` receives request, passes to your handler
-3. Agent streams response, calling tools as needed
-4. Handler yields events back to client
+1. The client sends a request to the AgentCore Runtime endpoint
+2. `BedrockAgentCoreApp` validates it against `requestSchema` and passes it to your handler
+3. The agent streams its response, calling tools as needed
+4. Each `yield` is sent to the client as a server-sent event
 
-## Request/Response Format
+## Request and Response
 
 **Request:**
 
@@ -172,9 +130,12 @@ agentcore deploy    # Deploy to AgentCore
 { "prompt": "What is 25 * 4?" }
 ```
 
-**Response (streamed):**
+**Response (server-sent events):**
 
-```json
-{ "event": "message", "data": { "text": "The result of 25 × 4 is " } }
-{ "event": "message", "data": { "text": "100." } }
+```
+event: message
+data: {"text":"25 × 4"}
+
+event: message
+data: {"text":" = 100."}
 ```

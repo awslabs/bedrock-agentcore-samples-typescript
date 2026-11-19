@@ -31,8 +31,9 @@ body:
       label: Steps to reproduce
       description: Steps to reproduce the behavior
       placeholder: |
-        1. Run `make dev`
-        2. See error
+        1. `cd primitives/runtime/hosting-agent/strands`
+        2. Run `agentcore dev`
+        3. See error
     validations:
       required: true
 
@@ -55,7 +56,7 @@ body:
     id: node-version
     attributes:
       label: Node.js version
-      placeholder: v20.10.0
+      placeholder: v22.x
     validations:
       required: true
 

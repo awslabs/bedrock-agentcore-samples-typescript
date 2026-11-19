@@ -1,0 +1,54 @@
+import { Agent, BedrockModel } from '@strands-agents/sdk'
+import { BrowserTools } from 'bedrock-agentcore/experimental/browser/strands'
+import { BedrockAgentCoreApp } from 'bedrock-agentcore/runtime'
+import { z } from 'zod'
+
+const region = process.env['AWS_REGION'] ?? 'us-east-1'
+
+const browser = new BrowserTools({ region })
+
+const agent = new Agent({
+  model: new BedrockModel({ modelId: 'global.anthropic.claude-haiku-5-5', region, maxTokens: 8192 }),
+  systemPrompt:
+    'You are a web assistant with a cloud browser. Each request starts with a fresh browser, so navigate first. ' +
+    'Never enter payment or other sensitive details; hand off to the user instead.',
+  tools: browser.tools,
+  // The tools share one browser session, so they run one at a time
+  toolExecutor: 'sequential',
+})
+
+// The agent and its browser serve one request at a time; an overlapping request must not stop the browser in use
+let busy = false
+
+const app = new BedrockAgentCoreApp({
+  invocationHandler: {
+    requestSchema: z.object({ prompt: z.string() }),
+    process: async function* (request) {
+      if (busy) {
+        yield { event: 'error', data: { error: 'The agent is still answering another request' } }
+        return
+      }
+      busy = true
+      try {
+        for await (const event of agent.stream(request.prompt)) {
+          if (event.type === 'beforeToolCallEvent') {
+            yield { event: 'tool', data: { name: event.toolUse.name, input: event.toolUse.input } }
+          }
+          if (
+            event.type === 'modelStreamUpdateEvent' &&
+            event.event.type === 'modelContentBlockDeltaEvent' &&
+            event.event.delta.type === 'textDelta'
+          ) {
+            yield { event: 'message', data: { text: event.event.delta.text } }
+          }
+        }
+      } finally {
+        // A browser session outlives the runtime session, so stop it rather than let it run until its timeout
+        await browser.stopSession()
+        busy = false
+      }
+    },
+  },
+})
+
+app.run({ port: parseInt(process.env['PORT'] ?? '8080') })

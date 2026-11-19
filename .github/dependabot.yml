@@ -1,7 +1,30 @@
 version: 2
 updates:
   - package-ecosystem: npm
-    directory: /
+    directories:
+      - /
+      - /primitives/**
+      - /use-cases/**
+    # The AgentCore CLI generates and pins these CDK apps
+    exclude-paths:
+      - '**/agentcore/cdk'
+      - '**/agentcore/cdk/**'
+    ignore:
+      # typescript-eslint supports TypeScript up to 6.0
+      - dependency-name: typescript
+        update-types: ['version-update:semver-major']
+      # The live view's DCV UI, which ships inside bedrock-agentcore, needs @babel/runtime 7
+      - dependency-name: '@babel/runtime'
+        update-types: ['version-update:semver-major']
     schedule:
       interval: weekly
     open-pull-requests-limit: 10
+    groups:
+      dependencies:
+        patterns: ['*']
+        group-by: dependency-name
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly

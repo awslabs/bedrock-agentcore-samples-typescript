@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Google Calendar Agent</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <main>
+      <div class="card">
+        <h2>Google authorization</h2>
+        <p id="status" class="status">Completing…</p>
+      </div>
+    </main>
+
+    <script type="module">
+      const response = await fetch('/api/complete-auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
+        body: JSON.stringify({ sessionUri: new URLSearchParams(location.search).get('session_id') }),
+      })
+      const status = document.getElementById('status')
+      if (response.ok) {
+        status.textContent = 'Done. Close this tab: the agent carries on in the other one.'
+        status.className = 'status ok'
+      } else {
+        status.textContent = `Authorization failed: ${(await response.json()).error}`
+        status.className = 'status error'
+      }
+    </script>
+  </body>
+</html>

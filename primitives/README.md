@@ -1,21 +1,13 @@
 # Primitives
 
-Building blocks for AI agents using Amazon Bedrock AgentCore.
+Focused samples, each showing one Amazon Bedrock AgentCore capability with the TypeScript SDK. Every sample is an
+[AgentCore CLI](https://github.com/aws/agentcore-cli) project you can run with `agentcore dev` and deploy with
+`agentcore deploy`.
 
-## Structure
+## Samples
 
-```
-primitives/
-├── runtime/                      # AgentCore Runtime samples
-│   ├── hosting-agent/            # Deploy agents (Strands, Vercel AI, Claude Agent SDK)
-│   ├── bidirectional-streaming/  # WebSocket communication
-│   └── async-agent/              # Long-running tasks
-├── identity/                     # AgentCore Identity samples
-│   ├── inbound-auth/             # Authenticate callers
-│   └── outbound-auth/            # Access external services
-└── tools/                        # AgentCore Tools samples
-    ├── code-interpreter/         # Execute code in secure sandbox
-    └── browser/                  # Browser automation
-```
-
-See individual sample READMEs for details.
+| Sample                  | What it shows                                                                         |
+| ----------------------- | ------------------------------------------------------------------------------------- |
+| [runtime](./runtime/)   | Hosting an agent on AgentCore Runtime: streaming, WebSockets and long-running tasks   |
+| [identity](./identity/) | Authenticating callers with a JWT, and letting an agent call external APIs with OAuth |
+| [tools](./tools/)       | Giving an agent a secure Code Interpreter sandbox and a cloud Browser                 |

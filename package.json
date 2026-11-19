@@ -1,14 +1,14 @@
 {
-  "name": "amazon-bedrock-agentcore-samples-typescript",
+  "name": "bedrock-agentcore-samples-typescript",
   "version": "0.1.0",
-  "description": "Examples and tutorials for AWS Bedrock AgentCore TypeScript SDK",
+  "description": "Samples for the Amazon Bedrock AgentCore TypeScript SDK",
   "private": true,
   "type": "module",
   "scripts": {
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "format": "prettier --write \"**/*.{ts,js,json,md,yaml,yml}\"",
-    "format:check": "prettier --check \"**/*.{ts,js,json,md,yaml,yml}\"",
+    "format": "prettier --write \"**/*.{ts,tsx,js,json,md,yaml,yml}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,json,md,yaml,yml}\"",
     "validate": "npm run format:check && npm run lint"
   },
   "keywords": [
@@ -24,22 +24,22 @@
   "author": "Amazon Web Services",
   "license": "Apache-2.0",
   "devDependencies": {
-    "@eslint/js": "^9.0.0",
-    "@typescript-eslint/eslint-plugin": "^8.53.0",
-    "@typescript-eslint/parser": "^8.0.0",
-    "eslint": "^9.0.0",
-    "prettier": "^3.0.0",
-    "typescript": "^5.5.0"
+    "@eslint/js": "^10.0.1",
+    "@typescript-eslint/eslint-plugin": "^8.72.2",
+    "@typescript-eslint/parser": "^8.72.2",
+    "eslint": "^10.15.0",
+    "prettier": "^3.10.1",
+    "typescript": "~6.0.3"
   },
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=22.0.0"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/awslabs/amazon-bedrock-agentcore-samples-typescript.git"
+    "url": "https://github.com/awslabs/bedrock-agentcore-samples-typescript.git"
   },
   "bugs": {
-    "url": "https://github.com/awslabs/amazon-bedrock-agentcore-samples-typescript/issues"
+    "url": "https://github.com/awslabs/bedrock-agentcore-samples-typescript/issues"
   },
-  "homepage": "https://github.com/awslabs/amazon-bedrock-agentcore-samples-typescript#readme"
+  "homepage": "https://github.com/awslabs/bedrock-agentcore-samples-typescript#readme"
 }
