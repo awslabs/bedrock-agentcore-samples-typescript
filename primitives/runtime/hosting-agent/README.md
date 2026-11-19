@@ -12,10 +12,11 @@ back.
 
 ## Samples
 
-| Sample                    | What it shows                                 |
-| ------------------------- | --------------------------------------------- |
-| [strands](./strands/)     | A Strands Agents agent with a calculator tool |
-| [vercel-ai](./vercel-ai/) | A Vercel AI SDK agent with a calculator tool  |
+| Sample                          | What it shows                                   |
+| ------------------------------- | ----------------------------------------------- |
+| [strands](./strands/)           | A Strands Agents agent with a calculator tool   |
+| [vercel-ai](./vercel-ai/)       | A Vercel AI SDK agent with a calculator tool    |
+| [claude-agent](./claude-agent/) | A Claude Agent SDK agent with a calculator tool |
 
 ## The Agent
 
@@ -83,10 +84,60 @@ conversation.
 
 → [Full source](./vercel-ai/app/agent/main.ts)
 
+### Claude Agent SDK
+
+```typescript
+const tools = createSdkMcpServer({ name: 'tools', tools: [calculator] })
+
+let sessionId: string | undefined
+
+const app = new BedrockAgentCoreApp({
+  invocationHandler: {
+    requestSchema: z.object({ prompt: z.string() }),
+    process: async function* (request) {
+      const messages = query({
+        prompt: request.prompt,
+        options: {
+          model: 'global.anthropic.claude-haiku-5-5',
+          env: {
+            ...process.env,
+            CLAUDE_CODE_USE_BEDROCK: '1',
+            AWS_REGION: process.env['AWS_REGION'] ?? 'us-east-1',
+          },
+          tools: [],
+          mcpServers: { tools },
+          allowedTools: ['mcp__tools__calculator'],
+          includePartialMessages: true,
+          resume: sessionId,
+        },
+      })
+
+      for await (const message of messages) {
+        if (
+          message.type === 'stream_event' &&
+          message.event.type === 'content_block_delta' &&
+          message.event.delta.type === 'text_delta'
+        ) {
+          yield { event: 'message', data: { text: message.event.delta.text } }
+        }
+        if (message.type === 'result' && message.subtype === 'success') {
+          sessionId = message.session_id
+        }
+      }
+    },
+  },
+})
+```
+
+`tools: []` turns off the built-in Claude Code tools, so the calculator is the only tool, and `resume` continues the
+previous session. The SDK runs a native Claude Code binary, so this sample deploys as a container.
+
+→ [Full source](./claude-agent/app/agent/main.ts)
+
 ## Quick Start
 
 ```bash
-cd strands  # or vercel-ai
+cd strands  # or vercel-ai, claude-agent
 agentcore dev
 ```
 

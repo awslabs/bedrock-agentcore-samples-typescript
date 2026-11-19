@@ -1,139 +1,126 @@
 # Hosting an Agent (Claude Agent SDK)
 
-Deploy a [Claude Agent SDK](https://docs.anthropic.com/en/docs/agents/claude-agent-sdk) agent to Amazon Bedrock AgentCore Runtime, with model calls routed through Amazon Bedrock.
+Deploy a [Claude Agent SDK](https://docs.claude.com/en/docs/agent-sdk/typescript) agent with a calculator tool to
+Amazon Bedrock AgentCore Runtime.
 
-→ See [parent README](../README.md) for full context on hosting agents.
-
-## How It Works
-
-The Claude Agent SDK (`@anthropic-ai/claude-agent-sdk`) spawns the Claude Code CLI as a subprocess and drives an agent loop. Setting `CLAUDE_CODE_USE_BEDROCK=1` and `ANTHROPIC_MODEL=<bedrock inference profile ID>` routes every model call through Amazon Bedrock using the container's IAM role credentials — no Anthropic API key needed.
-
-Unlike the Strands and Vercel AI samples, this one ships a custom `Dockerfile` so the Claude Code CLI is available in the image. The `agentcore` CLI picks up the Dockerfile automatically during deployment.
+→ See the [parent README](../README.md) for how hosting works.
 
 ## Prerequisites
 
-- Node.js 20+
-- AWS credentials configured
-- Docker (or Podman/Finch) for local dev
-- [AgentCore Starter Toolkit](https://github.com/aws/bedrock-agentcore-starter-toolkit):
+- Node.js 22+
+- AWS credentials with access to Amazon Bedrock and AgentCore
+- Docker, Podman or Finch, to run the agent's container locally
+- The [AgentCore CLI](https://github.com/aws/agentcore-cli):
 
 ```bash
-pip install bedrock-agentcore-starter-toolkit
+npm install -g @aws/agentcore
 ```
 
-## Implementation
+## Project Structure
+
+```
+claude-agent/
+├── app/agent/          # The agent: main.ts, package.json, Dockerfile
+└── agentcore/
+    ├── agentcore.json  # Runtime configuration read by the AgentCore CLI
+    └── cdk/            # CDK app the CLI deploys
+```
+
+## The Agent
 
 ```typescript
-import { query } from '@anthropic-ai/claude-agent-sdk'
-import { BedrockAgentCoreApp } from 'bedrock-agentcore/runtime'
-import { z } from 'zod'
+const calculator = tool(
+  'calculator',
+  'Performs basic arithmetic',
+  {
+    operation: z.enum(['add', 'subtract', 'multiply', 'divide']),
+    a: z.number(),
+    b: z.number(),
+  },
+  async ({ operation, a, b }): Promise<CallToolResult> => ({
+    content: [{ type: 'text', text: String(calculate(operation, a, b)) }],
+  })
+)
 
-const requestSchema = z.object({ prompt: z.string() })
+const tools = createSdkMcpServer({ name: 'tools', tools: [calculator] })
+
+let sessionId: string | undefined
 
 const app = new BedrockAgentCoreApp({
   invocationHandler: {
-    requestSchema,
-    process: async function* (request, _context) {
-      const response = query({
+    requestSchema: z.object({ prompt: z.string() }),
+    process: async function* (request) {
+      const messages = query({
         prompt: request.prompt,
         options: {
-          systemPrompt: "You're a helpful assistant.",
-          maxTurns: 5,
-          allowedTools: [],
+          model: 'global.anthropic.claude-haiku-5-5',
+          env: {
+            ...process.env,
+            CLAUDE_CODE_USE_BEDROCK: '1',
+            AWS_REGION: process.env['AWS_REGION'] ?? 'us-east-1',
+          },
+          tools: [],
+          mcpServers: { tools },
+          allowedTools: ['mcp__tools__calculator'],
+          includePartialMessages: true,
+          resume: sessionId,
         },
       })
 
-      for await (const message of response) {
-        if (message.type === 'assistant') {
-          for (const block of message.message.content) {
-            if (block.type === 'text') {
-              yield { event: 'message', data: { text: block.text } }
-            }
-          }
+      for await (const message of messages) {
+        if (
+          message.type === 'stream_event' &&
+          message.event.type === 'content_block_delta' &&
+          message.event.delta.type === 'text_delta'
+        ) {
+          yield { event: 'message', data: { text: message.event.delta.text } }
+        }
+        if (message.type === 'result' && message.subtype === 'success') {
+          sessionId = message.session_id
         }
       }
     },
   },
 })
-
-app.run()
 ```
 
-→ [Full source](./agent.ts)
+The SDK runs the Claude Code binary it ships with, and `CLAUDE_CODE_USE_BEDROCK` sends its model calls to Amazon
+Bedrock. `tools: []` turns off the built-in Claude Code tools (Bash, Read, Edit and the rest), so the calculator, served
+from an in-process MCP server, is the only tool. `allowedTools` lets it run without a permission prompt. `resume`
+continues the previous session, so the agent remembers the conversation.
 
-## Quick Start
+→ [Full source](./app/agent/main.ts)
 
-Install dependencies:
-
-```bash
-npm install
-```
-
-Configure the agent (specify `agent.ts` as the entrypoint):
-
-```bash
-agentcore configure
-```
-
-Accept defaults for all prompts, except for memory—enter `s` to skip memory creation. The CLI detects the Dockerfile and uses container-based deployment.
-
-Set environment variables so the Claude Agent SDK routes through Bedrock:
-
-```bash
-agentcore configure env CLAUDE_CODE_USE_BEDROCK=1
-agentcore configure env ANTHROPIC_MODEL=us.anthropic.claude-sonnet-4-5-20250929-v1:0
-```
-
-## Local Development
-
-The Claude Code CLI subprocess needs AWS credentials and Bedrock access locally:
-
-```bash
-npm install -g @anthropic-ai/claude-code@latest
-
-export CLAUDE_CODE_USE_BEDROCK=1
-export ANTHROPIC_MODEL=us.anthropic.claude-sonnet-4-5-20250929-v1:0
-export AWS_REGION=us-east-1
-```
-
-Start the local dev server:
+## Run Locally
 
 ```bash
 agentcore dev
 ```
 
-Test with the CLI:
+The first run builds the agent's container image. In a second terminal:
 
 ```bash
-agentcore invoke --dev '{"prompt": "What is the capital of France?"}'
+agentcore invoke --runtime agent --local --payload '{"prompt": "What is 25 * 4?"}'
 ```
 
-Or with curl:
+Prefer a chat UI? `agentcore dev --mode browser` opens the Agent Inspector.
+
+## Deploy
 
 ```bash
-curl -X POST http://localhost:8080/invocations \
-  -H "Content-Type: application/json" \
-  -H "Accept: text/event-stream" \
-  -H "x-amzn-bedrock-agentcore-runtime-session-id: test-123" \
-  -d '{"prompt": "What is the capital of France?"}'
-```
-
-## Deploy to AWS
-
-```bash
+npm install --prefix agentcore/cdk
 agentcore deploy
+agentcore invoke --runtime agent --payload '{"prompt": "What is 25 * 4?"}'
 ```
 
-AgentCore builds the ARM64 container in AWS CodeBuild, pushes it to ECR, and creates the Runtime. The execution role is granted Bedrock model invocation permissions automatically.
-
-## Test Deployed Agent
-
-```bash
-agentcore invoke '{"prompt": "What is the capital of France?"}'
-```
+`agentcore deploy` builds the image from `app/agent/Dockerfile` in AWS CodeBuild and creates the runtime with
+permission to call Bedrock models. The image installs the SDK on Linux, so it gets the matching Claude Code binary.
 
 ## Clean Up
 
 ```bash
-agentcore destroy
+agentcore remove all --yes
+agentcore deploy --yes
 ```
+
+This deletes the deployed stack. Run `git checkout -- agentcore` to restore the configuration and deploy again.
