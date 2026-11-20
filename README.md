@@ -146,7 +146,7 @@ the conversation.
 ```
 ├── primitives/
 │   ├── runtime/                      # AgentCore Runtime samples
-│   │   ├── hosting-agent/            # Agent hosting (Strands, Vercel AI)
+│   │   ├── hosting-agent/            # Agent hosting (Strands, Vercel AI, Claude Agent SDK)
 │   │   ├── bidirectional-streaming/  # WebSocket streaming
 │   │   └── async-agent/              # Long-running tasks
 │   ├── identity/                     # AgentCore Identity samples
@@ -167,6 +167,7 @@ the conversation.
 - [Amazon Bedrock AgentCore Documentation](https://docs.aws.amazon.com/bedrock-agentcore/)
 - [Strands Agents SDK](https://strandsagents.com/)
 - [Vercel AI SDK](https://ai-sdk.dev)
+- [Claude Agent SDK](https://docs.claude.com/en/docs/agent-sdk/typescript)
 
 ## Contributing
 
