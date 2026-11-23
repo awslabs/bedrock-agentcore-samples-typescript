@@ -194,8 +194,8 @@ URL and signs the connection for a runtime ARN.
 
 ## Samples
 
-| Sample                                                | What it shows                                                            |
-| ----------------------------------------------------- | ------------------------------------------------------------------------ |
-| [hosting-agent](./hosting-agent/)                     | An agent with a calculator tool, in Strands Agents and the Vercel AI SDK |
-| [bidirectional-streaming](./bidirectional-streaming/) | Full-duplex communication over WebSocket connections                     |
-| [async-agent](./async-agent/)                         | An agent that keeps its session alive while background work runs         |
+| Sample                                                | What it shows                                                                                  |
+| ----------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| [hosting-agent](./hosting-agent/)                     | An agent with a calculator tool, in Strands Agents, the Vercel AI SDK and the Claude Agent SDK |
+| [bidirectional-streaming](./bidirectional-streaming/) | Full-duplex communication over WebSocket connections                                           |
+| [async-agent](./async-agent/)                         | An agent that keeps its session alive while background work runs                               |
