@@ -147,6 +147,7 @@ the conversation.
 ├── primitives/
 │   ├── runtime/                      # AgentCore Runtime samples
 │   │   ├── hosting-agent/            # Agent hosting (Strands, Vercel AI)
+│   │   ├── a2a/                      # A2A protocol (serveA2A + buildAgentCard)
 │   │   ├── bidirectional-streaming/  # WebSocket streaming
 │   │   └── async-agent/              # Long-running tasks
 │   ├── identity/                     # AgentCore Identity samples
