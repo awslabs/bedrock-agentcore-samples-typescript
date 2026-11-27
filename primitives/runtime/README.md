@@ -197,5 +197,6 @@ URL and signs the connection for a runtime ARN.
 | Sample                                                | What it shows                                                            |
 | ----------------------------------------------------- | ------------------------------------------------------------------------ |
 | [hosting-agent](./hosting-agent/)                     | An agent with a calculator tool, in Strands Agents and the Vercel AI SDK |
+| [a2a](./a2a/)                                         | The same calculator agent, served over the A2A protocol with `serveA2A`  |
 | [bidirectional-streaming](./bidirectional-streaming/) | Full-duplex communication over WebSocket connections                     |
 | [async-agent](./async-agent/)                         | An agent that keeps its session alive while background work runs         |

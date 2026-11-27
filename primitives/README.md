@@ -6,8 +6,8 @@ Focused samples, each showing one Amazon Bedrock AgentCore capability with the T
 
 ## Samples
 
-| Sample                  | What it shows                                                                         |
-| ----------------------- | ------------------------------------------------------------------------------------- |
-| [runtime](./runtime/)   | Hosting an agent on AgentCore Runtime: streaming, WebSockets and long-running tasks   |
-| [identity](./identity/) | Authenticating callers with a JWT, and letting an agent call external APIs with OAuth |
-| [tools](./tools/)       | Giving an agent a secure Code Interpreter sandbox and a cloud Browser                 |
+| Sample                  | What it shows                                                                            |
+| ----------------------- | ---------------------------------------------------------------------------------------- |
+| [runtime](./runtime/)   | Hosting an agent on AgentCore Runtime: streaming, A2A, WebSockets and long-running tasks |
+| [identity](./identity/) | Authenticating callers with a JWT, and letting an agent call external APIs with OAuth    |
+| [tools](./tools/)       | Giving an agent a secure Code Interpreter sandbox and a cloud Browser                    |
